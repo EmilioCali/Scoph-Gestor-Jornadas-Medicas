@@ -1,5 +1,6 @@
 import { SERVICES } from '../config/services.js';
 import * as XLSX from 'xlsx';
+import PDFDocument from 'pdfkit';
 
 export async function obtenerConsumoJornada(jornadaId) {
     const controller = new AbortController();
@@ -299,4 +300,176 @@ export async function exportarStockExcel() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock');
 
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
+export async function exportarJornadasExcel() {
+    const response = await fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`);
+    if (!response.ok) throw new Error('Error al consultar jornadas');
+
+    const data = await response.json();
+
+    const filas = data.data.map(jornada => ({
+        Nombre: jornada.name,
+        Descripcion: jornada.description,
+        FechaInicio: new Date(jornada.startDate).toLocaleDateString(),
+        FechaFin: new Date(jornada.endDate).toLocaleDateString(),
+        Departamento: jornada.location?.department,
+        Municipio: jornada.location?.municipality,
+        Direccion: jornada.location?.address,
+        Responsable: jornada.manager?.name,
+        PacientesEstimados: jornada.estimatedPatients,
+        MedicamentosEstimados: jornada.estimatedMedicines,
+        Estado: jornada.status
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(filas);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Jornadas');
+
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
+export async function exportarConsumoExcel() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`);
+    if (!response.ok) throw new Error('Error al consultar consumo');
+
+    const data = await response.json();
+
+    const filas = data.data.flatMap(mov =>
+        mov.detail.map(item => ({
+        JornadaId: mov.destination?.id,
+        Medicamento: item.medicationSnapshot.name,
+        Concentracion: item.medicationSnapshot.concentration,
+        Lote: item.batch,
+        Cantidad: item.quantity,
+        FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
+        Usuario: mov.userId,
+        Fecha: new Date(mov.createdAt).toLocaleDateString()
+        }))
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(filas);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Consumo');
+
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
+export async function exportarMovimientosPDF() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`);
+    if (!response.ok) throw new Error('Error al consultar movimientos');
+
+    const data = await response.json();
+
+    return new Promise((resolve) => {
+        const doc = new PDFDocument({ margin: 30 });
+        const buffers = [];
+
+        doc.on('data', chunk => buffers.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+        doc.fontSize(18).text('Reporte de Movimientos', { align: 'center' });
+        doc.moveDown();
+
+        data.data.forEach(mov => {
+        doc.fontSize(11).text(`Tipo: ${mov.type} - ${mov.subType}`);
+        doc.text(`Estado: ${mov.status}`);
+        doc.text(`Usuario: ${mov.userId}`);
+        doc.text(`Fecha: ${new Date(mov.createdAt).toLocaleDateString()}`);
+        mov.detail.forEach(item => {
+            doc.text(`  Medicamento: ${item.medicationSnapshot.name} | Lote: ${item.batch} | Cantidad: ${item.quantity}`);
+        });
+        doc.moveDown(0.5);
+        });
+
+        doc.end();
+    });
+}
+
+export async function exportarStockPDF() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`);
+    if (!response.ok) throw new Error('Error al consultar inventario');
+
+    const data = await response.json();
+
+    return new Promise((resolve) => {
+        const doc = new PDFDocument({ margin: 30 });
+        const buffers = [];
+
+        doc.on('data', chunk => buffers.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+        doc.fontSize(18).text('Reporte de Stock Actual', { align: 'center' });
+        doc.moveDown();
+
+        data.data.forEach(inv => {
+        doc.fontSize(11).text(`Medicamento: ${inv.medicineId?.name} - ${inv.medicineId?.concentration}`);
+        doc.text(`Stock Total: ${inv.totalStock} | Stock Mínimo: ${inv.minimumStock}`);
+        inv.lots.forEach(lote => {
+            doc.text(`  Lote: ${lote.batch} | Stock: ${lote.stock} | Vence: ${new Date(lote.expirationDate).toLocaleDateString()}`);
+        });
+        doc.moveDown(0.5);
+        });
+
+        doc.end();
+    });
+}
+
+export async function exportarJornadasPDF() {
+    const response = await fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`);
+    if (!response.ok) throw new Error('Error al consultar jornadas');
+
+    const data = await response.json();
+
+    return new Promise((resolve) => {
+        const doc = new PDFDocument({ margin: 30 });
+        const buffers = [];
+
+        doc.on('data', chunk => buffers.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+        doc.fontSize(18).text('Reporte de Jornadas', { align: 'center' });
+        doc.moveDown();
+
+        data.data.forEach(jornada => {
+        doc.fontSize(11).text(`Nombre: ${jornada.name}`);
+        doc.text(`Descripción: ${jornada.description}`);
+        doc.text(`Fecha: ${new Date(jornada.startDate).toLocaleDateString()} - ${new Date(jornada.endDate).toLocaleDateString()}`);
+        doc.text(`Ubicación: ${jornada.location?.department}, ${jornada.location?.municipality}`);
+        doc.text(`Responsable: ${jornada.manager?.name}`);
+        doc.text(`Estado: ${jornada.status}`);
+        doc.moveDown(0.5);
+        });
+
+        doc.end();
+    });
+}
+
+export async function exportarConsumoPDF() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`);
+    if (!response.ok) throw new Error('Error al consultar consumo');
+
+    const data = await response.json();
+
+    return new Promise((resolve) => {
+        const doc = new PDFDocument({ margin: 30 });
+        const buffers = [];
+
+        doc.on('data', chunk => buffers.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+        doc.fontSize(18).text('Reporte de Consumo', { align: 'center' });
+        doc.moveDown();
+
+        data.data.forEach(mov => {
+        doc.fontSize(11).text(`Jornada: ${mov.destination?.id}`);
+        doc.text(`Fecha: ${new Date(mov.createdAt).toLocaleDateString()}`);
+        mov.detail.forEach(item => {
+            doc.text(`  Medicamento: ${item.medicationSnapshot.name} | Lote: ${item.batch} | Cantidad: ${item.quantity}`);
+        });
+        doc.moveDown(0.5);
+        });
+
+        doc.end();
+    });
 }

@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -172,6 +172,102 @@ export const exportStockExcel = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al exportar stock a Excel',
+        error: err.message
+        });
+    }
+};
+
+export const exportJornadasExcel = async (request, reply) => {
+    try {
+        const buffer = await exportarJornadasExcel();
+        return reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', 'attachment; filename=jornadas.xlsx')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar jornadas a Excel',
+        error: err.message
+        });
+    }
+};
+
+export const exportConsumoExcel = async (request, reply) => {
+    try {
+        const buffer = await exportarConsumoExcel();
+        return reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', 'attachment; filename=consumo.xlsx')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar consumo a Excel',
+        error: err.message
+        });
+    }
+};
+
+export const exportMovimientosPDF = async (request, reply) => {
+    try {
+        const buffer = await exportarMovimientosPDF();
+        return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename=movimientos.pdf')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar movimientos a PDF',
+        error: err.message
+        });
+    }
+};
+
+export const exportStockPDF = async (request, reply) => {
+    try {
+        const buffer = await exportarStockPDF();
+        return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename=stock.pdf')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar stock a PDF',
+        error: err.message
+        });
+    }
+};
+
+export const exportJornadasPDF = async (request, reply) => {
+    try {
+        const buffer = await exportarJornadasPDF();
+        return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename=jornadas.pdf')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar jornadas a PDF',
+        error: err.message
+        });
+    }
+};
+
+export const exportConsumoPDF = async (request, reply) => {
+    try {
+        const buffer = await exportarConsumoPDF();
+        return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename=consumo.pdf')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar consumo a PDF',
         error: err.message
         });
     }
