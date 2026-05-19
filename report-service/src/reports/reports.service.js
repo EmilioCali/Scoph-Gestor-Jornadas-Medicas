@@ -473,3 +473,17 @@ export async function exportarConsumoPDF() {
         doc.end();
     });
 }
+
+export async function obtenerAuditorias({ userId, action, module, fecha }) {
+    let url = `${SERVICES.core.baseUrl}/api/v1/auditoria?`;
+    if (userId) url += `userId=${userId}&`;
+    if (action) url += `action=${action}&`;
+    if (module) url += `module=${module}&`;
+    if (fecha) url += `fecha=${fecha}&`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al consultar auditorías');
+
+    const data = await response.json();
+    return data.data;
+}
