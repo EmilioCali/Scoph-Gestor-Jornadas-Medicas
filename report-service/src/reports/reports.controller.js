@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -122,6 +122,24 @@ export const getAlertasStockBajo = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al obtener alertas de stock bajo',
+        error: err.message
+        });
+    }
+};
+
+export const getAlertasVencimiento = async (request, reply) => {
+    try {
+        const dias = request.query.dias ? parseInt(request.query.dias) : 30;
+        const alertas = await obtenerAlertasVencimiento(dias);
+        return reply.status(200).send({
+        success: true,
+        message: 'Alertas de medicamentos próximos a vencer',
+        data: alertas
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al obtener alertas de vencimiento',
         error: err.message
         });
     }
