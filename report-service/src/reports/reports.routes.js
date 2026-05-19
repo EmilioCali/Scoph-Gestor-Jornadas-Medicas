@@ -1,4 +1,4 @@
-import { getConsumoJornada, getStockActual, getProximosAVencer, getMovimientos, getMetricasGenerales } from "./reports.controller.js";
+import { getConsumoJornada, getStockActual, getProximosAVencer, getMovimientos, getMetricasGenerales, getEstadisticasJornada } from "./reports.controller.js";
 
 const reportesRoutes = async (fastify) =>{
     fastify.get('/reportes/consumo-jornada/:id', getConsumoJornada);
@@ -6,6 +6,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get('/reportes/vencimientos', getProximosAVencer);
     fastify.get('/reportes/movimientos', getMovimientos);
     fastify.get('/reportes/dashboard', getMetricasGenerales);
+    fastify.get('/reportes/jornada/:jornadaId', getEstadisticasJornada);
 }
 
 

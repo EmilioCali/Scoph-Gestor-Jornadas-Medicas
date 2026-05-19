@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -76,18 +76,36 @@ export const getMovimientos = async (request, reply) =>{
 }
 
 export const getMetricasGenerales = async (request, reply) => {
-  try {
-    const metricas = await obtenerMetricasGenerales();
-    return reply.status(200).send({
-      success: true,
-      message: 'Métricas generales del sistema',
-      data: metricas
-    });
-  } catch (err) {
-    return reply.status(400).send({
-      success: false,
-      message: 'Error al obtener métricas generales',
-      error: err.message
-    });
-  }
+    try {
+        const metricas = await obtenerMetricasGenerales();
+        return reply.status(200).send({
+        success: true,
+        message: 'Métricas generales del sistema',
+        data: metricas
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al obtener métricas generales',
+        error: err.message
+        });
+    }
+};
+
+export const getEstadisticasJornada = async (request, reply) => {
+    try {
+        const { jornadaId } = request.params;
+        const stats = await obtenerEstadisticasJornada(jornadaId);
+        return reply.status(200).send({
+        success: true,
+        message: 'Estadísticas de la jornada',
+        data: stats
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al obtener estadísticas de la jornada',
+        error: err.message
+        });
+    }
 };

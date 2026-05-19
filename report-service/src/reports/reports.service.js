@@ -105,45 +105,95 @@ export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario }){
 }
 
 export async function obtenerMetricasGenerales() {
-  const [medicamentos, jornadas, movimientos, inventario] = await Promise.all([
-    fetch(`${SERVICES.core.baseUrl}/api/v1/medicines`),
-    fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`),
-    fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`),
-    fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`)
-  ]);
+    const [medicamentos, jornadas, movimientos, inventario] = await Promise.all([
+        fetch(`${SERVICES.core.baseUrl}/api/v1/medicines`),
+        fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`),
+        fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`),
+        fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`)
+    ]);
 
-  if (!medicamentos.ok) throw new Error('Error al consultar medicamentos');
-  if (!jornadas.ok) throw new Error('Error al consultar jornadas');
-  if (!movimientos.ok) throw new Error('Error al consultar movimientos');
-  if (!inventario.ok) throw new Error('Error al consultar inventario');
+    if (!medicamentos.ok) throw new Error('Error al consultar medicamentos');
+    if (!jornadas.ok) throw new Error('Error al consultar jornadas');
+    if (!movimientos.ok) throw new Error('Error al consultar movimientos');
+    if (!inventario.ok) throw new Error('Error al consultar inventario');
 
-  const [dataMed, dataJor, dataMov, dataInv] = await Promise.all([
-    medicamentos.json(),
-    jornadas.json(),
-    movimientos.json(),
-    inventario.json()
-  ]);
+    const [dataMed, dataJor, dataMov, dataInv] = await Promise.all([
+        medicamentos.json(),
+        jornadas.json(),
+        movimientos.json(),
+        inventario.json()
+    ]);
 
-  const hoy = new Date();
+    const hoy = new Date();
 
-  // Stock bajo — stockTotal <= stockMinimo
-  const stockBajo = dataInv.data.filter(inv => inv.totalStock <= inv.minimumStock).length;
+    // Stock bajo — stockTotal <= stockMinimo
+    const stockBajo = dataInv.data.filter(inv => inv.totalStock <= inv.minimumStock).length;
 
-  // Medicamentos vencidos — lotes con expirationDate menor a hoy
-  let medicamentosVencidos = 0;
-  dataInv.data.forEach(inv => {
-    inv.lots.forEach(lote => {
-      if (new Date(lote.expirationDate) < hoy && lote.stock > 0) {
-        medicamentosVencidos++;
-      }
+    // Medicamentos vencidos — lotes con expirationDate menor a hoy
+    let medicamentosVencidos = 0;
+    dataInv.data.forEach(inv => {
+        inv.lots.forEach(lote => {
+        if (new Date(lote.expirationDate) < hoy && lote.stock > 0) {
+            medicamentosVencidos++;
+        }
+        });
     });
-  });
 
-  return {
-    totalMedicamentos: dataMed.data?.length || 0,
-    totalJornadas: dataJor.data?.length || 0,
-    totalMovimientos: dataMov.data?.length || 0,
-    stockBajo,
-    medicamentosVencidos
-  };
+    return {
+        totalMedicamentos: dataMed.data?.length || 0,
+        totalJornadas: dataJor.data?.length || 0,
+        totalMovimientos: dataMov.data?.length || 0,
+        stockBajo,
+        medicamentosVencidos
+    };
+}
+
+export async function obtenerEstadisticasJornada(jornadaId) {
+    const [movimientos, inventario] = await Promise.all([
+        fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?jornadaId=${jornadaId}`),
+        fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-jornada/${jornadaId}`)
+    ]);
+
+    if (!movimientos.ok) throw new Error('Error al consultar movimientos');
+    if (!inventario.ok) throw new Error('Error al consultar inventario de jornada');
+
+    const [dataMov, dataInv] = await Promise.all([
+        movimientos.json(),
+        inventario.json()
+    ]);
+
+    const totalMovimientos = dataMov.data?.length || 0;
+
+    // Medicamentos consumidos
+    const consumidos = {};
+    dataMov.data
+        .filter(mov => mov.subType === 'CONSUMO_JORNADA')
+        .forEach(mov => {
+        mov.detail.forEach(item => {
+            const key = item.medicineId;
+            if (!consumidos[key]) {
+            consumidos[key] = {
+                medicineId: item.medicineId,
+                nombre: item.medicationSnapshot.name,
+                concentracion: item.medicationSnapshot.concentration,
+                totalConsumido: 0
+            };
+            }
+            consumidos[key].totalConsumido += item.quantity;
+        });
+        });
+
+    // Medicamentos restantes en inventario de jornada
+    const restantes = dataInv.data?.map(inv => ({
+        medicineId: inv.medicineId,
+        stockTotal: inv.totalStock,
+        lotes: inv.lots
+    })) || [];
+
+    return {
+        jornadaId,
+        totalMovimientos,
+        medicamentosConsumidos: Object.values(consumidos),
+        medicamentosRestantes: restantes
+    };
 }
