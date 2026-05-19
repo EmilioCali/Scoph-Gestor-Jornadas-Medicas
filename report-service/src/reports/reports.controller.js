@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF, obtenerAuditorias } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -268,6 +268,24 @@ export const exportConsumoPDF = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al exportar consumo a PDF',
+        error: err.message
+        });
+    }
+};
+
+export const getAuditorias = async (request, reply) => {
+    try {
+        const { userId, action, module, fecha } = request.query;
+        const auditorias = await obtenerAuditorias({ userId, action, module, fecha });
+        return reply.status(200).send({
+        success: true,
+        message: 'Auditorías del sistema',
+        data: auditorias
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al consultar auditorías',
         error: err.message
         });
     }
