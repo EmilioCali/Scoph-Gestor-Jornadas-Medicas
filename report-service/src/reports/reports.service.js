@@ -93,17 +93,19 @@ export async function obtenerProximosAVencer(dias = 30) {
 }
 
 // ver todos los movimientos del inventario central
-export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario }){
+export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page, limit }) {
     let url = `${SERVICES.core.baseUrl}/api/v1/movimientos?`;
-    if(fecha) url += `fecha=${fecha}&`;
-    if(jornadaId) url += `jornadaId=${jornadaId}&`;
-    if(tipo) url += `tipo=${tipo}&`;
-    if(usuario) url += `usuario=${usuario}&`;
+    if (fecha) url += `fecha=${fecha}&`;
+    if (jornadaId) url += `jornadaId=${jornadaId}&`;
+    if (tipo) url += `tipo=${tipo}&`;
+    if (usuario) url += `usuario=${usuario}&`;
+    if (page) url += `page=${page}&`;
+    if (limit) url += `limit=${limit}&`;
 
     const response = await fetch(url);
-    if(!response.ok) throw new Error('error al consultar los movimientos');
+    if (!response.ok) throw new Error('Error al consultar los movimientos');
     const data = await response.json();
-    return data.data;
+    return data;
 }
 
 export async function obtenerMetricasGenerales() {
