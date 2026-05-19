@@ -216,3 +216,33 @@ export async function obtenerAlertasStockBajo() {
 
     return alertas;
 }
+
+export async function obtenerAlertasVencimiento(dias = 30) {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`);
+    if (!response.ok) throw new Error('Error al consultar inventario central');
+
+    const data = await response.json();
+    const hoy = new Date();
+    const limite = new Date();
+    limite.setDate(hoy.getDate() + dias);
+
+    const alertas = [];
+    data.data.forEach(inv => {
+        inv.lots.forEach(lote => {
+        const exp = new Date(lote.expirationDate);
+        if (exp <= limite && lote.stock > 0) {
+            alertas.push({
+            medicineId: inv.medicineId._id,
+            nombre: inv.medicineId?.name,
+            concentracion: inv.medicineId?.concentration,
+            batch: lote.batch,
+            stock: lote.stock,
+            expirationDate: lote.expirationDate,
+            diasRestantes: Math.ceil((exp - hoy) / (1000 * 60 * 60 * 24))
+            });
+        }
+        });
+    });
+
+    return alertas.sort((a, b) => a.diasRestantes - b.diasRestantes);
+}
