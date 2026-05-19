@@ -1,5 +1,7 @@
 import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF, obtenerAuditorias } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
+import { getPaginationParams, paginatedResponse } from '../utils/pagination.js';
+
 export const getConsumoJornada = async (request, reply) => {
     try {
         const { jornadaId } = request.params;
@@ -56,24 +58,26 @@ export const getProximosAVencer = async (request, reply) => {
     }
 }
 
-export const getMovimientos = async (request, reply) =>{
+export const getMovimientos = async (request, reply) => {
     try {
         const { fecha, jornadaId, tipo, usuario } = request.query;
-        const movimientos = await obtenerMovimientos({ fecha, jornadaId, tipo, usuario });
+        const { page, limit } = getPaginationParams(request.query);
+
+        const data = await obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page, limit });
+
         return reply.status(200).send({
-            success: true,
-            message: 'Movimientos de inventario: ',
-            data: movimientos
+        success: true,
+        message: 'Movimientos de inventario',
+        ...paginatedResponse(data.data, data.total || data.data?.length, page, limit)
         });
     } catch (err) {
         return reply.status(400).send({
-            success: false,
-            message: 'Error al consultar tods los movimientos',
-            error: err.message
-        })
-        
+        success: false,
+        message: 'Error al consultar los movimientos',
+        error: err.message
+        });
     }
-}
+};
 
 export const getMetricasGenerales = async (request, reply) => {
     try {
