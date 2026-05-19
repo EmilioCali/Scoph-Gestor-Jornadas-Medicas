@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -140,6 +140,38 @@ export const getAlertasVencimiento = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al obtener alertas de vencimiento',
+        error: err.message
+        });
+    }
+};
+
+export const exportMovimientosExcel = async (request, reply) => {
+    try {
+        const buffer = await exportarMovimientosExcel();
+        return reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', 'attachment; filename=movimientos.xlsx')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar movimientos a Excel',
+        error: err.message
+        });
+    }
+    };
+
+export const exportStockExcel = async (request, reply) => {
+    try {
+        const buffer = await exportarStockExcel();
+        return reply
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', 'attachment; filename=stock.xlsx')
+        .send(buffer);
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al exportar stock a Excel',
         error: err.message
         });
     }
