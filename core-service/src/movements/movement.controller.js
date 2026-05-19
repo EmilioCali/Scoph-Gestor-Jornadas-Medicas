@@ -175,24 +175,27 @@ export const createRetornoJornada = async (request, reply) => {
 
 export const getMovimientos = async (request, reply) => {
     try {
-        const { subType, jornadaId } = request.query;
+        const { subType, jornadaId, page = 1, limit = 10 } = request.query;
 
-        const filtros ={};
-        if(subType) filtros.subType = subType;
-        if(jornadaId) filtros["destination.id"] = jornadaId;
+        const filtros = {};
+        if (subType) filtros.subType = subType;
+        if (jornadaId) filtros['destination.id'] = jornadaId;
 
-        const movimientos = await Movement.find(filtros);
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const total = await Movement.countDocuments(filtros);
+        const movimientos = await Movement.find(filtros).skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
+
         return reply.status(200).send({
-            sucess: true,
-            message: 'Movimientos consultados con exito',
-            data: movimientos
+        success: true,
+        message: 'Movimientos consultados con éxito',
+        total,
+        data: movimientos
         });
-
     } catch (err) {
         return reply.status(400).send({
-            success: false,
-            message: 'Error al consultar movimeintos',
-            error: err.message
+        success: false,
+        message: 'Error al consultar movimientos',
+        error: err.message
         });
     }
-}
+};
