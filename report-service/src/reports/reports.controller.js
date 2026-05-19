@@ -1,10 +1,9 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
-
 export const getConsumoJornada = async (request, reply) => {
     try {
         const { jornadaId } = request.params;
-
+        
         const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA&originId=${jornadaId}`);
         if (!response.ok) {
             throw new Error("Error al consultar movimientos en core-service");
@@ -75,3 +74,20 @@ export const getMovimientos = async (request, reply) =>{
         
     }
 }
+
+export const getMetricasGenerales = async (request, reply) => {
+  try {
+    const metricas = await obtenerMetricasGenerales();
+    return reply.status(200).send({
+      success: true,
+      message: 'Métricas generales del sistema',
+      data: metricas
+    });
+  } catch (err) {
+    return reply.status(400).send({
+      success: false,
+      message: 'Error al obtener métricas generales',
+      error: err.message
+    });
+  }
+};
