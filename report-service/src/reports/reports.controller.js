@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF, obtenerAuditorias } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo, obtenerAlertasVencimiento, exportarMovimientosExcel, exportarStockExcel, exportarConsumoExcel, exportarJornadasExcel, exportarMovimientosPDF, exportarStockPDF, exportarConsumoPDF, exportarJornadasPDF, obtenerAuditorias, validarConsistenciaDatos } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 import { getPaginationParams, paginatedResponse } from '../utils/pagination.js';
 
@@ -290,6 +290,23 @@ export const getAuditorias = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al consultar auditorías',
+        error: err.message
+        });
+    }
+};
+
+export const getConsistenciaDatos = async (request, reply) => {
+    try {
+        const resultado = await validarConsistenciaDatos();
+        return reply.status(200).send({
+        success: true,
+        message: 'Validación de consistencia de datos',
+        data: resultado
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al validar consistencia',
         error: err.message
         });
     }

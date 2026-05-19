@@ -1,4 +1,4 @@
-import { getConsumoJornada, getStockActual, getProximosAVencer, getMovimientos, getMetricasGenerales, getEstadisticasJornada, getAlertasStockBajo, getAlertasVencimiento, exportMovimientosExcel, exportStockExcel, exportConsumoExcel, exportJornadasExcel, exportMovimientosPDF, exportStockPDF, exportConsumoPDF, exportJornadasPDF, getAuditorias } from "./reports.controller.js";
+import { getConsumoJornada, getStockActual, getProximosAVencer, getMovimientos, getMetricasGenerales, getEstadisticasJornada, getAlertasStockBajo, getAlertasVencimiento, exportMovimientosExcel, exportStockExcel, exportConsumoExcel, exportJornadasExcel, exportMovimientosPDF, exportStockPDF, exportConsumoPDF, exportJornadasPDF, getAuditorias, getConsistenciaDatos } from "./reports.controller.js";
 
 const reportesRoutes = async (fastify) =>{
     fastify.get('/reportes/consumo-jornada/:id', getConsumoJornada);
@@ -18,6 +18,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get('/reportes/exportar/jornadas/pdf', exportJornadasPDF);
     fastify.get('/reportes/exportar/consumo/pdf', exportConsumoPDF);
     fastify.get('/reportes/auditoria', getAuditorias);
+    fastify.get('/reportes/consistencia', getConsistenciaDatos);
 }
 
 
