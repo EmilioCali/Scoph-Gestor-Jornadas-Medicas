@@ -1,4 +1,5 @@
 import { SERVICES } from '../config/services.js';
+import * as XLSX from 'xlsx';
 
 export async function obtenerConsumoJornada(jornadaId) {
     const controller = new AbortController();
@@ -245,4 +246,57 @@ export async function obtenerAlertasVencimiento(dias = 30) {
     });
 
     return alertas.sort((a, b) => a.diasRestantes - b.diasRestantes);
+}
+
+export async function exportarMovimientosExcel() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`);
+    if (!response.ok) throw new Error('Error al consultar movimientos');
+
+    const data = await response.json();
+
+    const filas = data.data.flatMap(mov =>
+        mov.detail.map(item => ({
+        Tipo: mov.type,
+        SubTipo: mov.subType,
+        Medicamento: item.medicationSnapshot.name,
+        Concentracion: item.medicationSnapshot.concentration,
+        Lote: item.batch,
+        Cantidad: item.quantity,
+        FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
+        Estado: mov.status,
+        Usuario: mov.userId,
+        Fecha: new Date(mov.createdAt).toLocaleDateString()
+        }))
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(filas);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos');
+
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
+export async function exportarStockExcel() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`);
+    if (!response.ok) throw new Error('Error al consultar inventario');
+
+    const data = await response.json();
+
+    const filas = data.data.flatMap(inv =>
+        inv.lots.map(lote => ({
+        Medicamento: inv.medicineId?.name,
+        Concentracion: inv.medicineId?.concentration,
+        Lote: lote.batch,
+        Stock: lote.stock,
+        FechaVencimiento: new Date(lote.expirationDate).toLocaleDateString(),
+        StockTotal: inv.totalStock,
+        StockMinimo: inv.minimumStock
+        }))
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(filas);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock');
+
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
