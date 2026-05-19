@@ -489,3 +489,53 @@ export async function obtenerAuditorias({ userId, action, module, fecha }) {
     const data = await response.json();
     return data.data;
 }
+
+export async function validarConsistenciaDatos() {
+    const [inventario, movimientos] = await Promise.all([
+        fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`),
+        fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`)
+    ]);
+
+    if (!inventario.ok) throw new Error('Error al consultar inventario');
+    if (!movimientos.ok) throw new Error('Error al consultar movimientos');
+
+    const [dataInv, dataMov] = await Promise.all([
+        inventario.json(),
+        movimientos.json()
+    ]);
+
+    const inconsistencias = [];
+
+    // Validar que stockTotal coincida con la suma de lotes
+    dataInv.data.forEach(inv => {
+        const sumLotes = inv.lots.reduce((acc, lote) => acc + lote.stock, 0);
+        if (sumLotes !== inv.totalStock) {
+        inconsistencias.push({
+            tipo: 'STOCK_INCONSISTENTE',
+            medicamento: inv.medicineId?.name,
+            medicineId: inv.medicineId?._id,
+            stockTotal: inv.totalStock,
+            sumLotes,
+            diferencia: inv.totalStock - sumLotes
+        });
+        }
+    });
+
+    // Validar que no haya movimientos sin detalle
+    dataMov.data.forEach(mov => {
+        if (!mov.detail || mov.detail.length === 0) {
+        inconsistencias.push({
+            tipo: 'MOVIMIENTO_SIN_DETALLE',
+            movimientoId: mov._id,
+            tipo: mov.type,
+            fecha: mov.createdAt
+        });
+        }
+    });
+
+    return {
+        consistente: inconsistencias.length === 0,
+        totalInconsistencias: inconsistencias.length,
+        inconsistencias
+    };
+}
