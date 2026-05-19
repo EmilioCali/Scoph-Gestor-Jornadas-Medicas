@@ -197,3 +197,22 @@ export async function obtenerEstadisticasJornada(jornadaId) {
         medicamentosRestantes: restantes
     };
 }
+
+export async function obtenerAlertasStockBajo() {
+    const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`);
+    if (!response.ok) throw new Error('Error al consultar inventario central');
+
+    const data = await response.json();
+
+    const alertas = data.data
+        .filter(inv => inv.totalStock <= inv.minimumStock)
+        .map(inv => ({
+        medicineId: inv.medicineId._id,
+        nombre: inv.medicineId?.name,
+        concentracion: inv.medicineId?.concentration,
+        stockTotal: inv.totalStock,
+        stockMinimo: inv.minimumStock
+        }));
+
+    return alertas;
+}

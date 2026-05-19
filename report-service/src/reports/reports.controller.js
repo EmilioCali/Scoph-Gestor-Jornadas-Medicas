@@ -1,4 +1,4 @@
-import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada } from "./reports.service.js";
+import { obtenerConsumoJornada, obtenerStockActual, obtenerProximosAVencer, obtenerMovimientos, obtenerMetricasGenerales, obtenerEstadisticasJornada, obtenerAlertasStockBajo } from "./reports.service.js";
 import { SERVICES } from '../config/services.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
@@ -105,6 +105,23 @@ export const getEstadisticasJornada = async (request, reply) => {
         return reply.status(400).send({
         success: false,
         message: 'Error al obtener estadísticas de la jornada',
+        error: err.message
+        });
+    }
+};
+
+export const getAlertasStockBajo = async (request, reply) => {
+    try {
+        const alertas = await obtenerAlertasStockBajo();
+        return reply.status(200).send({
+        success: true,
+        message: 'Alertas de bajo stock',
+        data: alertas
+        });
+    } catch (err) {
+        return reply.status(400).send({
+        success: false,
+        message: 'Error al obtener alertas de stock bajo',
         error: err.message
         });
     }
