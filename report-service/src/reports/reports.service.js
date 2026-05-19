@@ -146,7 +146,7 @@ export async function obtenerMetricasGenerales() {
     return {
         totalMedicamentos: dataMed.data?.length || 0,
         totalJornadas: dataJor.data?.length || 0,
-        totalMovimientos: dataMov.data?.length || 0,
+        totalMovimientos: dataMov.total || dataMov.data?.length || 0,
         stockBajo,
         medicamentosVencidos
     };
