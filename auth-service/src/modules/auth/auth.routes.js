@@ -1,6 +1,25 @@
 import { authenticate, requireRole } from '../../middlewares/authenticate.js'
-import { login, register, getUserById, listUsers, toggleUserStatus, changePassword } from './auth.service.js'
-import { loginSchema, registerSchema, changePasswordSchema, usuarioResponse } from './auth.schemas.js'
+import {
+  login,
+  register,
+  getUserById,
+  listUsers,
+  toggleUserStatus,
+  changePassword,
+  verifyEmail,
+  resendVerificationCode,
+  requestPasswordReset,
+  resetPassword
+} from './auth.service.js'
+import {
+  loginSchema,
+  registerSchema,
+  changePasswordSchema,
+  usuarioResponse,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
+} from './auth.schemas.js'
 
 /**
  * Plugin de Fastify para el módulo de autenticación.
@@ -10,6 +29,7 @@ async function authPlugin(fastify) {
   /**
    * POST /api/auth/login
    * Autentica al usuario y retorna un JWT.
+   * Si mustChangePassword = true, el cliente debe redirigir al cambio de contraseña.
    */
   fastify.post('/login', { schema: loginSchema }, async (request, reply) => {
     try {
@@ -69,14 +89,34 @@ async function authPlugin(fastify) {
   /**
    * POST /api/auth/register
    * Crea un nuevo usuario. Solo ADMIN.
+   * Genera contraseña temporal y la envía al correo del usuario automáticamente.
    */
   fastify.post(
     '/register',
-    { schema: registerSchema},
+    { schema: registerSchema, preHandler: [requireRole('ADMIN')] },
     async (request, reply) => {
       try {
-        const user = await register({ ...request.body, creadoPor: request.user?.id || null})
+        const user = await register({ ...request.body, creadoPor: request.user.id })
         return reply.status(201).send({ ok: true, user: user.toSafeJSON() })
+      } catch (err) {
+        return reply.status(400).send({ ok: false, message: err.message })
+      }
+    }
+  )
+
+  /**
+   * POST /api/auth/change-password
+   * Cambia la contraseña del usuario autenticado.
+   * Obligatorio al primer inicio de sesión (mustChangePassword = true).
+   */
+  fastify.post(
+    '/change-password',
+    { schema: changePasswordSchema, preHandler: [authenticate] },
+    async (request, reply) => {
+      try {
+        const { currentPassword, newPassword } = request.body
+        await changePassword(request.user.id, currentPassword, newPassword)
+        return reply.send({ ok: true, message: 'Contraseña actualizada correctamente' })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })
       }
@@ -156,17 +196,94 @@ async function authPlugin(fastify) {
   )
 
   /**
-   * POST /api/auth/change-password
-   * Cambia la contraseña del usuario autenticado.
+   * POST /api/auth/verify-email
+   * Verifica el correo usando el código de 6 dígitos.
    */
   fastify.post(
-    '/change-password',
-    { schema: changePasswordSchema, preHandler: [authenticate] },
+    '/verify-email',
+    { schema: verifyEmailSchema },
     async (request, reply) => {
       try {
-        const { currentPassword, newPassword } = request.body
-        await changePassword(request.user.id, currentPassword, newPassword)
-        return reply.send({ ok: true, message: 'Contraseña actualizada correctamente' })
+        const { correo, code } = request.body
+        await verifyEmail(correo, code)
+        return reply.send({ ok: true, message: 'Correo verificado correctamente' })
+      } catch (err) {
+        return reply.status(400).send({ ok: false, message: err.message })
+      }
+    }
+  )
+
+  /**
+   * POST /api/auth/resend-verification
+   * Reenvía el código de verificación al correo del usuario.
+   */
+  fastify.post(
+    '/resend-verification',
+    {
+      schema: {
+        tags: ['Autenticación'],
+        summary: 'Reenviar código de verificación',
+        description: 'Genera y envía un nuevo código de verificación al correo indicado.',
+        body: {
+          type: 'object',
+          required: ['correo'],
+          properties: {
+            correo: { type: 'string', example: 'daniel@gmail.com' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean', example: true },
+              message: { type: 'string', example: 'Si el correo existe y no está verificado, recibirás un nuevo código' }
+            }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        await resendVerificationCode(request.body.correo)
+        return reply.send({ ok: true, message: 'Si el correo existe y no está verificado, recibirás un nuevo código' })
+      } catch (err) {
+        return reply.status(400).send({ ok: false, message: err.message })
+      }
+    }
+  )
+
+  /**
+   * POST /api/auth/forgot-password
+   * Solicita el código de restablecimiento de contraseña.
+   */
+  fastify.post(
+    '/forgot-password',
+    { schema: forgotPasswordSchema },
+    async (request, reply) => {
+      try {
+        await requestPasswordReset(request.body.correo)
+        return reply.send({
+          ok: true,
+          message: 'Si el correo existe, recibirás un código para restablecer tu contraseña'
+        })
+      } catch (err) {
+        return reply.status(400).send({ ok: false, message: err.message })
+      }
+    }
+  )
+
+  /**
+   * POST /api/auth/reset-password
+   * Restablece la contraseña usando el código recibido por correo.
+   */
+  fastify.post(
+    '/reset-password',
+    { schema: resetPasswordSchema },
+    async (request, reply) => {
+      try {
+        const { correo, code, newPassword } = request.body
+        await resetPassword(correo, code, newPassword)
+        return reply.send({ ok: true, message: 'Contraseña restablecida correctamente' })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })
       }

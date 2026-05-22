@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { User } from '../../models/user.model.js'
+import { generateCode, generateTempPassword, getExpiresAt, isExpired } from '../../lib/tokens.js'
+import { sendCredentialsMail, sendVerificationCodeMail, sendPasswordResetMail } from '../../lib/mailer.js'
 
 const SALT_ROUNDS = 12
 
@@ -37,10 +39,11 @@ export async function login({ username, correo, password }) {
 
 /**
  * Registra un nuevo usuario (solo puede hacerlo un ADMIN).
+ * Genera una contraseña temporal y la envía por correo automáticamente.
  * @param {Object} data - Datos del usuario a crear
  * @returns {Promise<import('mongoose').Document>} Usuario creado
  */
-export async function register({ nombre, apellido, username, correo, password, rol, telefono, creadoPor }) {
+export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }) {
   const existingUser = await User.findOne({
     $or: [{ username: username.toLowerCase() }, { correo: correo.toLowerCase() }]
   })
@@ -52,7 +55,10 @@ export async function register({ nombre, apellido, username, correo, password, r
     throw new Error('El correo ya está en uso')
   }
 
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+  const tempPassword = generateTempPassword()
+  const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS)
+  const activationCode = generateCode()
+  const activationTokenExpires = getExpiresAt()
 
   const user = new User({
     nombre,
@@ -64,10 +70,147 @@ export async function register({ nombre, apellido, username, correo, password, r
     telefono: telefono || null,
     creadoPor: creadoPor || null,
     mustChangePassword: true,
-    emailVerificado: false
+    emailVerificado: false,
+    activationToken: activationCode,
+    activationTokenExpires
   })
 
   await user.save()
+
+  // Enviar credenciales y código de verificación (no bloquean si fallan)
+  sendCredentialsMail({ to: correo, nombre, username, password: tempPassword }).catch(() => {})
+  sendVerificationCodeMail({ to: correo, nombre, code: activationCode }).catch(() => {})
+
+  return user
+}
+
+/**
+ * Verifica el correo electrónico usando el código de 6 dígitos enviado al usuario.
+ * @param {string} correo
+ * @param {string} code
+ */
+export async function verifyEmail(correo, code) {
+  const user = await User.findOne({ correo: correo.toLowerCase() })
+
+  if (!user) {
+    throw new Error('Correo no encontrado')
+  }
+
+  if (user.emailVerificado) {
+    throw new Error('El correo ya fue verificado anteriormente')
+  }
+
+  if (!user.activationToken || user.activationToken !== code) {
+    throw new Error('Código de verificación incorrecto')
+  }
+
+  if (isExpired(user.activationTokenExpires)) {
+    throw new Error('El código de verificación ha expirado. Solicita uno nuevo.')
+  }
+
+  user.emailVerificado = true
+  user.activationToken = null
+  user.activationTokenExpires = null
+  await user.save()
+
+  return user
+}
+
+/**
+ * Reenvía el código de verificación de correo al usuario.
+ * @param {string} correo
+ */
+export async function resendVerificationCode(correo) {
+  const user = await User.findOne({ correo: correo.toLowerCase() })
+
+  if (!user) return // respuesta genérica por seguridad
+
+  if (user.emailVerificado) {
+    throw new Error('El correo ya fue verificado')
+  }
+
+  const code = generateCode()
+  const activationTokenExpires = getExpiresAt()
+
+  user.activationToken = code
+  user.activationTokenExpires = activationTokenExpires
+  await user.save()
+
+  await sendVerificationCodeMail({ to: correo, nombre: user.nombre, code })
+}
+
+/**
+ * Cambia la contraseña del usuario autenticado.
+ * Usado principalmente en el primer login cuando mustChangePassword = true.
+ * @param {string} id
+ * @param {string} currentPassword
+ * @param {string} newPassword
+ */
+export async function changePassword(id, currentPassword, newPassword) {
+  const user = await User.findById(id)
+  if (!user) throw new Error('Usuario no encontrado')
+
+  const isValid = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!isValid) throw new Error('La contraseña actual es incorrecta')
+
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+  user.passwordHash = passwordHash
+  user.mustChangePassword = false
+  await user.save()
+
+  return user
+}
+
+/**
+ * Genera y envía un código de restablecimiento de contraseña.
+ * Respuesta siempre genérica para no revelar si el correo existe.
+ * @param {string} correo
+ */
+export async function requestPasswordReset(correo) {
+  const user = await User.findOne({ correo: correo.toLowerCase() })
+
+  if (!user || !user.isActive) {
+    return
+  }
+
+  const code = generateCode()
+  const resetPasswordExpires = getExpiresAt()
+
+  user.resetPassword = code
+  user.resetPasswordExpires = resetPasswordExpires
+  await user.save()
+
+  await sendPasswordResetMail({ to: correo, nombre: user.nombre, code })
+}
+
+/**
+ * Restablece la contraseña usando el código recibido por correo.
+ * @param {string} correo
+ * @param {string} code
+ * @param {string} newPassword
+ */
+export async function resetPassword(correo, code, newPassword) {
+  const user = await User.findOne({ correo: correo.toLowerCase() })
+
+  if (!user) {
+    throw new Error('Correo no encontrado')
+  }
+
+  if (!user.resetPassword || user.resetPassword !== code) {
+    throw new Error('Código de restablecimiento incorrecto')
+  }
+
+  if (isExpired(user.resetPasswordExpires)) {
+    throw new Error('El código de restablecimiento ha expirado. Solicita uno nuevo.')
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+  user.passwordHash = passwordHash
+  user.mustChangePassword = false
+  user.resetPassword = null
+  user.resetPasswordExpires = null
+  await user.save()
+
   return user
 }
 
@@ -96,26 +239,5 @@ export async function listUsers() {
 export async function toggleUserStatus(id, isActive) {
   const user = await User.findByIdAndUpdate(id, { isActive }, { new: true })
   if (!user) throw new Error('Usuario no encontrado')
-  return user
-}
-
-/**
- * Cambia la contraseña del usuario autenticado.
- * @param {string} id
- * @param {string} currentPassword
- * @param {string} newPassword
- */
-export async function changePassword(id, currentPassword, newPassword) {
-  const user = await User.findById(id)
-  if (!user) throw new Error('Usuario no encontrado')
-
-  const isValid = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!isValid) throw new Error('La contraseña actual es incorrecta')
-
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
-  user.passwordHash = passwordHash
-  user.mustChangePassword = false
-  await user.save()
-
   return user
 }
