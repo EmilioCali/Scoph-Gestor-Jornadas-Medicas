@@ -14,16 +14,16 @@ const medicationSnapshotSchema = new Schema(
         },
     },
     { _id: false }
-    );
+);
 
-    const detailSchema = new Schema(
+const detailSchema = new Schema(
     {
         medicineId: {
             type: Schema.Types.ObjectId,
             ref: 'Medicine',
             required: [true, 'El ID del medicamento es requerido'],
         },
-            medicationSnapshot: {
+        medicationSnapshot: {
             type: medicationSnapshotSchema,
             required: [true, 'El snapshot del medicamento es requerido'],
         },
@@ -43,9 +43,9 @@ const medicationSnapshotSchema = new Schema(
         },
     },
     { _id: false }
-    );
+);
 
-    const originDestinationSchema = new Schema(
+const originDestinationSchema = new Schema(
     {
         type: {
             type: String,
@@ -61,9 +61,9 @@ const medicationSnapshotSchema = new Schema(
         },
     },
     { _id: false }
-    );
+);
 
-    const movementSchema = new Schema(
+const movementSchema = new Schema(
     {
         type: {
             type: String,
@@ -107,11 +107,23 @@ const medicationSnapshotSchema = new Schema(
             trim: true,
         },
         metadata: {
-            prescription: {
+            patientName: {
                 type: String,
                 trim: true,
                 default: null,
             },
+
+            patientAge: {
+                type: Number,
+                default: null,
+            },
+
+            deliveryType: {
+                type: String,
+                enum: ['RECETA', 'MANUAL'],
+                default: null,
+            },
+
             reason: {
                 type: String,
                 trim: true,
