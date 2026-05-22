@@ -39,7 +39,7 @@ await app.register(cors, {
 await app.register(helmet);
 
 await app.register(rateLimit, {
-    max: 10,
+    max: Number(process.env.RATE_LIMIT_MAX || 100),
     timeWindow: '10 minutes',
     errorResponseBuilder: (req, context) =>({
         success: false,
@@ -153,6 +153,10 @@ app.setErrorHandler((error, request, reply) =>{
         message: error.message,
         stack: error.stack
     });
+
+    if (error.error === 'RATE_LIMIT_EXCEEDED' || error.retryAfter) {
+        return reply.status(429).send(error);
+    }
 
     reply.status(error.statusCode || 500).send({
         status: 'error',

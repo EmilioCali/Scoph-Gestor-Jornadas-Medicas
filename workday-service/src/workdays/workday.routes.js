@@ -13,9 +13,8 @@ const locationSchema = {
 
 const managerSchema = {
     type: 'object',
-    required: ['userId', 'name'],
+    required: ['name'],
     properties: {
-        userId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
         name: { type: 'string', example: 'Dr. Juan Perez' }
     }
 };
@@ -53,6 +52,13 @@ const workdayResponseSchema = {
     properties: {
         _id: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
         ...workdayInputSchema.properties,
+        manager: {
+            type: 'object',
+            properties: {
+                userId: { type: 'string', example: 'usr_123456789abc' },
+                name: { type: 'string', example: 'Dr. Juan Perez' }
+            }
+        },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' }
     }
