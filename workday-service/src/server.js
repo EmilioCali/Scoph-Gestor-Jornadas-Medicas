@@ -1,8 +1,6 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import connectDb from './config/database.js'
 import app from './app.js';
-
-dotenv.config();
 
 const start = async () => {
     try {

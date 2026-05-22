@@ -2,7 +2,16 @@ import Workday from './workday.model.js';
 
 export const createWorkday = async (request, reply) => {
     try {
-        const workday = await Workday.create(request.body);
+        const workdayData = {
+            ...request.body,
+            manager: {
+                ...request.body.manager,
+                userId: request.user.id,
+                name: request.body.manager?.name || request.user.username
+            }
+        };
+
+        const workday = await Workday.create(workdayData);
 
         return reply.status(201).send({
         success: true,
