@@ -1,9 +1,13 @@
 import { buildApp } from './app.js'
+import { seedAdmin } from './scripts/seedAdmin.js'
 
 const port = parseInt(process.env.PORT || '8080', 10)
 const entorno = process.env.NODE_ENV || 'development'
 
 const app = await buildApp()
+
+// Crea el primer ADMIN si no existe ninguno en la BD
+await seedAdmin()
 
 try {
   await app.listen({ port, host: '0.0.0.0' })

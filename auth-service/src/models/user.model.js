@@ -42,6 +42,8 @@ const userSchema = new mongoose.Schema(
     mustChangePassword: { type: Boolean, default: true },
 
     activationToken: { type: String, default: null },
+    activationTokenExpires: { type: Date, default: null },
+
     resetPassword: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
 
@@ -60,6 +62,7 @@ userSchema.methods.toSafeJSON = function () {
   const obj = this.toObject()
   delete obj.passwordHash
   delete obj.activationToken
+  delete obj.activationTokenExpires
   delete obj.resetPassword
   delete obj.resetPasswordExpires
   return obj
