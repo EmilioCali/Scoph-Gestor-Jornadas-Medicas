@@ -4,17 +4,8 @@ import { getPaginationParams, paginatedResponse } from '../utils/pagination.js';
 
 export const getConsumoJornada = async (request, reply) => {
     try {
-        const { jornadaId } = request.params;
-        
-        const response = await fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA&originId=${jornadaId}`);
-        if (!response.ok) {
-            throw new Error("Error al consultar movimientos en core-service");
-        }
-
-        const data = await response.json();
-
-        //extraer solo el detalle de cada movimiento
-        const detalles = data.data.flatMap(mov => mov.detail);
+        const { id } = request.params;
+        const detalles = await obtenerConsumoJornada(id);
 
         return reply.status(200).send({
             success: true,

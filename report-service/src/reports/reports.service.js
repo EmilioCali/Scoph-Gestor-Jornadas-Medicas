@@ -24,8 +24,8 @@ export async function obtenerConsumoJornada(jornadaId) {
                 if (!consumo[key]) {
                     consumo[key] = {
                         medicineId: item.medicineId,
-                        nombre: item.medicamentoSnapshot.name,
-                        concentracion: item.medicamentoSnapshot.concentration,
+                        nombre: item.medicationSnapshot.name,
+                        concentracion: item.medicationSnapshot.concentration,
                         totalConsumido: 0
                     };
                 }
@@ -97,8 +97,8 @@ export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page
     let url = `${SERVICES.core.baseUrl}/api/v1/movimientos?`;
     if (fecha) url += `fecha=${fecha}&`;
     if (jornadaId) url += `jornadaId=${jornadaId}&`;
-    if (tipo) url += `tipo=${tipo}&`;
-    if (usuario) url += `usuario=${usuario}&`;
+    if (tipo) url += `subType=${tipo}&`;
+    if (usuario) url += `userId=${usuario}&`;
     if (page) url += `page=${page}&`;
     if (limit) url += `limit=${limit}&`;
 
