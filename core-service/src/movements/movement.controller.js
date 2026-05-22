@@ -175,11 +175,24 @@ export const createRetornoJornada = async (request, reply) => {
 
 export const getMovimientos = async (request, reply) => {
     try {
-        const { subType, jornadaId, page = 1, limit = 10 } = request.query;
+        const { subType, type, userId, fecha, jornadaId, page = 1, limit = 10 } = request.query;
 
         const filtros = {};
         if (subType) filtros.subType = subType;
-        if (jornadaId) filtros['destination.id'] = jornadaId;
+        if (type) filtros.type = type;
+        if (userId) filtros.userId = userId;
+        if (fecha) {
+            const inicio = new Date(fecha);
+            const fin = new Date(fecha);
+            fin.setDate(fin.getDate() + 1);
+            filtros.createdAt = { $gte: inicio, $lt: fin };
+        }
+        if (jornadaId) {
+            filtros.$or = [
+                { 'origin.id': jornadaId },
+                { 'destination.id': jornadaId }
+            ];
+        }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const total = await Movement.countDocuments(filtros);

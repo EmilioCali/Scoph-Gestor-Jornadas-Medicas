@@ -302,6 +302,12 @@ const movementRoutes = async (fastify) => {
                             enum: ['DONACION', 'COMPRA', 'RECETA', 'CONSUMO_JORNADA', 'ASIGNACION_JORNADA', 'RETORNO_JORNADA']
                         },
                         jornadaId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
+                        type: {
+                            type: 'string',
+                            enum: ['ENTRADA', 'SALIDA', 'TRANSFERENCIA']
+                        },
+                        userId: { type: 'string', example: 'usr_123456789abc' },
+                        fecha: { type: 'string', format: 'date', example: '2026-05-22' },
                         page: { type: 'integer', minimum: 1, default: 1 },
                         limit: { type: 'integer', minimum: 1, default: 10 }
                     }
