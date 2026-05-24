@@ -4,16 +4,29 @@ import app from './app.js';
 
 dotenv.config();
 
+const port = parseInt(process.env.PORT || '3003', 10);
+const entorno = process.env.NODE_ENV || 'development';
+
 const start = async () => {
     try {
         await connectDb();
 
         await app.listen({
-            port: process.env.PORT,
+            port,
             host: '0.0.0.0'
         });
 
-        console.log(`Servicio de Reportes corriendo en el puerto ${process.env.PORT}`);
+        console.log('');
+        console.log('  ╔══════════════════════════════════════════╗');
+        console.log('  ║         SCOPH — Sistema de Salud         ║');
+        console.log('  ╚══════════════════════════════════════════╝');
+        console.log(`  Servicio   : ReportService`);
+        console.log(`  Puerto     : ${port}`);
+        console.log(`  Entorno    : ${entorno}`);
+        console.log(`  Base datos : MongoDB conectada`);
+        console.log(`  Docs       : http://localhost:${port}/api/docs`);
+        console.log('  ──────────────────────────────────────────');
+        console.log('');
     } catch (err) {
         app.log.error(err);
         process.exit(1);
