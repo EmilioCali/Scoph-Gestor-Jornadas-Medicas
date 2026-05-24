@@ -103,16 +103,27 @@ const diasQuerySchema = {
     }
 };
 
-const exportSchema = (summary, description) => ({
+const exportSchema = (summary, description, contentType) => ({
     tags: ['Exportaciones'],
     summary,
     description,
     response: {
+        200: {
+            description: 'Archivo descargable',
+            content: {
+                [contentType]: {
+                    schema: {
+                        type: 'string',
+                        format: 'binary'
+                    }
+                }
+            }
+        },
         400: {
             ...badRequestErrorSchema,
             properties: {
                 ...badRequestErrorSchema.properties,
-                message: { type: 'string', example: `Error al ${summary.toLowerCase()}` }
+                message: { type: 'string', example: 'Error al ' + summary.toLowerCase() }
             }
         },
         429: rateLimitErrorSchema
@@ -298,14 +309,14 @@ const reportesRoutes = async (fastify) =>{
         getAlertasVencimiento
     );
 
-    fastify.get('/reportes/exportar/movimientos/excel', { schema: exportSchema('Exportar movimientos a Excel', 'Descarga un archivo XLSX con los movimientos de inventario.') }, exportMovimientosExcel);
-    fastify.get('/reportes/exportar/stock/excel', { schema: exportSchema('Exportar stock a Excel', 'Descarga un archivo XLSX con el stock central por lote.') }, exportStockExcel);
-    fastify.get('/reportes/exportar/jornadas/excel', { schema: exportSchema('Exportar jornadas a Excel', 'Descarga un archivo XLSX con el listado de jornadas medicas.') }, exportJornadasExcel);
-    fastify.get('/reportes/exportar/consumo/excel', { schema: exportSchema('Exportar consumo a Excel', 'Descarga un archivo XLSX con el consumo registrado en jornadas.') }, exportConsumoExcel);
-    fastify.get('/reportes/exportar/movimientos/pdf', { schema: exportSchema('Exportar movimientos a PDF', 'Descarga un archivo PDF con los movimientos de inventario.') }, exportMovimientosPDF);
-    fastify.get('/reportes/exportar/stock/pdf', { schema: exportSchema('Exportar stock a PDF', 'Descarga un archivo PDF con el stock central por lote.') }, exportStockPDF);
-    fastify.get('/reportes/exportar/jornadas/pdf', { schema: exportSchema('Exportar jornadas a PDF', 'Descarga un archivo PDF con el listado de jornadas medicas.') }, exportJornadasPDF);
-    fastify.get('/reportes/exportar/consumo/pdf', { schema: exportSchema('Exportar consumo a PDF', 'Descarga un archivo PDF con el consumo registrado en jornadas.') }, exportConsumoPDF);
+    fastify.get('/reportes/exportar/movimientos/excel', { schema: exportSchema('Exportar movimientos a Excel', 'Descarga un archivo XLSX con los movimientos de inventario.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportMovimientosExcel);
+    fastify.get('/reportes/exportar/stock/excel', { schema: exportSchema('Exportar stock a Excel', 'Descarga un archivo XLSX con el stock central por lote.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportStockExcel);
+    fastify.get('/reportes/exportar/jornadas/excel', { schema: exportSchema('Exportar jornadas a Excel', 'Descarga un archivo XLSX con el listado de jornadas medicas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportJornadasExcel);
+    fastify.get('/reportes/exportar/consumo/excel', { schema: exportSchema('Exportar consumo a Excel', 'Descarga un archivo XLSX con el consumo registrado en jornadas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportConsumoExcel);
+    fastify.get('/reportes/exportar/movimientos/pdf', { schema: exportSchema('Exportar movimientos a PDF', 'Descarga un archivo PDF con los movimientos de inventario.', 'application/pdf') }, exportMovimientosPDF);
+    fastify.get('/reportes/exportar/stock/pdf', { schema: exportSchema('Exportar stock a PDF', 'Descarga un archivo PDF con el stock central por lote.', 'application/pdf') }, exportStockPDF);
+    fastify.get('/reportes/exportar/jornadas/pdf', { schema: exportSchema('Exportar jornadas a PDF', 'Descarga un archivo PDF con el listado de jornadas medicas.', 'application/pdf') }, exportJornadasPDF);
+    fastify.get('/reportes/exportar/consumo/pdf', { schema: exportSchema('Exportar consumo a PDF', 'Descarga un archivo PDF con el consumo registrado en jornadas.', 'application/pdf') }, exportConsumoPDF);
 
     fastify.get(
         '/reportes/auditoria',
