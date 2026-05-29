@@ -9,12 +9,12 @@ import ChangePasswordPage from "../../features/auth/pages/ChangePasswordPage";
 
 // Páginas principales
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
-import UsuariosPage from "../../features/users/pages/UsersPages";
+import UsuariosPage from "../../features/users/pages/UsersPages.jsx";
 import JornadasPage from "../../features/jornadas/pages/JornadasPage";
 
 // Páginas de inventario
-import CatalogoPage from "../../features/inventario/pages/CatalogoPage";
-import InventarioCentralPage from "../../features/inventario/pages/InventarioCentralPage";
+import CatalogoPage from "../../features/inventory/pages/CatalogoPage";
+import InventarioCentralPage from "../../features/inventory/pages/InventarioCentralPage";
 
 // Página de reportes
 import ReportesPage from "../../features/reports/pages/ReportsPages";
