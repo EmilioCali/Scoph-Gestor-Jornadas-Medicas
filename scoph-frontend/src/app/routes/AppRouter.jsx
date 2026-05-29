@@ -10,7 +10,7 @@ import ChangePasswordPage from "../../features/auth/pages/ChangePasswordPage";
 // Páginas principales
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 import UsuariosPage from "../../features/users/pages/UsersPages.jsx";
-import JornadasPage from "../../features/jornadas/pages/JornadasPage";
+import WorkdaysPage from "../../features/workdays/pages/WorkdaysPage.jsx";
 
 // Páginas de inventario
 import CatalogoPage from "../../features/inventory/pages/CatalogoPage";
@@ -36,7 +36,7 @@ export default function AppRouter() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="usuarios" element={<UsuariosPage />} />
-            <Route path="jornadas" element={<JornadasPage />} />
+            <Route path="jornadas" element={<WorkdaysPage />} />
             <Route path="inventario/catalogo" element={<CatalogoPage />} />
             <Route
               path="inventario/central"
