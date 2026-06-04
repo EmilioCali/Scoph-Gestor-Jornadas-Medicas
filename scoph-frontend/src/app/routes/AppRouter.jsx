@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute from "./ProtectedRoute";
@@ -20,6 +22,21 @@ import InventarioCentralPage from "../../features/inventory/pages/InventarioCent
 import ReportesPage from "../../features/reports/pages/ReportsPages";
 
 export default function AppRouter() {
+  const { checkAuth, isLoadingAuth } = useAuthStore();
+
+  // Verifica el token en Zustand al arrancar la app
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // Evitamos renderizar las rutas hasta que Zustand termine de revisar
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   return (
     <BrowserRouter>
       <Routes>
