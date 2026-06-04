@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
 import PageHeader from "../../../shared/components/ui/PageHeader";
 import Table from "../../../shared/components/ui/Table";
 import Badge from "../../../shared/components/ui/Badge";
@@ -7,9 +8,9 @@ import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
-import { mockUsers } from "../../../shared/utils/mockData";
 
-// Badge según rol del usuario
+import { getUsers, createUser } from "../../../shared/apis/authService";
+
 function getRolBadge(rol) {
   return rol === "ADMIN" ? (
     <Badge variant="primary">Administrador</Badge>
@@ -18,7 +19,6 @@ function getRolBadge(rol) {
   );
 }
 
-// Badge según estado activo del usuario
 function getStatusBadge(isActive) {
   return isActive ? (
     <Badge variant="success">Activo</Badge>
@@ -27,7 +27,6 @@ function getStatusBadge(isActive) {
   );
 }
 
-// Formulario reutilizable para crear y editar usuario
 function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -74,7 +73,6 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
         placeholder="12345678"
       />
 
-      {/* Selector de rol */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">Rol</label>
         <select
@@ -89,7 +87,6 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
         </select>
       </div>
 
-      {/* Nota de contraseña temporal al crear */}
       {!isEdit && (
         <p className="text-xs text-gray-400 bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
           Se enviará una contraseña temporal al correo institucional del
@@ -97,7 +94,6 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
         </p>
       )}
 
-      {/* Estado solo visible al editar */}
       {isEdit && (
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">Estado</label>
@@ -107,8 +103,9 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
             onChange={onChange}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
           >
-            <option value={true}>Activo</option>
-            <option value={false}>Inactivo</option>
+            {/* OJO: Los select nativos devuelven strings, lo manejaremos en el onChange del padre */}
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
           </select>
         </div>
       )}
@@ -136,16 +133,38 @@ const formInicial = {
 };
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]); // Iniciamos con array vacío
+  const [isLoading, setIsLoading] = useState(true);
+
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(formInicial);
 
+  // Cargar usuarios desde Fastify
+  const cargarUsuarios = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await getUsers();
+      setUsers(data.users || data); // Ajusta según la estructura que responda tu Fastify
+    } catch (error) {
+      toast.error("Error al cargar los usuarios");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    // Parchear valores booleanos que vienen del select como string
+    const val = value === "true" ? true : value === "false" ? false : value;
+    setForm((prev) => ({ ...prev, [name]: val }));
   };
 
   const handleEditar = (user) => {
@@ -159,35 +178,50 @@ export default function UsuariosPage() {
     setConfirmEliminar(true);
   };
 
-  // Crea nuevo usuario - cuando se conecte el backend usar createUser() de authService
-  const handleCrear = (e) => {
+  // Petición POST al Backend
+  const handleCrear = async (e) => {
     e.preventDefault();
-    const nuevo = {
-      ...form,
-      _id: `usr_${Date.now()}`,
-      mustChangePassword: true,
-      emailVerificado: false,
-      ultimoAcceso: null,
-      createdAt: new Date().toISOString(),
-    };
-    setUsers((prev) => [...prev, nuevo]);
-    setForm(formInicial);
-    setModalCrear(false);
+    const toastId = toast.loading("Creando usuario...");
+    try {
+      await createUser(form);
+      toast.success("Usuario creado exitosamente", { id: toastId });
+      setModalCrear(false);
+      setForm(formInicial);
+      cargarUsuarios(); // Recargar datos frescos
+    } catch (error) {
+      const msg = error.response?.data?.message || "Error al crear usuario";
+      toast.error(msg, { id: toastId });
+    }
   };
 
-  // Actualiza usuario - cuando se conecte el backend usar updateUserStatus() de authService
-  const handleGuardarEdicion = (e) => {
+  // Petición PUT/PATCH al Backend
+  const handleGuardarEdicion = async (e) => {
     e.preventDefault();
-    setUsers((prev) =>
-      prev.map((u) => (u._id === selectedUser._id ? { ...u, ...form } : u)),
-    );
-    setModalEditar(false);
+    const toastId = toast.loading("Guardando cambios...");
+    try {
+      await updateUser(selectedUser._id, form);
+      toast.success("Usuario actualizado", { id: toastId });
+      setModalEditar(false);
+      cargarUsuarios(); // Recargar datos frescos
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || "Error al actualizar usuario";
+      toast.error(msg, { id: toastId });
+    }
   };
 
-  // Elimina usuario - cuando se conecte el backend usar deleteUser() de authService
-  const handleConfirmarEliminar = () => {
-    setUsers((prev) => prev.filter((u) => u._id !== selectedUser._id));
-    setConfirmEliminar(false);
+  // Petición DELETE al Backend
+  const handleConfirmarEliminar = async () => {
+    const toastId = toast.loading("Eliminando usuario...");
+    try {
+      await deleteUser(selectedUser._id);
+      toast.success("Usuario eliminado", { id: toastId });
+      setConfirmEliminar(false);
+      cargarUsuarios(); // Recargar datos frescos
+    } catch (error) {
+      const msg = error.response?.data?.message || "Error al eliminar usuario";
+      toast.error(msg, { id: toastId });
+    }
   };
 
   const columnas = [
@@ -196,9 +230,9 @@ export default function UsuariosPage() {
       label: "Usuario",
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {row.nombre[0]}
-            {row.apellido[0]}
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0 uppercase">
+            {row.nombre?.[0] || ""}
+            {row.apellido?.[0] || ""}
           </div>
           <div>
             <p className="font-semibold text-gray-700">
@@ -282,12 +316,20 @@ export default function UsuariosPage() {
         }
       />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <Table
-          columns={columnas}
-          data={users}
-          emptyMessage="No hay usuarios registrados"
-        />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center p-8 gap-4">
+            <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+            <p className="text-gray-500 text-sm">Cargando usuarios...</p>
+          </div>
+        ) : (
+          <Table
+            columns={columnas}
+            data={users}
+            emptyMessage="No hay usuarios registrados"
+          />
+        )}
       </div>
+
       <Modal
         isOpen={modalCrear}
         onClose={() => setModalCrear(false)}
@@ -301,6 +343,7 @@ export default function UsuariosPage() {
           isEdit={false}
         />
       </Modal>
+
       <Modal
         isOpen={modalEditar}
         onClose={() => setModalEditar(false)}
@@ -314,6 +357,7 @@ export default function UsuariosPage() {
           isEdit={true}
         />
       </Modal>
+
       <ConfirmDialog
         isOpen={confirmEliminar}
         onClose={() => setConfirmEliminar(false)}

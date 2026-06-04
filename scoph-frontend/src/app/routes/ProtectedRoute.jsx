@@ -1,11 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from ".././../features/auth/store/AuthContext";
+//import { useAuth } from ".././../features/auth/store/AuthContext";
+import { useAuthStore } from "../../features/auth/store/authStore.js";
 
-//Componente para proteger rutas que requieren autenticación
+//Componente par//a proteger rutas que requieren autenticación
 //Si el usuario no esta autenticado, redirige al login
 //Si mustChangePassword es true, redirige a la pagina de cambio de contraseña
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user } = useAuthStore();
 
   //Mientras verifica la sesion guardadad, se muestra un loader
   if (loading) {
