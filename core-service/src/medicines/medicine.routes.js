@@ -1,4 +1,4 @@
-import { createMedicine, getMedicines } from './medicine.controller.js';
+import { createMedicine, getMedicines, updateMedicine, toggleMedicineStatus } from './medicine.controller.js';
 
 const medicineSchema = {
     type: 'object',
@@ -39,10 +39,7 @@ const rateLimitErrorSchema = {
     type: 'object',
     properties: {
         success: { type: 'boolean', example: false },
-        message: {
-            type: 'string',
-            example: 'Demasiadas peticiones desde esta IP, por favor intente nuevamenente despues de 60 segundos'
-        },
+        message: { type: 'string', example: 'Demasiadas peticiones desde esta IP, por favor intente nuevamente después de 60 segundos' },
         error: { type: 'string', example: 'RATE_LIMIT_EXCEEDED' },
         retryAfter: { type: 'string', example: '1 minute' }
     }
@@ -55,7 +52,7 @@ const medicineRoutes = async (fastify) => {
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
-                description: 'Registra un medicamento en el catalogo. Este endpoint no crea stock; el stock se registra con un movimiento de entrada.',
+                description: 'Registra un medicamento en el catálogo. No crea stock; el stock se registra con un movimiento de entrada.',
                 body: {
                     type: 'object',
                     required: ['name', 'compound', 'concentration', 'presentation', 'unitOfMeasure', 'category'],
@@ -91,8 +88,8 @@ const medicineRoutes = async (fastify) => {
         {
             schema: {
                 tags: ['Medicamentos'],
-                summary: 'Listar medicamentos activos',
-                description: 'Retorna los medicamentos con estado ACTIVO.',
+                summary: 'Listar medicamentos',
+                description: 'Retorna todos los medicamentos (ACTIVO e INACTIVO). El filtrado por estado se hace en el cliente.',
                 response: {
                     200: {
                         type: 'object',
@@ -108,6 +105,83 @@ const medicineRoutes = async (fastify) => {
             }
         },
         getMedicines
+    );
+
+    fastify.put(
+        '/medicines/:id',
+        {
+            schema: {
+                tags: ['Medicamentos'],
+                summary: 'Actualizar medicamento',
+                description: 'Actualiza los datos de un medicamento. No modifica el estado (usar PATCH /medicines/:id/status).',
+                params: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: { id: { type: 'string', example: '664f1a2b3c4d5e6f78901234' } }
+                },
+                body: {
+                    type: 'object',
+                    properties: {
+                        barcode: { type: 'string', nullable: true },
+                        name: { type: 'string' },
+                        compound: { type: 'string' },
+                        concentration: { type: 'string' },
+                        presentation: { type: 'string' },
+                        unitOfMeasure: { type: 'string' },
+                        category: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            data: medicineSchema
+                        }
+                    },
+                    404: validationErrorSchema,
+                    429: rateLimitErrorSchema
+                }
+            }
+        },
+        updateMedicine
+    );
+
+    fastify.patch(
+        '/medicines/:id/status',
+        {
+            schema: {
+                tags: ['Medicamentos'],
+                summary: 'Cambiar estado de medicamento',
+                description: 'Activa o desactiva un medicamento.',
+                params: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: { id: { type: 'string', example: '664f1a2b3c4d5e6f78901234' } }
+                },
+                body: {
+                    type: 'object',
+                    required: ['status'],
+                    properties: {
+                        status: { type: 'string', enum: ['ACTIVO', 'INACTIVO'] }
+                    }
+                },
+                response: {
+                    200: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            data: medicineSchema
+                        }
+                    },
+                    404: validationErrorSchema,
+                    429: rateLimitErrorSchema
+                }
+            }
+        },
+        toggleMedicineStatus
     );
 };
 
