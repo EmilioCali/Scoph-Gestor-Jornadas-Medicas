@@ -9,6 +9,14 @@ export const getMedicines = () =>
 export const createMedicine = (data) =>
     coreAPI.post("/api/v1/medicines", data);
 
+// PUT /api/v1/medicines/:id
+export const updateMedicine = (id, data) =>
+    coreAPI.put(`/api/v1/medicines/${id}`, data);
+
+// PATCH /api/v1/medicines/:id/status
+export const toggleMedicineStatus = (id, status) =>
+    coreAPI.patch(`/api/v1/medicines/${id}/status`, { status });
+
 // INVENTARIO CENTRAL
 // GET /api/v1/inventorio-central
 export const getCentralInventory = () =>
