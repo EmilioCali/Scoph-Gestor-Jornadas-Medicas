@@ -4,7 +4,7 @@ export class ServiceError extends Error {
         this.name = 'ServiceError';
         this.statusCode = statusCode;
     }
-    }
+}
 
 export class NotFoundError extends Error {
     constructor(message) {
@@ -46,6 +46,23 @@ export function handleServiceError(error, reply) {
             success: false,
             message: 'El servicio externo no está disponible',
             error: 'SERVICE_UNAVAILABLE'
+        });
+    }
+
+    if (error.name === 'CastError') {
+        return reply.status(400).send({
+            success: false,
+            message: `Identificador inválido: ${error.value}`,
+            error: 'INVALID_ID'
+        });
+    }
+
+    if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(e => e.message).join(', ');
+        return reply.status(400).send({
+            success: false,
+            message: messages,
+            error: 'VALIDATION_ERROR'
         });
     }
 
