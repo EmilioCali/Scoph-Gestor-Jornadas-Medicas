@@ -3,6 +3,7 @@ import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute from "./ProtectedRoute";
+import MovimientosPage from "../../features/inventory/pages/MovimientosPage";
 
 // Páginas de autenticación
 import LoginPage from "../../features/auth/pages/LoginPage";
@@ -58,6 +59,7 @@ export default function AppRouter() {
               path="inventario/central"
               element={<InventarioCentralPage />}
             />
+            <Route path="inventario/movimientos" element={<MovimientosPage />} />
             <Route path="reportes" element={<ReportesPage />} />
           </Route>
         </Route>
