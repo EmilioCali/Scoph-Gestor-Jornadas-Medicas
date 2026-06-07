@@ -7,7 +7,11 @@ import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import workdayRoutes from './workdays/workday.routes.js';
+import { globalErrorHandler } from './utils/errorHandler.js';
 
+const fastify = Fastify({ logger: true });
+
+await fastify.register(globalErrorHandler); // ← registra el handler global
 
 const app = Fastify({
     ajv: {
