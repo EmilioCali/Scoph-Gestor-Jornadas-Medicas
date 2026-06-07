@@ -1,72 +1,97 @@
-import { getInventarioCentral, getInventarioJornada } from './inventory.controller.js';
+import { getInventarioCentral, addMedicineToInventory, getInventarioJornada } from './inventory.controller.js';
+import { authenticate } from '../middlewares/authenticate.js';
 
-const lotSchema = {
-    type: 'object',
-    properties: {
-        batch: { type: 'string', example: 'LOTE-001' },
-        expirationDate: { type: 'string', format: 'date-time' },
-        stock: { type: 'number', example: 100 }
-    }
-};
+const inventoryRoutes = async (fastify) => {
 
-const inventorySchema = {
-    type: 'object',
-    additionalProperties: true,
-    properties: {
-        _id: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
-        medicineId: { type: 'object', additionalProperties: true },
-        lots: { type: 'array', items: lotSchema },
-        totalStock: { type: 'number', example: 100 },
-        minimumStock: { type: 'number', example: 10 },
-        updatedAt: { type: 'string', format: 'date-time' }
-    }
-};
-
-const badRequestErrorSchema = {
-    type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Error al consultar inventario central' },
-        error: { type: 'string', example: 'Cast to ObjectId failed for value' }
-    }
-};
-
-const rateLimitErrorSchema = {
-    type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: {
-            type: 'string',
-            example: 'Demasiadas peticiones desde esta IP, por favor intente nuevamenente despues de 60 segundos'
-        },
-        error: { type: 'string', example: 'RATE_LIMIT_EXCEEDED' },
-        retryAfter: { type: 'string', example: '1 minute' }
-    }
-};
-
-const inventoryRoutes = async (fastify) =>{
     fastify.get(
         '/inventario-central',
         {
             schema: {
                 tags: ['Inventario'],
-                summary: 'Consultar inventario central',
-                description: 'Retorna el stock central agrupado por medicamento y lotes.',
+                summary: 'Obtener inventario central',
+                description: 'Retorna todos los medicamentos en inventario central con sus lotes, stock total y stock mínimo.',
                 response: {
                     200: {
                         type: 'object',
                         properties: {
-                            success: { type: 'boolean', example: true },
-                            message: { type: 'string', example: 'Inventario central' },
-                            data: { type: 'array', items: inventorySchema }
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            data: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        _id: { type: 'string' },
+                                        medicineId: { type: 'string' },
+                                        name: { type: 'string' },
+                                        compound: { type: 'string' },
+                                        category: { type: 'string' },
+                                        unitOfMeasure: { type: 'string' },
+                                        totalStock: { type: 'number' },
+                                        minimumStock: { type: 'number' },
+                                        lots: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    batch: { type: 'string' },
+                                                    expirationDate: { type: 'string', format: 'date-time' },
+                                                    stock: { type: 'number' }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    },
-                    400: badRequestErrorSchema,
-                    429: rateLimitErrorSchema
+                    }
                 }
             }
         },
         getInventarioCentral
+    );
+
+    fastify.post(
+        '/inventario-central',
+        {
+            preHandler: [authenticate],
+            schema: {
+                tags: ['Inventario'],
+                summary: 'Agregar medicamento al inventario central',
+                description: 'Crea el registro de inventario para un medicamento. Si initialStock > 0 genera un movimiento de entrada tipo DONACION.',
+                security: [{ bearerAuth: [] }],
+                body: {
+                    type: 'object',
+                    required: ['medicineId', 'minimumStock'],
+                    properties: {
+                        medicineId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
+                        minimumStock: { type: 'number', minimum: 0, example: 10 },
+                        batch: { type: 'string', example: 'LOTE-001' },
+                        expirationDate: { type: 'string', format: 'date', example: '2027-12-31' },
+                        initialStock: { type: 'number', minimum: 0, default: 0, example: 50 }
+                    }
+                },
+                response: {
+                    201: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            data: { type: 'object', additionalProperties: true }
+                        }
+                    },
+                    409: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            error: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        },
+        addMedicineToInventory
     );
 
     fastify.get(
@@ -74,37 +99,26 @@ const inventoryRoutes = async (fastify) =>{
         {
             schema: {
                 tags: ['Inventario'],
-                summary: 'Consultar inventario de jornada',
-                description: 'Retorna el inventario asignado a una jornada especifica.',
+                summary: 'Obtener inventario de jornada',
                 params: {
                     type: 'object',
                     required: ['jornadaId'],
-                    properties: {
-                        jornadaId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' }
-                    }
+                    properties: { jornadaId: { type: 'string' } }
                 },
                 response: {
                     200: {
                         type: 'object',
                         properties: {
-                            success: { type: 'boolean', example: true },
-                            message: { type: 'string', example: 'Inventario de jornada' },
-                            data: { type: 'array', items: inventorySchema }
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            data: { type: 'array', items: { type: 'object', additionalProperties: true } }
                         }
-                    },
-                    400: {
-                        ...badRequestErrorSchema,
-                        properties: {
-                            ...badRequestErrorSchema.properties,
-                            message: { type: 'string', example: 'Error al consultar inventario de jornada' }
-                        }
-                    },
-                    429: rateLimitErrorSchema
+                    }
                 }
             }
         },
         getInventarioJornada
     );
-}
+};
 
 export default inventoryRoutes;
