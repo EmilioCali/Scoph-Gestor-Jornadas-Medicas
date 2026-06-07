@@ -16,6 +16,7 @@ import {
   ChevronDownIcon,
   ClipboardDocumentListIcon,
   ArchiveBoxIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 
 const navItems = [
@@ -39,6 +40,11 @@ const inventarioItems = [
     to: "/inventario/central",
     label: "Inventario Central",
     icon: ArchiveBoxIcon,
+  },
+  {
+    to: "/inventario/movimientos",
+    label: "Movimientos",
+    icon: ArrowsRightLeftIcon,
   },
 ];
 
