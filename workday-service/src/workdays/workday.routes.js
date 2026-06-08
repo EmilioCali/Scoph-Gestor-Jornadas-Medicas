@@ -1,4 +1,11 @@
-import { createWorkday, getWorkdays, getWorkdayById } from './workday.controller.js';
+import {
+    createWorkday,
+    getWorkdays,
+    getWorkdayById,
+    updateWorkday,
+    updateWorkdayStatus,
+    deleteWorkday
+} from './workday.controller.js';
 import { authenticate } from '../middlewares/authenticate.js';
 
 const locationSchema = {
@@ -15,198 +22,167 @@ const managerSchema = {
     type: 'object',
     required: ['name'],
     properties: {
-        name: { type: 'string', example: 'Dr. Juan Perez' }
+        userId: { type: 'string', example: 'usr_001' },
+        name:   { type: 'string', example: 'Dr. Juan Perez' }
     }
 };
 
 const workdayInputSchema = {
     type: 'object',
-    required: [
-        'name',
-        'startDate',
-        'endDate',
-        'location',
-        'estimatedPatients',
-        'estimatedMedicines'
-    ],
+    required: ['name', 'startDate', 'endDate', 'location', 'estimatedPatients', 'estimatedMedicines'],
     properties: {
-        name: { type: 'string', maxLength: 100, example: 'Jornada Medica Zona 1' },
-        description: { type: 'string', maxLength: 500, example: 'Atencion medica general y entrega de medicamentos.' },
-        startDate: { type: 'string', format: 'date-time', example: '2026-06-01T08:00:00.000Z' },
-        endDate: { type: 'string', format: 'date-time', example: '2026-06-01T16:00:00.000Z' },
-        location: locationSchema,
-        manager: managerSchema,
-        estimatedPatients: { type: 'number', minimum: 0, example: 150 },
-        estimatedMedicines: { type: 'number', minimum: 0, example: 500 },
-        status: {
-            type: 'string',
-            enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'],
-            default: 'PLANNED',
-            example: 'PLANNED'
-        }
+        name:               { type: 'string', maxLength: 100 },
+        description:        { type: 'string', maxLength: 500 },
+        startDate:          { type: 'string', format: 'date-time' },
+        endDate:            { type: 'string', format: 'date-time' },
+        location:           locationSchema,
+        manager:            managerSchema,
+        estimatedPatients:  { type: 'number', minimum: 0 },
+        estimatedMedicines: { type: 'number', minimum: 0 },
+        status:             { type: 'string', enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'], default: 'PLANNED' }
+    }
+};
+
+const workdayUpdateSchema = {
+    type: 'object',
+    properties: {
+        name:               { type: 'string', maxLength: 100 },
+        description:        { type: 'string', maxLength: 500 },
+        startDate:          { type: 'string', format: 'date-time' },
+        endDate:            { type: 'string', format: 'date-time' },
+        location:           locationSchema,
+        manager:            managerSchema,
+        estimatedPatients:  { type: 'number', minimum: 0 },
+        estimatedMedicines: { type: 'number', minimum: 0 },
+        status:             { type: 'string', enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] }
     }
 };
 
 const workdayResponseSchema = {
     type: 'object',
     properties: {
-        _id: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
-        ...workdayInputSchema.properties,
+        _id:                { type: 'string' },
+        name:               { type: 'string' },
+        description:        { type: 'string' },
+        startDate:          { type: 'string', format: 'date-time' },
+        endDate:            { type: 'string', format: 'date-time' },
+        location:           locationSchema,
         manager: {
             type: 'object',
             properties: {
-                userId: { type: 'string', example: 'usr_123456789abc' },
-                name: { type: 'string', example: 'Dr. Juan Perez' }
+                userId: { type: 'string' },
+                name:   { type: 'string' }
             }
         },
-        createdAt: { type: 'string', format: 'date-time' },
-        updatedAt: { type: 'string', format: 'date-time' }
+        estimatedPatients:  { type: 'number' },
+        estimatedMedicines: { type: 'number' },
+        status:             { type: 'string' },
+        createdAt:          { type: 'string', format: 'date-time' },
+        updatedAt:          { type: 'string', format: 'date-time' }
     }
 };
 
-const validationErrorSchema = {
+const errorSchema = (msg) => ({
     type: 'object',
     properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Error al crear la jornada' },
-        error: { type: 'string', example: 'El nombre de la jornada es requerido' }
+        success: { type: 'boolean' },
+        message: { type: 'string', example: msg },
+        error:   { type: 'string' }
     }
-};
+});
 
-const notFoundErrorSchema = {
+const idParam = {
     type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Jornada no encontrada' }
-    }
+    required: ['id'],
+    properties: { id: { type: 'string' } }
 };
 
-const serverErrorSchema = {
+const successBody = (dataSchema) => ({
     type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Error al obtener la jornada' },
-        error: { type: 'string', example: 'Cast to ObjectId failed for value' }
-    }
-};
+    properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: dataSchema }
+});
 
-const rateLimitErrorSchema = {
-    type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: {
-            type: 'string',
-            example: 'Demasiadas peticiones desde esta IP, por favor intente nuevamenente despues de 60 segundos'
-        },
-        error: { type: 'string', example: 'RATE_LIMIT_EXCEEDED' },
-        retryAfter: { type: 'string', example: '1 minute' }
-    }
-};
+async function workdayRoutes(fastify) {
 
-const unauthorizedErrorSchema = {
-    type: 'object',
-    properties: {
-        success: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Token invalido o expirado' },
-        error: { type: 'string', example: 'UNAUTHORIZED' }
-    }
-};
+    fastify.post('/workdays', {
+        preHandler: [authenticate],
+        schema: {
+            tags: ['Jornadas'], summary: 'Crear jornada médica',
+            security: [{ bearerAuth: [] }],
+            body: workdayInputSchema,
+            response: {
+                201: successBody(workdayResponseSchema),
+                400: errorSchema('Error al crear la jornada'),
+                401: errorSchema('Token inválido o expirado')
+            }
+        }
+    }, createWorkday);
 
-async function workdayRoutes(fastify, options) {
-    fastify.post(
-        '/workdays',
-        {
-            preHandler: [authenticate],
-            schema: {
-                tags: ['Jornadas'],
-                summary: 'Crear jornada medica',
-                description: 'Registra una jornada medica con fechas, ubicacion, responsable y estimaciones operativas. El ID del responsable se toma del token JWT.',
-                security: [{ bearerAuth: [] }],
-                body: workdayInputSchema,
-                response: {
-                    201: {
-                        type: 'object',
-                        properties: {
-                            success: { type: 'boolean', example: true },
-                            message: { type: 'string', example: 'Jornada creada exitosamente' },
-                            data: workdayResponseSchema
-                        }
-                    },
-                    400: validationErrorSchema,
-                    401: unauthorizedErrorSchema,
-                    429: rateLimitErrorSchema
+    fastify.get('/workdays', {
+        schema: {
+            tags: ['Jornadas'], summary: 'Listar jornadas médicas',
+            response: { 200: successBody({ type: 'array', items: workdayResponseSchema }) }
+        }
+    }, getWorkdays);
+
+    fastify.get('/workdays/:id', {
+        schema: {
+            tags: ['Jornadas'], summary: 'Obtener jornada por ID',
+            params: idParam,
+            response: {
+                200: successBody(workdayResponseSchema),
+                404: errorSchema('Jornada no encontrada')
+            }
+        }
+    }, getWorkdayById);
+
+    fastify.put('/workdays/:id', {
+        preHandler: [authenticate],
+        schema: {
+            tags: ['Jornadas'], summary: 'Actualizar jornada',
+            description: 'Actualiza datos. El status se ignora aquí — usar PATCH /workdays/:id/status.',
+            security: [{ bearerAuth: [] }],
+            params: idParam,
+            body: workdayUpdateSchema,
+            response: {
+                200: successBody(workdayResponseSchema),
+                404: errorSchema('Jornada no encontrada')
+            }
+        }
+    }, updateWorkday);
+
+    fastify.patch('/workdays/:id/status', {
+        preHandler: [authenticate],
+        schema: {
+            tags: ['Jornadas'], summary: 'Cambiar estado de jornada',
+            security: [{ bearerAuth: [] }],
+            params: idParam,
+            body: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                    status: { type: 'string', enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] }
                 }
+            },
+            response: {
+                200: successBody(workdayResponseSchema),
+                404: errorSchema('Jornada no encontrada')
             }
-        },
-        createWorkday
-    );
+        }
+    }, updateWorkdayStatus);
 
-    fastify.get(
-        '/workdays',
-        {
-            schema: {
-                tags: ['Jornadas'],
-                summary: 'Listar jornadas medicas',
-                description: 'Retorna todas las jornadas medicas registradas.',
-                response: {
-                    200: {
-                        type: 'object',
-                        properties: {
-                            success: { type: 'boolean', example: true },
-                            data: { type: 'array', items: workdayResponseSchema }
-                        }
-                    },
-                    429: rateLimitErrorSchema,
-                    500: {
-                        ...serverErrorSchema,
-                        properties: {
-                            ...serverErrorSchema.properties,
-                            message: { type: 'string', example: 'Error al obtener las jornadas' }
-                        }
-                    }
-                }
+    fastify.delete('/workdays/:id', {
+        preHandler: [authenticate],
+        schema: {
+            tags: ['Jornadas'], summary: 'Eliminar jornada',
+            security: [{ bearerAuth: [] }],
+            params: idParam,
+            response: {
+                200: successBody(workdayResponseSchema),
+                404: errorSchema('Jornada no encontrada')
             }
-        },
-        getWorkdays
-    );
-
-    fastify.get(
-        '/workdays/:id',
-        {
-            schema: {
-                tags: ['Jornadas'],
-                summary: 'Obtener jornada por ID',
-                description: 'Retorna una jornada medica especifica por su identificador de MongoDB.',
-                params: {
-                    type: 'object',
-                    required: ['id'],
-                    properties: {
-                        id: { type: 'string', example: '664f1a2b3c4d5e6f78909999' }
-                    }
-                },
-                response: {
-                    200: {
-                        type: 'object',
-                        properties: {
-                            success: { type: 'boolean', example: true },
-                            data: workdayResponseSchema
-                        }
-                    },
-                    404: notFoundErrorSchema,
-                    429: rateLimitErrorSchema,
-                    500: {
-                        ...serverErrorSchema,
-                        properties: {
-                            ...serverErrorSchema.properties,
-                            message: { type: 'string', example: 'Error al obtener la jornada' },
-                            error: { type: 'string', example: 'Cast to ObjectId failed for value' }
-                        }
-                    }
-                }
-            }
-        },
-        getWorkdayById
-    );
+        }
+    }, deleteWorkday);
 }
 
 export default workdayRoutes;

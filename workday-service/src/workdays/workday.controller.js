@@ -1,46 +1,40 @@
 import Workday from './workday.model.js';
+import { handleServiceError } from '../utils/errorHandler.js';
+import { successResponse } from '../utils/response.js';
 
 export const createWorkday = async (request, reply) => {
     try {
         const workdayData = {
             ...request.body,
             manager: {
-                ...request.body.manager,
-                userId: request.user.id,
+                userId: request.body.manager?.userId || request.user.id,
                 name: request.body.manager?.name || request.user.username
             }
         };
 
         const workday = await Workday.create(workdayData);
 
-        return reply.status(201).send({
-        success: true,
-        message: 'Jornada creada exitosamente',
-        data: workday,
+        return successResponse(reply, {
+            message: 'Jornada creada exitosamente',
+            data: workday,
+            statusCode: 201
         });
     } catch (error) {
-        return reply.status(400).send({
-        success: false,
-        message: 'Error al crear la jornada',
-        error: error.message,
-        });
+        return handleServiceError(error, reply);
     }
 };
 
 export const getWorkdays = async (request, reply) => {
     try {
-        const workdays = await Workday.find();
+        const workdays = await Workday.find().sort({ startDate: -1 });
 
-        return reply.status(200).send({
-        success: true,
-        data: workdays,
+        return successResponse(reply, {
+            message: 'Jornadas obtenidas exitosamente',
+            data: workdays,
+            statusCode: 200
         });
     } catch (error) {
-        return reply.status(500).send({
-        success: false,
-        message: 'Error al obtener las jornadas',
-        error: error.message,
-        });
+        return handleServiceError(error, reply);
     }
 };
 
@@ -52,18 +46,100 @@ export const getWorkdayById = async (request, reply) => {
             return reply.status(404).send({
                 success: false,
                 message: 'Jornada no encontrada',
+                error: 'NOT_FOUND'
             });
         }
 
-        return reply.status(200).send({
-            success: true,
+        return successResponse(reply, {
+            message: 'Jornada obtenida exitosamente',
             data: workday,
+            statusCode: 200
         });
     } catch (error) {
-        return reply.status(500).send({
-            success: false,
-            message: 'Error al obtener la jornada',
-            error: error.message,
+        return handleServiceError(error, reply);
+    }
+};
+
+export const updateWorkday = async (request, reply) => {
+    try {
+        // status tiene su propio endpoint — se ignora aquí
+        const { status, manager, ...rest } = request.body;
+
+        // Dot notation para no pisar manager.userId
+        const updateFields = { ...rest };
+        if (manager?.name)   updateFields['manager.name']   = manager.name;
+        if (manager?.userId) updateFields['manager.userId'] = manager.userId;
+
+        const workday = await Workday.findByIdAndUpdate(
+            request.params.id,
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (!workday) {
+            return reply.status(404).send({
+                success: false,
+                message: 'Jornada no encontrada',
+                error: 'NOT_FOUND'
+            });
+        }
+
+        return successResponse(reply, {
+            message: 'Jornada actualizada exitosamente',
+            data: workday,
+            statusCode: 200
         });
+    } catch (error) {
+        return handleServiceError(error, reply);
+    }
+};
+
+export const updateWorkdayStatus = async (request, reply) => {
+    try {
+        const { status } = request.body;
+
+        const workday = await Workday.findByIdAndUpdate(
+            request.params.id,
+            { $set: { status } },
+            { new: true }
+        );
+
+        if (!workday) {
+            return reply.status(404).send({
+                success: false,
+                message: 'Jornada no encontrada',
+                error: 'NOT_FOUND'
+            });
+        }
+
+        return successResponse(reply, {
+            message: `Estado de jornada actualizado a ${status}`,
+            data: workday,
+            statusCode: 200
+        });
+    } catch (error) {
+        return handleServiceError(error, reply);
+    }
+};
+
+export const deleteWorkday = async (request, reply) => {
+    try {
+        const workday = await Workday.findByIdAndDelete(request.params.id);
+
+        if (!workday) {
+            return reply.status(404).send({
+                success: false,
+                message: 'Jornada no encontrada',
+                error: 'NOT_FOUND'
+            });
+        }
+
+        return successResponse(reply, {
+            message: 'Jornada eliminada exitosamente',
+            data: workday,
+            statusCode: 200
+        });
+    } catch (error) {
+        return handleServiceError(error, reply);
     }
 };
