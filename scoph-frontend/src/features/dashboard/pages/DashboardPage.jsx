@@ -20,17 +20,9 @@ import StatCard from "../../../shared/components/ui/StatCard";
 import Badge from "../../../shared/components/ui/Badge";
 import PageHeader from "../../../shared/components/ui/PageHeader";
 import Table from "../../../shared/components/ui/Table";
-//import { useAuth } from "../../auth/store/AuthContext";
+import Button from "../../../shared/components/ui/Button";
+import { useDashboardData } from "../hooks/useDashboardData";
 import { useAuthStore } from "../../auth/store/authStore.js";
-
-// Datos mock - se reemplazarán por llamadas axios al ReportesService
-// Endpoint: GET /api/v1/reportes/dashboard
-import {
-  mockDashboardMetrics,
-  mockMovementsChart,
-  mockExpirationAlerts,
-  mockRecentWorkdays,
-} from "../../../shared/utils/mockData";
 
 // Badge según estado de la jornadas
 function getStatusBadge(status) {
@@ -85,44 +77,111 @@ const workdayColumns = [
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const {
+    metrics,
+    movementsChart,
+    stockAlerts,
+    expirationAlerts,
+    recentWorkdays,
+    workdayStats,
+    updatedAt,
+    loading,
+    error,
+    refetch,
+  } = useDashboardData();
+
+  const fechaActualizacion = updatedAt
+    ? new Date(updatedAt).toLocaleString("es-GT")
+    : "-";
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
         subtitle="Resumen general del sistema de jornadas médicas"
       />
-      <h1 className="text-2xl font-bold">{user?.rol}</h1>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{user?.rol || "Administrador"}</h1>
+          <p className="text-sm text-gray-500">Última actualización: {fechaActualizacion}</p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={refetch}
+          loading={loading}
+        >
+          Actualizar datos
+        </Button>
+      </div>
+
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <p className="font-semibold">Error cargando datos del dashboard</p>
+          <p>{error}</p>
+        </div>
+      ) : null}
 
       {/*   Tarjetas de métricas  */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Medicamentos"
-          value={mockDashboardMetrics.totalMedicines}
+          value={metrics.totalMedicamentos}
           subtitle="En inventario central"
           icon={ArchiveBoxIcon}
           variant="primary"
         />
         <StatCard
           title="Jornadas Activas"
-          value={mockDashboardMetrics.activeWorkdays}
+          value={metrics.jornadasActivas}
           subtitle="En curso actualmente"
           icon={MapPinIcon}
           variant="success"
         />
         <StatCard
-          title="Alertas Vencimiento"
-          value={mockDashboardMetrics.expirationAlerts}
-          subtitle="Próximos 60 días"
+          title="Alertas Stock"
+          value={metrics.stockBajo}
+          subtitle="Medicamentos con stock bajo"
           icon={BellAlertIcon}
           variant="warning"
         />
         <StatCard
-          title="Movimientos del Mes"
-          value={mockDashboardMetrics.monthlyMovements}
-          subtitle="Entradas y salidas"
+          title="Alertas Vencimiento"
+          value={metrics.alertasVencimiento}
+          subtitle="Próximos 60 días"
           icon={ArrowTrendingUpIcon}
           variant="danger"
         />
+      </div>
+
+      {/* Estadísticas de jornadas */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-gray-800">Estadísticas de Jornadas</h2>
+            <p className="text-gray-400 text-xs">Resumen de estado de las jornadas médicas</p>
+          </div>
+          <p className="text-sm text-gray-500">Total jornadas: {workdayStats.total}</p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wider text-gray-500">Activas</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{workdayStats.activas}</p>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wider text-gray-500">Planificadas</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{workdayStats.planificadas}</p>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wider text-gray-500">Finalizadas</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{workdayStats.finalizadas}</p>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wider text-gray-500">Movimientos este mes</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{metrics.movimientosMes}</p>
+          </div>
+        </div>
       </div>
 
       {/*  Gráfica de movimientos  */}
@@ -134,7 +193,7 @@ export default function DashboardPage() {
           Entradas y salidas de medicamentos durante el año
         </p>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={mockMovementsChart} barSize={18} barGap={6}>
+          <BarChart data={movementsChart} barSize={18} barGap={6}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="month"
@@ -173,7 +232,27 @@ export default function DashboardPage() {
       </div>
 
       {/*   Tablas inferiores  */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Alertas de stock bajo */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-base font-extrabold text-gray-800 mb-1">
+            Alertas de Stock Bajo
+          </h2>
+          <p className="text-gray-400 text-xs mb-4">
+            Medicamentos con stock igual o menor al mínimo
+          </p>
+          <Table
+            columns={[
+              { key: "name", label: "Medicamento" },
+              { key: "currentStock", label: "Stock" },
+              { key: "minimumStock", label: "Mínimo" },
+            ]}
+            data={stockAlerts}
+            loading={loading}
+            emptyMessage="No hay alertas de stock bajo"
+          />
+        </div>
+
         {/* Alertas de vencimiento */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-base font-extrabold text-gray-800 mb-1">
@@ -184,7 +263,8 @@ export default function DashboardPage() {
           </p>
           <Table
             columns={expirationColumns}
-            data={mockExpirationAlerts}
+            data={expirationAlerts}
+            loading={loading}
             emptyMessage="No hay alertas de vencimiento"
           />
         </div>
@@ -199,7 +279,8 @@ export default function DashboardPage() {
           </p>
           <Table
             columns={workdayColumns}
-            data={mockRecentWorkdays}
+            data={recentWorkdays}
+            loading={loading}
             emptyMessage="No hay jornadas registradas"
           />
         </div>

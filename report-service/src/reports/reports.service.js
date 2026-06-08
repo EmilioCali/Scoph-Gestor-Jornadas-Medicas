@@ -2,6 +2,83 @@ import { SERVICES } from '../config/services.js';
 import * as XLSX from 'xlsx';
 import PDFDocument from 'pdfkit';
 
+const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function getMedicineValue(inv, key, fallback = '') {
+    if (inv.medicineId && typeof inv.medicineId === 'object') {
+        return inv.medicineId[key] ?? fallback;
+    }
+    return inv[key] ?? fallback;
+}
+
+function getMedicineId(inv) {
+    if (inv.medicineId && typeof inv.medicineId === 'object') {
+        return inv.medicineId._id;
+    }
+    return inv.medicineId;
+}
+
+function getWorkdayLocation(workday) {
+    const municipality = workday.location?.municipality;
+    const department = workday.location?.department;
+    return [municipality, department].filter(Boolean).join(', ');
+}
+
+function getMonthlyMovements(movements = []) {
+    const currentYear = new Date().getFullYear();
+    const months = MONTH_LABELS.map((month) => ({ month, entries: 0, exits: 0 }));
+
+    movements.forEach((movement) => {
+        const date = new Date(movement.createdAt || movement.appliedAt);
+        if (Number.isNaN(date.getTime()) || date.getFullYear() !== currentYear) return;
+
+        const bucket = months[date.getMonth()];
+        if (movement.type === 'ENTRADA') bucket.entries += 1;
+        if (movement.type === 'SALIDA') bucket.exits += 1;
+        if (movement.type === 'TRANSFERENCIA') bucket.exits += 1;
+    });
+
+    return months;
+}
+
+function getLowStockAlerts(inventory = []) {
+    return inventory
+        .filter(inv => inv.totalStock <= inv.minimumStock)
+        .map(inv => ({
+            medicineId: getMedicineId(inv),
+            nombre: getMedicineValue(inv, 'name'),
+            concentracion: getMedicineValue(inv, 'concentration'),
+            stockTotal: inv.totalStock,
+            stockMinimo: inv.minimumStock
+        }));
+}
+
+function getExpirationAlerts(inventory = [], dias = 60) {
+    const hoy = new Date();
+    const limite = new Date();
+    limite.setDate(hoy.getDate() + dias);
+
+    const alertas = [];
+    inventory.forEach(inv => {
+        inv.lots.forEach(lote => {
+            const exp = new Date(lote.expirationDate);
+            if (exp <= limite && lote.stock > 0) {
+                alertas.push({
+                    medicineId: getMedicineId(inv),
+                    nombre: getMedicineValue(inv, 'name'),
+                    concentracion: getMedicineValue(inv, 'concentration'),
+                    batch: lote.batch,
+                    stock: lote.stock,
+                    expirationDate: lote.expirationDate,
+                    diasRestantes: Math.ceil((exp - hoy) / (1000 * 60 * 60 * 24))
+                });
+            }
+        });
+    });
+
+    return alertas.sort((a, b) => a.diasRestantes - b.diasRestantes);
+}
+
 export async function obtenerConsumoJornada(jornadaId) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
@@ -50,9 +127,9 @@ export async function obtenerStockActual() {
     const data = await response.json();
 
     return data.data.map(inv => ({
-        medicineId: inv.medicineId._id, //devuleve solo el id del mediaento y no el objeto completo
-        nombre: inv.medicineId?.name,
-        concentracion: inv.medicineId?.concentration,
+        medicineId: getMedicineId(inv),
+        nombre: getMedicineValue(inv, 'name'),
+        concentracion: getMedicineValue(inv, 'concentration'),
         stockTotal: inv.totalStock,
         lotes: inv.lots.map(l => ({
             batch: l.batch,
@@ -79,9 +156,9 @@ export async function obtenerProximosAVencer(dias = 30) {
             const exp = new Date(lote.expirationDate);
             if (exp <= limite){
                 proximosAVencer.push({
-                    medicineId: inv.medicineId._id,
-                    nombre: inv.medicineId?.name,
-                    concentracion: inv.medicineId?.concentration,
+                    medicineId: getMedicineId(inv),
+                    nombre: getMedicineValue(inv, 'name'),
+                    concentracion: getMedicineValue(inv, 'concentration'),
                     batch: lote.batch,
                     stock: lote.stock,
                     expirationDate: lote.expirationDate
@@ -112,7 +189,7 @@ export async function obtenerMetricasGenerales() {
     const [medicamentos, jornadas, movimientos, inventario] = await Promise.all([
         fetch(`${SERVICES.core.baseUrl}/api/v1/medicines`),
         fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`),
-        fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos`),
+        fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?limit=1000`),
         fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`)
     ]);
 
@@ -128,27 +205,54 @@ export async function obtenerMetricasGenerales() {
         inventario.json()
     ]);
 
-    const hoy = new Date();
+    const workdays = dataJor.data || [];
+    const movements = dataMov.data || [];
+    const inventory = dataInv.data || [];
+    const stockAlerts = getLowStockAlerts(inventory);
+    const expirationAlerts = getExpirationAlerts(inventory, 60);
+    const activeWorkdays = workdays.filter(jornada => jornada.status === 'IN_PROGRESS').length;
+    const plannedWorkdays = workdays.filter(jornada => jornada.status === 'PLANNED').length;
+    const finishedWorkdays = workdays.filter(jornada => ['FINISHED', 'COMPLETED'].includes(jornada.status)).length;
+    const recentWorkdays = [...workdays]
+        .sort((a, b) => new Date(b.createdAt || b.startDate) - new Date(a.createdAt || a.startDate))
+        .slice(0, 5)
+        .map(jornada => ({
+            _id: jornada._id,
+            name: jornada.name,
+            startDate: jornada.startDate,
+            location: getWorkdayLocation(jornada),
+            manager: jornada.manager?.name || 'Sin responsable',
+            status: jornada.status
+        }));
 
-    // Stock bajo — stockTotal <= stockMinimo
-    const stockBajo = dataInv.data.filter(inv => inv.totalStock <= inv.minimumStock).length;
-
-    // Medicamentos vencidos — lotes con expirationDate menor a hoy
-    let medicamentosVencidos = 0;
-    dataInv.data.forEach(inv => {
-        inv.lots.forEach(lote => {
-        if (new Date(lote.expirationDate) < hoy && lote.stock > 0) {
-            medicamentosVencidos++;
-        }
-        });
-    });
+    const currentMonth = new Date().getMonth();
+    const monthlyMovements = movements.filter((movement) => {
+        const date = new Date(movement.createdAt || movement.appliedAt);
+        return !Number.isNaN(date.getTime()) && date.getMonth() === currentMonth;
+    }).length;
 
     return {
         totalMedicamentos: dataMed.data?.length || 0,
-        totalJornadas: dataJor.data?.length || 0,
-        totalMovimientos: dataMov.total || dataMov.data?.length || 0,
-        stockBajo,
-        medicamentosVencidos
+        totalJornadas: workdays.length,
+        jornadasActivas: activeWorkdays,
+        jornadasPlanificadas: plannedWorkdays,
+        jornadasFinalizadas: finishedWorkdays,
+        totalMovimientos: dataMov.total || movements.length,
+        movimientosMes: monthlyMovements,
+        stockBajo: stockAlerts.length,
+        alertasVencimiento: expirationAlerts.length,
+        medicamentosVencidos: expirationAlerts.filter(alerta => alerta.diasRestantes < 0).length,
+        movimientosPorMes: getMonthlyMovements(movements),
+        alertasStock: stockAlerts,
+        vencimientosProximos: expirationAlerts,
+        jornadasRecientes: recentWorkdays,
+        estadisticasJornadas: {
+            total: workdays.length,
+            activas: activeWorkdays,
+            planificadas: plannedWorkdays,
+            finalizadas: finishedWorkdays
+        },
+        actualizadoEn: new Date().toISOString()
     };
 }
 
@@ -207,18 +311,7 @@ export async function obtenerAlertasStockBajo() {
     if (!response.ok) throw new Error('Error al consultar inventario central');
 
     const data = await response.json();
-
-    const alertas = data.data
-        .filter(inv => inv.totalStock <= inv.minimumStock)
-        .map(inv => ({
-        medicineId: inv.medicineId._id,
-        nombre: inv.medicineId?.name,
-        concentracion: inv.medicineId?.concentration,
-        stockTotal: inv.totalStock,
-        stockMinimo: inv.minimumStock
-        }));
-
-    return alertas;
+    return getLowStockAlerts(data.data || []);
 }
 
 export async function obtenerAlertasVencimiento(dias = 30) {
@@ -226,29 +319,7 @@ export async function obtenerAlertasVencimiento(dias = 30) {
     if (!response.ok) throw new Error('Error al consultar inventario central');
 
     const data = await response.json();
-    const hoy = new Date();
-    const limite = new Date();
-    limite.setDate(hoy.getDate() + dias);
-
-    const alertas = [];
-    data.data.forEach(inv => {
-        inv.lots.forEach(lote => {
-        const exp = new Date(lote.expirationDate);
-        if (exp <= limite && lote.stock > 0) {
-            alertas.push({
-            medicineId: inv.medicineId._id,
-            nombre: inv.medicineId?.name,
-            concentracion: inv.medicineId?.concentration,
-            batch: lote.batch,
-            stock: lote.stock,
-            expirationDate: lote.expirationDate,
-            diasRestantes: Math.ceil((exp - hoy) / (1000 * 60 * 60 * 24))
-            });
-        }
-        });
-    });
-
-    return alertas.sort((a, b) => a.diasRestantes - b.diasRestantes);
+    return getExpirationAlerts(data.data || [], dias);
 }
 
 export async function exportarMovimientosExcel() {
