@@ -7,14 +7,17 @@ import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
-import { mockWorkdays, mockCentralInventory, mockWorkdayInventory, mockDepartamentos, mockUsers } from "../../../shared/utils/mockData";
+import { mockDepartamentos, mockUsers } from "../../../shared/utils/mockData";
+import { useWorkdayInventory } from "../hooks/useWorkdayInventory";
 
 // Badge según estado de la jornada - valores reales del backend
 function getStatusBadge(status) {
     const map = {
         IN_PROGRESS: <Badge variant="success">En Curso</Badge>,
         PLANNED: <Badge variant="info">Planificada</Badge>,
+        FINISHED: <Badge variant="gray">Finalizada</Badge>,
         COMPLETED: <Badge variant="gray">Finalizada</Badge>,
+        CANCELLED: <Badge variant="danger">Cancelada</Badge>,
     };
     return map[status] || <Badge>{status}</Badge>;
 }
@@ -82,7 +85,7 @@ function WorkdayForm({ form, onChange, onSubmit, onClose, departamentos, users }
 }
 
 // Vista detalle de la jornada con su inventario asignado
-function WorkdayDetail({ workday, workdayInventory, onAssign, onConsumption, onReturn }) {
+function WorkdayDetail({ workday, workdayInventory, loading, onAssign, onConsumption, onReturn }) {
     return (
         <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
@@ -128,33 +131,54 @@ function WorkdayDetail({ workday, workdayInventory, onAssign, onConsumption, onR
                         Inventario de la Jornada
                         <span className="ml-2 text-xs font-normal text-gray-400">({workdayInventory.length} medicamentos)</span>
                     </h3>
-                    {workday.status !== "COMPLETED" && (
+                    {workday.status !== "FINISHED" && workday.status !== "COMPLETED" && (
                         <Button variant="primary" size="sm" onClick={onAssign}>
                             <PlusIcon className="w-4 h-4" />Asignar medicamento
                         </Button>
                     )}
                 </div>
 
-                {workdayInventory.length === 0 ? (
+                {loading ? (
+                    <p className="text-center text-gray-400 text-sm py-6 bg-gray-50 rounded-xl border border-gray-100">
+                        Cargando inventario asignado...
+                    </p>
+                ) : workdayInventory.length === 0 ? (
                     <p className="text-center text-gray-400 text-sm py-6 bg-gray-50 rounded-xl border border-gray-100">
                         No hay medicamentos asignados a esta jornada
                     </p>
                 ) : (
                     <div className="space-y-2">
                         {workdayInventory.map((item) => (
-                            <div key={`${item._id}-${item.batch}`} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-700">{item.name}</p>
-                                    <p className="text-xs text-gray-400">
-                                        Lote: {item.batch} · Asignado: {item.assignedQuantity} · Usado: {item.usedQuantity} · Restante: {item.assignedQuantity - item.usedQuantity}
-                                    </p>
-                                </div>
-                                {workday.status === "IN_PROGRESS" && (
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="sm" onClick={() => onConsumption(item)}>Consumo</Button>
-                                        <Button variant="outline" size="sm" onClick={() => onReturn(item)}>Retorno</Button>
+                            <div key={item.inventoryId} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700">{item.name}</p>
+                                        <p className="text-xs text-gray-400">
+                                            {item.compound || item.category || "Medicamento asignado"} · Stock disponible:{" "}
+                                            <span className="font-semibold text-gray-600">{item.totalStock} {item.unitOfMeasure}</span>
+                                        </p>
                                     </div>
-                                )}
+                                    {workday.status === "IN_PROGRESS" && (
+                                        <div className="flex gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => onConsumption(item)}>Consumo</Button>
+                                            <Button variant="outline" size="sm" onClick={() => onReturn(item)}>Retorno</Button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-3 grid gap-2">
+                                    {item.lots.map((lot) => (
+                                        <div key={lot.batch} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 border border-gray-100">
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-600">Lote {lot.batch}</p>
+                                                <p className="text-xs text-gray-400">Vence: {new Date(lot.expirationDate).toLocaleDateString("es-GT")}</p>
+                                            </div>
+                                            <p className="text-sm font-extrabold text-gray-700">{lot.stock} {item.unitOfMeasure}</p>
+                                        </div>
+                                    ))}
+                                    {item.lots.length === 0 && (
+                                        <p className="text-xs text-gray-400">Sin lotes asignados</p>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -166,16 +190,19 @@ function WorkdayDetail({ workday, workdayInventory, onAssign, onConsumption, onR
 
 // Formulario para asignar medicamentos a la jornada
 // Body alineado con backend: jornadaId, jornadaNombre, detalle[{medicineId, batch, quantity, expirationDate}]
-function AssignMedicineForm({ form, onChange, onSubmit, onClose, centralInventory }) {
+function AssignMedicineForm({ form, onChange, onSubmit, onClose, centralInventory, submitting, formError }) {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
+            {formError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
+            )}
             <div className="flex flex-col gap-1">
                 <label className="text-sm font-semibold text-gray-600">Medicamento</label>
                 <select name="medicineId" value={form.medicineId} onChange={onChange}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition" required>
                     <option value="">Seleccionar medicamento</option>
                     {centralInventory.map((med) => (
-                        <option key={med._id} value={med._id}>{med.name} (Stock: {med.totalStock} {med.unitOfMeasure})</option>
+                        <option key={med._id} value={med.medicineId}>{med.name} (Stock: {med.totalStock} {med.unitOfMeasure})</option>
                     ))}
                 </select>
             </div>
@@ -185,7 +212,7 @@ function AssignMedicineForm({ form, onChange, onSubmit, onClose, centralInventor
                     <select name="batch" value={form.batch} onChange={onChange}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition" required>
                         <option value="">Seleccionar lote</option>
-                        {centralInventory.find((m) => m._id === form.medicineId)?.lots.map((l) => (
+                        {centralInventory.find((m) => String(m.medicineId) === String(form.medicineId))?.lots.filter((l) => l.stock > 0).map((l) => (
                             <option key={l.batch} value={l.batch}>
                                 {l.batch} — Stock: {l.stock} — Vence: {new Date(l.expirationDate).toLocaleDateString("es-GT")}
                             </option>
@@ -195,11 +222,11 @@ function AssignMedicineForm({ form, onChange, onSubmit, onClose, centralInventor
             )}
             <Input label="Cantidad a asignar" name="quantity" type="number" min="1" value={form.quantity} onChange={onChange} placeholder="0" required />
             <p className="text-xs text-gray-400 bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
-                ⚠️ Esta cantidad se descontará del inventario central (ASIGNACION_JORNADA).
+                Esta cantidad se descontara del inventario central (ASIGNACION_JORNADA).
             </p>
             <div className="flex gap-3 justify-end pt-2">
-                <Button variant="ghost" type="button" onClick={onClose}>Cancelar</Button>
-                <Button variant="primary" type="submit">Asignar</Button>
+                <Button variant="ghost" type="button" onClick={onClose} disabled={submitting}>Cancelar</Button>
+                <Button variant="primary" type="submit" disabled={submitting}>{submitting ? "Asignando..." : "Asignar"}</Button>
             </div>
         </form>
     );
@@ -208,28 +235,31 @@ function AssignMedicineForm({ form, onChange, onSubmit, onClose, centralInventor
 // Formulario reutilizable para consumo y retorno
 // Consumo → backend: productoId, cantidad (POST /movimientos/consumo-jornada)
 // Retorno → backend: productoId, cantidad (POST /movimientos/retorno-jornada)
-function WorkdayMovementForm({ form, onChange, onSubmit, onClose, item, tipo }) {
+function WorkdayMovementForm({ form, onChange, onSubmit, onClose, item, tipo, submitting, formError }) {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
+            {formError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
+            )}
             <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                 <p className="text-xs text-gray-400">Medicamento</p>
                 <p className="text-sm font-semibold text-gray-700">{item?.name}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                    Lote: {item?.batch} · Disponible: <span className="font-semibold text-gray-600">{item ? item.assignedQuantity - item.usedQuantity : 0}</span>
+                    Disponible: <span className="font-semibold text-gray-600">{item?.totalStock ?? 0} {item?.unitOfMeasure}</span>
                 </p>
             </div>
             <Input
                 label={tipo === "CONSUMO" ? "Cantidad consumida" : "Cantidad a retornar"}
                 name="quantity" type="number" min="1"
-                max={item ? item.assignedQuantity - item.usedQuantity : 0}
+                max={item?.totalStock ?? 0}
                 value={form.quantity} onChange={onChange} placeholder="0" required
             />
             <Input label="Observación" name="observacion" value={form.observacion} onChange={onChange}
                 placeholder={tipo === "CONSUMO" ? "Ej: Receta paciente" : "Ej: Medicamento no utilizado"} />
             <div className="flex gap-3 justify-end pt-2">
-                <Button variant="ghost" type="button" onClick={onClose}>Cancelar</Button>
-                <Button variant={tipo === "CONSUMO" ? "danger" : "primary"} type="submit">
-                    {tipo === "CONSUMO" ? "Registrar consumo" : "Registrar retorno"}
+                <Button variant="ghost" type="button" onClick={onClose} disabled={submitting}>Cancelar</Button>
+                <Button variant={tipo === "CONSUMO" ? "danger" : "primary"} type="submit" disabled={submitting}>
+                    {submitting ? "Guardando..." : tipo === "CONSUMO" ? "Registrar consumo" : "Registrar retorno"}
                 </Button>
             </div>
         </form>
@@ -241,9 +271,21 @@ const assignInicial = { medicineId: "", batch: "", quantity: "" };
 const movementInicial = { quantity: "", observacion: "" };
 
 export default function JornadasPage() {
-    const [workdays, setWorkdays] = useState(mockWorkdays);
-    const [centralInventory, setCentralInventory] = useState(mockCentralInventory);
-    const [workdayInventories, setWorkdayInventories] = useState(mockWorkdayInventory);
+    const {
+        workdays,
+        centralInventory,
+        workdayInventoryById,
+        loading,
+        inventoryLoading,
+        error,
+        refetch,
+        fetchWorkdayInventory,
+        createNewWorkday,
+        removeWorkday,
+        assignMedicine,
+        registerWorkdayConsumption,
+        registerWorkdayReturn,
+    } = useWorkdayInventory();
 
     const [modalCrear, setModalCrear] = useState(false);
     const [modalDetalle, setModalDetalle] = useState(false);
@@ -257,6 +299,8 @@ export default function JornadasPage() {
     const [formWorkday, setFormWorkday] = useState(workdayInicial);
     const [formAssign, setFormAssign] = useState(assignInicial);
     const [formMovement, setFormMovement] = useState(movementInicial);
+    const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState(null);
 
     const handleChangeWorkday = (e) => {
         const { name, value } = e.target;
@@ -281,114 +325,112 @@ export default function JornadasPage() {
         setFormMovement((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleVerDetalle = (workday) => { setSelectedWorkday(workday); setModalDetalle(true); };
+    const handleVerDetalle = (workday) => {
+        setSelectedWorkday(workday);
+        setModalDetalle(true);
+        fetchWorkdayInventory(workday._id);
+    };
     const handleEliminar = (workday) => { setSelectedWorkday(workday); setConfirmEliminar(true); };
 
     // Crea jornada - cuando se conecte el backend usar createWorkday() de workdayService
     // El body debe ser: { name, description, startDate, endDate, location, manager, estimatedPatients, estimatedMedicines, status }
-    const handleCrearWorkday = (e) => {
+    const handleCrearWorkday = async (e) => {
         e.preventDefault();
         const manager = mockUsers.find((u) => u._id === formWorkday.managerId);
-        const nueva = {
-            _id: `jor_${Date.now()}`,
+        setSubmitting(true);
+        setFormError(null);
+        try {
+            await createNewWorkday({
             name: formWorkday.name,
             description: formWorkday.description,
             startDate: new Date(formWorkday.startDate).toISOString(),
             endDate: new Date(formWorkday.endDate).toISOString(),
             location: { department: formWorkday.department, municipality: formWorkday.municipality, address: formWorkday.address },
-            manager: { userId: formWorkday.managerId, name: manager ? `${manager.nombre} ${manager.apellido}` : "" },
+            manager: { name: manager ? `${manager.nombre} ${manager.apellido}` : "" },
             estimatedPatients: Number(formWorkday.estimatedPatients),
             estimatedMedicines: Number(formWorkday.estimatedMedicines),
             status: formWorkday.status,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        setWorkdays((prev) => [...prev, nueva]);
-        setWorkdayInventories((prev) => ({ ...prev, [nueva._id]: [] }));
-        setFormWorkday(workdayInicial);
-        setModalCrear(false);
+            });
+            setFormWorkday(workdayInicial);
+            setModalCrear(false);
+        } catch (err) {
+            setFormError(err.response?.data?.message ?? "No se pudo crear la jornada");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Asigna medicamentos - cuando se conecte el backend usar registerTransfer() de coreService
     // Body: { jornadaId, jornadaNombre, detalle: [{ medicineId, batch, quantity, expirationDate }] }
-    const handleAsignarMedicamento = (e) => {
+    const handleAsignarMedicamento = async (e) => {
         e.preventDefault();
-        const medicine = centralInventory.find((m) => m._id === formAssign.medicineId);
-        if (!medicine) return;
-        const quantity = Number(formAssign.quantity);
-        const workdayId = selectedWorkday._id;
-        const lotInfo = medicine.lots.find((l) => l.batch === formAssign.batch);
-
-        setCentralInventory((prev) => prev.map((m) => m._id === medicine._id ? {
-            ...m,
-            totalStock: Math.max(0, m.totalStock - quantity),
-            lots: m.lots.map((l) => l.batch === formAssign.batch ? { ...l, stock: Math.max(0, l.stock - quantity) } : l),
-        } : m));
-
-        setWorkdayInventories((prev) => {
-            const current = prev[workdayId] || [];
-            const exists = current.find((i) => i._id === medicine._id && i.batch === formAssign.batch);
-            if (exists) {
-                return { ...prev, [workdayId]: current.map((i) => i._id === medicine._id && i.batch === formAssign.batch ? { ...i, assignedQuantity: i.assignedQuantity + quantity } : i) };
-            }
-            return {
-                ...prev, [workdayId]: [...current, {
-                    _id: medicine._id, name: medicine.name, unitOfMeasure: medicine.unitOfMeasure,
-                    batch: formAssign.batch, expirationDate: lotInfo?.expirationDate || "",
-                    assignedQuantity: quantity, usedQuantity: 0, returnedQuantity: 0,
-                }],
-            };
-        });
-
-        setFormAssign(assignInicial);
-        setModalAsignar(false);
+        setSubmitting(true);
+        setFormError(null);
+        try {
+            await assignMedicine({
+                workday: selectedWorkday,
+                medicineId: formAssign.medicineId,
+                batch: formAssign.batch,
+                quantity: formAssign.quantity,
+            });
+            setFormAssign(assignInicial);
+            setModalAsignar(false);
+        } catch (err) {
+            setFormError(err.response?.data?.message ?? "No se pudo asignar el medicamento");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Registra consumo - cuando se conecte el backend usar registerConsumption() de coreService
     // Body: { productoId, cantidad }
-    const handleRegistrarConsumo = (e) => {
+    const handleRegistrarConsumo = async (e) => {
         e.preventDefault();
-        const quantity = Number(formMovement.quantity);
-        const workdayId = selectedWorkday._id;
-        setWorkdayInventories((prev) => ({
-            ...prev,
-            [workdayId]: prev[workdayId].map((i) =>
-                i._id === selectedInventoryItem._id && i.batch === selectedInventoryItem.batch
-                    ? { ...i, usedQuantity: i.usedQuantity + quantity } : i
-            ),
-        }));
-        setFormMovement(movementInicial);
-        setModalConsumo(false);
+        setSubmitting(true);
+        setFormError(null);
+        try {
+            await registerWorkdayConsumption({
+                item: selectedInventoryItem,
+                quantity: formMovement.quantity,
+            });
+            setFormMovement(movementInicial);
+            setModalConsumo(false);
+        } catch (err) {
+            setFormError(err.response?.data?.message ?? "No se pudo registrar el consumo");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Registra retorno - cuando se conecte el backend usar registerReturn() de coreService
     // Body: { productoId, cantidad }
-    const handleRegistrarRetorno = (e) => {
+    const handleRegistrarRetorno = async (e) => {
         e.preventDefault();
-        const quantity = Number(formMovement.quantity);
-        const workdayId = selectedWorkday._id;
-
-        setCentralInventory((prev) => prev.map((m) => m._id === selectedInventoryItem._id ? {
-            ...m,
-            totalStock: m.totalStock + quantity,
-            lots: m.lots.map((l) => l.batch === selectedInventoryItem.batch ? { ...l, stock: l.stock + quantity } : l),
-        } : m));
-
-        setWorkdayInventories((prev) => ({
-            ...prev,
-            [workdayId]: prev[workdayId].map((i) =>
-                i._id === selectedInventoryItem._id && i.batch === selectedInventoryItem.batch
-                    ? { ...i, returnedQuantity: i.returnedQuantity + quantity, assignedQuantity: Math.max(0, i.assignedQuantity - quantity) } : i
-            ),
-        }));
-        setFormMovement(movementInicial);
-        setModalRetorno(false);
+        setSubmitting(true);
+        setFormError(null);
+        try {
+            await registerWorkdayReturn({
+                item: selectedInventoryItem,
+                quantity: formMovement.quantity,
+            });
+            setFormMovement(movementInicial);
+            setModalRetorno(false);
+        } catch (err) {
+            setFormError(err.response?.data?.message ?? "No se pudo registrar el retorno");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Elimina jornada - cuando se conecte el backend usar deleteWorkday() de workdayService
-    const handleConfirmarEliminar = () => {
-        setWorkdays((prev) => prev.filter((j) => j._id !== selectedWorkday._id));
-        setConfirmEliminar(false);
+    const handleConfirmarEliminar = async () => {
+        setSubmitting(true);
+        try {
+            await removeWorkday(selectedWorkday._id);
+            setConfirmEliminar(false);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const columnas = [
@@ -423,7 +465,7 @@ export default function JornadasPage() {
         { key: "status", label: "Estado", render: (row) => getStatusBadge(row.status) },
         {
             key: "inventario", label: "Inv. Asignado",
-            render: (row) => <Badge variant="gray">{(workdayInventories[row._id] || []).length} items</Badge>,
+            render: (row) => <Badge variant="gray">{(workdayInventoryById[row._id] || []).length} items</Badge>,
         },
         {
             key: "acciones", label: "Acciones",
@@ -444,11 +486,18 @@ export default function JornadasPage() {
                 title="Gestión de Jornadas"
                 subtitle="Administra las jornadas médicas y su inventario asignado"
                 action={
-                    <Button variant="primary" onClick={() => { setFormWorkday(workdayInicial); setModalCrear(true); }}>
+                    <Button variant="primary" onClick={() => { setFormWorkday(workdayInicial); setFormError(null); setModalCrear(true); }}>
                         <PlusIcon className="w-4 h-4" />Nueva Jornada
                     </Button>
                 }
             />
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-3 text-sm flex items-center justify-between">
+                    <span>{error}</span>
+                    <Button variant="ghost" size="sm" onClick={refetch}>Reintentar</Button>
+                </div>
+            )}
 
             {/* Resumen de jornadas */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -467,10 +516,13 @@ export default function JornadasPage() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <Table columns={columnas} data={workdays} emptyMessage="No hay jornadas registradas" />
+                <Table columns={columnas} data={workdays} loading={loading} emptyMessage="No hay jornadas registradas" />
             </div>
 
             <Modal isOpen={modalCrear} onClose={() => setModalCrear(false)} title="Nueva Jornada" size="lg">
+                {formError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{formError}</p>
+                )}
                 <WorkdayForm form={formWorkday} onChange={handleChangeWorkday} onSubmit={handleCrearWorkday} onClose={() => setModalCrear(false)} departamentos={mockDepartamentos} users={mockUsers} />
             </Modal>
 
@@ -478,24 +530,25 @@ export default function JornadasPage() {
                 {selectedWorkday && (
                     <WorkdayDetail
                         workday={selectedWorkday}
-                        workdayInventory={workdayInventories[selectedWorkday._id] || []}
-                        onAssign={() => { setFormAssign(assignInicial); setModalAsignar(true); }}
-                        onConsumption={(item) => { setSelectedInventoryItem(item); setFormMovement(movementInicial); setModalConsumo(true); }}
-                        onReturn={(item) => { setSelectedInventoryItem(item); setFormMovement(movementInicial); setModalRetorno(true); }}
+                        workdayInventory={workdayInventoryById[selectedWorkday._id] || []}
+                        loading={inventoryLoading}
+                        onAssign={() => { setFormAssign(assignInicial); setFormError(null); setModalAsignar(true); }}
+                        onConsumption={(item) => { setSelectedInventoryItem(item); setFormMovement(movementInicial); setFormError(null); setModalConsumo(true); }}
+                        onReturn={(item) => { setSelectedInventoryItem(item); setFormMovement(movementInicial); setFormError(null); setModalRetorno(true); }}
                     />
                 )}
             </Modal>
 
             <Modal isOpen={modalAsignar} onClose={() => setModalAsignar(false)} title="Asignar Medicamento" size="sm">
-                <AssignMedicineForm form={formAssign} onChange={handleChangeAssign} onSubmit={handleAsignarMedicamento} onClose={() => setModalAsignar(false)} centralInventory={centralInventory} />
+                <AssignMedicineForm form={formAssign} onChange={handleChangeAssign} onSubmit={handleAsignarMedicamento} onClose={() => setModalAsignar(false)} centralInventory={centralInventory} submitting={submitting} formError={formError} />
             </Modal>
 
             <Modal isOpen={modalConsumo} onClose={() => setModalConsumo(false)} title="Registrar Consumo" size="sm">
-                <WorkdayMovementForm form={formMovement} onChange={handleChangeMovement} onSubmit={handleRegistrarConsumo} onClose={() => setModalConsumo(false)} item={selectedInventoryItem} tipo="CONSUMO" />
+                <WorkdayMovementForm form={formMovement} onChange={handleChangeMovement} onSubmit={handleRegistrarConsumo} onClose={() => setModalConsumo(false)} item={selectedInventoryItem} tipo="CONSUMO" submitting={submitting} formError={formError} />
             </Modal>
 
             <Modal isOpen={modalRetorno} onClose={() => setModalRetorno(false)} title="Registrar Retorno" size="sm">
-                <WorkdayMovementForm form={formMovement} onChange={handleChangeMovement} onSubmit={handleRegistrarRetorno} onClose={() => setModalRetorno(false)} item={selectedInventoryItem} tipo="RETORNO" />
+                <WorkdayMovementForm form={formMovement} onChange={handleChangeMovement} onSubmit={handleRegistrarRetorno} onClose={() => setModalRetorno(false)} item={selectedInventoryItem} tipo="RETORNO" submitting={submitting} formError={formError} />
             </Modal>
 
             <ConfirmDialog
