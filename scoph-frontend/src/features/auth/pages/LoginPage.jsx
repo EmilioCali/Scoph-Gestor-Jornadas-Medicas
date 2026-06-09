@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "../store/authStore.js";
+import { useUIStore } from "../../../shared/store/uiStore";
 //import { login } from "../../../shared/apis/authService";
 import logo from "../../../assets/logo.png";
 import personalMedico from "../../../assets/PersonalMedico.jpeg";
@@ -312,7 +313,8 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login, loading, error } = useAuthStore();
+  const { login, loading, error, clearError } = useAuthStore();
+  const { showSuccess, showError, clearGlobalError } = useUIStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -335,18 +337,29 @@ export default function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    clearError();
+    clearGlobalError();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const username = form.username.trim();
+    const password = form.password.trim();
+
+    if (!username || !password) {
+      const validationError = "Debes completar usuario y contraseña.";
+      showError(validationError);
+      return;
+    }
+
     const response = await login({
-      username: form.username,
-      password: form.password,
+      username,
+      password,
     });
 
-    // Zustand nos devuelve un objeto indicando si tuvo éxito
     if (response.success) {
+      showSuccess("Inicio de sesión correcto");
       const currentUser = useAuthStore.getState().user;
 
       if (currentUser?.mustChangePassword) {

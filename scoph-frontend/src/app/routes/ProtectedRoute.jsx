@@ -6,10 +6,10 @@ import { useAuthStore } from "../../features/auth/store/authStore.js";
 //Si el usuario no esta autenticado, redirige al login
 //Si mustChangePassword es true, redirige a la pagina de cambio de contraseña
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, user } = useAuthStore();
+  const { isAuthenticated, isLoadingAuth, user } = useAuthStore();
 
-  //Mientras verifica la sesion guardadad, se muestra un loader
-  if (loading) {
+  //Mientras verifica la sesión guardada, se muestra un loader
+  if (isLoadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-3">
