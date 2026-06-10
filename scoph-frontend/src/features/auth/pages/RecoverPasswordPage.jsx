@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { EnvelopeIcon, KeyIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { forgotPassword, resetPassword } from "../../../shared/apis/authService";
+import { useUIStore } from "../../../shared/store/uiStore";
 import logo from "../../../assets/logo.png";
 import personalMedico from "../../../assets/PersonalMedico.jpeg";
 
@@ -55,6 +56,7 @@ export default function RecoverPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const { showSuccess, showError } = useUIStore();
     const navigate = useNavigate();
 
     // Maneja cambio en cada campo del código de verificación
@@ -81,9 +83,12 @@ export default function RecoverPasswordPage() {
         try {
             await forgotPassword(correo);
             setSuccessMessage("Si el correo existe recibirás un código de verificación.");
+            showSuccess("Código de verificación enviado");
             setStep(2);
         } catch (err) {
-            setError(err.response?.data?.message || "Error al enviar el correo. Intenta de nuevo.");
+            const message = err.response?.data?.message || "Error al enviar el correo. Intenta de nuevo.";
+            setError(message);
+            showError(message);
         } finally {
             setLoading(false);
         }
@@ -96,11 +101,15 @@ export default function RecoverPasswordPage() {
         setError("");
 
         if (newPassword !== confirmPassword) {
-            setError("Las contraseñas no coinciden.");
+            const message = "Las contraseñas no coinciden.";
+            setError(message);
+            showError(message);
             return;
         }
         if (newPassword.length < 8) {
-            setError("La contraseña debe tener al menos 8 caracteres.");
+            const message = "La contraseña debe tener al menos 8 caracteres.";
+            setError(message);
+            showError(message);
             return;
         }
 
@@ -112,9 +121,12 @@ export default function RecoverPasswordPage() {
                 newPassword,
             });
             setSuccessMessage("Contraseña restablecida correctamente. Ahora puedes iniciar sesión.");
+            showSuccess("Contraseña restablecida correctamente");
             setTimeout(() => navigate("/login"), 2000);
         } catch (err) {
-            setError(err.response?.data?.message || "Código inválido o expirado. Intenta de nuevo.");
+            const message = err.response?.data?.message || "Código inválido o expirado. Intenta de nuevo.";
+            setError(message);
+            showError(message);
         } finally {
             setLoading(false);
         }

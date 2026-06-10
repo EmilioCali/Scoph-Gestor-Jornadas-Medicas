@@ -38,20 +38,24 @@ export const useAuthStore = create(
 
       // Cierra sesión y limpia el storage
       logout: () => {
-        localStorage.clear();
+        localStorage.removeItem("auth-scoph-storage");
         set({
           user: null,
           token: null,
           role: null,
           isAuthenticated: false,
+          loading: false,
           error: null,
+          isLoadingAuth: false,
         });
       },
+
+      clearError: () => set({ error: null }),
 
       // Inicia sesión interactuando con Fastify
       login: async (credentials) => {
         try {
-          set({ loading: true, error: null });
+          set({ loading: true, error: null, isLoadingAuth: true });
 
           // Llamada a tu API de Fastify
           const { data } = await loginReq(credentials);
@@ -75,6 +79,7 @@ export const useAuthStore = create(
             isLoadingAuth: false,
             isAuthenticated: true,
             loading: false,
+            error: null,
           });
 
           return { success: true };
@@ -83,7 +88,15 @@ export const useAuthStore = create(
             err.response?.data?.message ||
             err.message ||
             "Error al iniciar sesión";
-          set({ error: message, loading: false });
+          set({
+            error: message,
+            loading: false,
+            isLoadingAuth: false,
+            isAuthenticated: false,
+            user: null,
+            token: null,
+            role: null,
+          });
           return { success: false, error: message };
         }
       },

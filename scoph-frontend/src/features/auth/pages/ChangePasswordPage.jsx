@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "../store/authStore.js";
 import { changePassword } from "../../../shared/apis/authService";
+import { useUIStore } from "../../../shared/store/uiStore";
 import logo from "../../../assets/logo.png";
 import personalMedico from "../../../assets/PersonalMedico.jpeg";
 
@@ -36,6 +37,7 @@ export default function ChangePasswordPage() {
 
   // EXTRAEMOS SOLO ZUSTAND
   const { user, updateUser } = useAuthStore();
+  const { showSuccess, showError } = useUIStore();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -49,15 +51,21 @@ export default function ChangePasswordPage() {
     setError("");
 
     if (form.newPassword !== form.confirmPassword) {
-      setError("Las contraseñas nuevas no coinciden.");
+      const validationError = "Las contraseñas nuevas no coinciden.";
+      setError(validationError);
+      showError(validationError);
       return;
     }
     if (form.newPassword.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
+      const validationError = "La contraseña debe tener al menos 8 caracteres.";
+      setError(validationError);
+      showError(validationError);
       return;
     }
     if (form.newPassword === form.currentPassword) {
-      setError("La nueva contraseña debe ser diferente a la actual.");
+      const validationError = "La nueva contraseña debe ser diferente a la actual.";
+      setError(validationError);
+      showError(validationError);
       return;
     }
 
@@ -71,14 +79,16 @@ export default function ChangePasswordPage() {
 
       // esto cambia el valor y fuerza el guardado en localStorage
       updateUser({ mustChangePassword: false });
+      showSuccess("Contraseña actualizada correctamente");
 
       // ahora el router leerá el localStorage actualizado y nos dejará pasar
       navigate("/dashboard");
     } catch (err) {
-      setError(
+      const message =
         err.response?.data?.message ||
-          "Error al cambiar la contraseña. Revisa tu contraseña actual.",
-      );
+        "Error al cambiar la contraseña. Revisa tu contraseña actual.";
+      setError(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
