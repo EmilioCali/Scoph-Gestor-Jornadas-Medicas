@@ -71,6 +71,7 @@ export async function register({ nombre, apellido, username, correo, rol, telefo
     creadoPor: creadoPor || null,
     mustChangePassword: true,
     emailVerificado: false,
+    isActive: false,
     activationToken: activationCode,
     activationTokenExpires
   })
@@ -156,6 +157,7 @@ export async function changePassword(id, currentPassword, newPassword) {
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
   user.passwordHash = passwordHash
   user.mustChangePassword = false
+  user.isActive = true
   await user.save()
 
   return user
