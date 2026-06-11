@@ -1,9 +1,26 @@
 import Workday from './workday.model.js';
-import { handleServiceError } from '../utils/errorHandler.js';
+import { badRequest, handleServiceError } from '../utils/errorHandler.js';
 import { successResponse } from '../utils/response.js';
+
+function assertValidDateRange(startDate, endDate) {
+    if (!startDate || !endDate) return;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        throw badRequest('Las fechas de la jornada no son validas');
+    }
+
+    if (start > end) {
+        throw badRequest('La fecha de inicio no puede ser posterior a la fecha de finalizacion');
+    }
+}
 
 export const createWorkday = async (request, reply) => {
     try {
+        assertValidDateRange(request.body.startDate, request.body.endDate);
+
         const workdayData = {
             ...request.body,
             manager: {
@@ -62,8 +79,22 @@ export const getWorkdayById = async (request, reply) => {
 
 export const updateWorkday = async (request, reply) => {
     try {
+        const currentWorkday = await Workday.findById(request.params.id);
+
+        if (!currentWorkday) {
+            return reply.status(404).send({
+                success: false,
+                message: 'Jornada no encontrada',
+                error: 'NOT_FOUND'
+            });
+        }
+
         // status tiene su propio endpoint — se ignora aquí
         const { status, manager, ...rest } = request.body;
+        assertValidDateRange(
+            rest.startDate ?? currentWorkday.startDate,
+            rest.endDate ?? currentWorkday.endDate
+        );
 
         // Dot notation para no pisar manager.userId
         const updateFields = { ...rest };

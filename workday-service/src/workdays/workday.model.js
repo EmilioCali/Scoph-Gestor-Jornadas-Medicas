@@ -93,4 +93,13 @@ workdaySchema.index({ status: 1 });
 workdaySchema.index({ startDate: 1 });
 workdaySchema.index({ 'location.department': 1 });
 
+workdaySchema.pre('validate', function () {
+    if (this.startDate && this.endDate && this.startDate > this.endDate) {
+        this.invalidate(
+            'endDate',
+            'La fecha de finalización no puede ser anterior a la fecha de inicio'
+        );
+    }
+});
+
 export default model('Workday', workdaySchema);

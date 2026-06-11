@@ -35,7 +35,15 @@ const userSchema = new mongoose.Schema(
       default: 'ASISTENTE'
     },
 
-    telefono: { type: String, trim: true, default: null },
+    telefono: {
+      type: String,
+      trim: true,
+      default: null,
+      validate: {
+        validator: (value) => value === null || value === '' || /^\d{8}$/.test(value),
+        message: 'El telefono debe tener exactamente 8 digitos'
+      }
+    },
     fotoPerfil: { type: String, default: null },
 
     isActive: { type: Boolean, default: true },

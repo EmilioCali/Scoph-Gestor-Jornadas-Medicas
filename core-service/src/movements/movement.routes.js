@@ -1,6 +1,6 @@
 import { createEntrada, createSalidaReceta, createTransferencia } from './movement.controller.js'
 import { createConsumoJornada, createRetornoJornada, getMovimientos } from './movement.controller.js'
-import { authenticate } from '../middlewares/authenticate.js';
+import { authenticate, requireRole } from '../middlewares/authenticate.js';
 
 const movementDetailInputSchema = {
     type: 'object',
@@ -91,7 +91,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/entrada',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar entrada a inventario central',
@@ -134,7 +134,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/salida-receta',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar salida por receta',
@@ -167,7 +167,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/transferencia',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Transferir stock a jornada',

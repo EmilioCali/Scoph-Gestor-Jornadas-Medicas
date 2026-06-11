@@ -1,0 +1,30 @@
+export const departamentosGuatemala = [
+    { _id: "dep_01", nombre: "Guatemala", municipios: [{ codigo: "GUA-01", nombre: "Guatemala" }, { codigo: "GUA-02", nombre: "Mixco" }, { codigo: "GUA-03", nombre: "Villa Nueva" }, { codigo: "GUA-04", nombre: "San Miguel Petapa" }, { codigo: "GUA-05", nombre: "Chinautla" }] },
+    { _id: "dep_02", nombre: "Sacatepequez", municipios: [{ codigo: "SAC-01", nombre: "Antigua Guatemala" }, { codigo: "SAC-02", nombre: "Jocotenango" }, { codigo: "SAC-03", nombre: "Pastores" }] },
+    { _id: "dep_03", nombre: "Chimaltenango", municipios: [{ codigo: "CHM-01", nombre: "Chimaltenango" }, { codigo: "CHM-02", nombre: "San Andres Itzapa" }, { codigo: "CHM-03", nombre: "Patzun" }] },
+    { _id: "dep_04", nombre: "Escuintla", municipios: [{ codigo: "ESC-01", nombre: "Escuintla" }, { codigo: "ESC-02", nombre: "Santa Lucia Cotzumalguapa" }, { codigo: "ESC-03", nombre: "La Democracia" }] },
+    { _id: "dep_05", nombre: "Santa Rosa", municipios: [{ codigo: "SRO-01", nombre: "Cuilapa" }, { codigo: "SRO-02", nombre: "Barberena" }] },
+    { _id: "dep_06", nombre: "Solola", municipios: [{ codigo: "SOL-01", nombre: "Solola" }, { codigo: "SOL-02", nombre: "Panajachel" }, { codigo: "SOL-03", nombre: "Santiago Atitlan" }] },
+    { _id: "dep_07", nombre: "Totonicapan", municipios: [{ codigo: "TOT-01", nombre: "Totonicapan" }, { codigo: "TOT-02", nombre: "San Cristobal Totonicapan" }] },
+    { _id: "dep_08", nombre: "Quetzaltenango", municipios: [{ codigo: "QUE-01", nombre: "Quetzaltenango" }, { codigo: "QUE-02", nombre: "Salcaja" }, { codigo: "QUE-03", nombre: "Coatepeque" }] },
+    { _id: "dep_09", nombre: "Suchitepequez", municipios: [{ codigo: "SUC-01", nombre: "Mazatenango" }, { codigo: "SUC-02", nombre: "Cuyotenango" }] },
+    { _id: "dep_10", nombre: "Retalhuleu", municipios: [{ codigo: "RET-01", nombre: "Retalhuleu" }, { codigo: "RET-02", nombre: "San Sebastian" }] },
+    { _id: "dep_11", nombre: "San Marcos", municipios: [{ codigo: "SMA-01", nombre: "San Marcos" }, { codigo: "SMA-02", nombre: "Malacatan" }] },
+    { _id: "dep_12", nombre: "Huehuetenango", municipios: [{ codigo: "HUE-01", nombre: "Huehuetenango" }, { codigo: "HUE-02", nombre: "Chiantla" }] },
+    { _id: "dep_13", nombre: "Quiche", municipios: [{ codigo: "QUI-01", nombre: "Santa Cruz del Quiche" }, { codigo: "QUI-02", nombre: "Chichicastenango" }] },
+    { _id: "dep_14", nombre: "Baja Verapaz", municipios: [{ codigo: "BVE-01", nombre: "Salama" }, { codigo: "BVE-02", nombre: "San Miguel Chicaj" }] },
+    { _id: "dep_15", nombre: "Alta Verapaz", municipios: [{ codigo: "AVE-01", nombre: "Coban" }, { codigo: "AVE-02", nombre: "San Pedro Carcha" }] },
+    { _id: "dep_16", nombre: "Peten", municipios: [{ codigo: "PET-01", nombre: "Flores" }, { codigo: "PET-02", nombre: "San Benito" }] },
+    { _id: "dep_17", nombre: "Izabal", municipios: [{ codigo: "IZA-01", nombre: "Puerto Barrios" }, { codigo: "IZA-02", nombre: "Livingston" }] },
+    { _id: "dep_18", nombre: "Zacapa", municipios: [{ codigo: "ZAC-01", nombre: "Zacapa" }, { codigo: "ZAC-02", nombre: "Estanzuela" }] },
+    { _id: "dep_19", nombre: "Chiquimula", municipios: [{ codigo: "CHI-01", nombre: "Chiquimula" }, { codigo: "CHI-02", nombre: "Esquipulas" }, { codigo: "CHI-03", nombre: "Jocotan" }] },
+    { _id: "dep_20", nombre: "Jalapa", municipios: [{ codigo: "JAL-01", nombre: "Jalapa" }, { codigo: "JAL-02", nombre: "San Pedro Pinula" }] },
+    { _id: "dep_21", nombre: "Jutiapa", municipios: [{ codigo: "JUT-01", nombre: "Jutiapa" }, { codigo: "JUT-02", nombre: "Asuncion Mita" }] },
+    { _id: "dep_22", nombre: "El Progreso", municipios: [{ codigo: "EPR-01", nombre: "Guastatoya" }, { codigo: "EPR-02", nombre: "Morazan" }] },
+];
+
+export const medicineCategories = [
+    "ANTIBIOTICOS", "ANALGESICOS", "ANTIINFLAMATORIOS", "ANTIDIABETICOS",
+    "ANTIHIPERTENSIVOS", "ANTIACIDOS", "VITAMINAS", "ANTIPARASITARIOS",
+    "ANTIHISTAMINICOS", "OTROS",
+];

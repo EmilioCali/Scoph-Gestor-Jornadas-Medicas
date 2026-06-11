@@ -6,7 +6,7 @@ import {
     updateWorkdayStatus,
     deleteWorkday
 } from './workday.controller.js';
-import { authenticate } from '../middlewares/authenticate.js';
+import { requireRole } from '../middlewares/authenticate.js';
 
 const locationSchema = {
     type: 'object',
@@ -105,7 +105,7 @@ const successBody = (dataSchema) => ({
 async function workdayRoutes(fastify) {
 
     fastify.post('/workdays', {
-        preHandler: [authenticate],
+        preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
         schema: {
             tags: ['Jornadas'], summary: 'Crear jornada médica',
             security: [{ bearerAuth: [] }],
@@ -137,7 +137,7 @@ async function workdayRoutes(fastify) {
     }, getWorkdayById);
 
     fastify.put('/workdays/:id', {
-        preHandler: [authenticate],
+        preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
         schema: {
             tags: ['Jornadas'], summary: 'Actualizar jornada',
             description: 'Actualiza datos. El status se ignora aquí — usar PATCH /workdays/:id/status.',
@@ -152,7 +152,7 @@ async function workdayRoutes(fastify) {
     }, updateWorkday);
 
     fastify.patch('/workdays/:id/status', {
-        preHandler: [authenticate],
+        preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
         schema: {
             tags: ['Jornadas'], summary: 'Cambiar estado de jornada',
             security: [{ bearerAuth: [] }],
@@ -172,7 +172,7 @@ async function workdayRoutes(fastify) {
     }, updateWorkdayStatus);
 
     fastify.delete('/workdays/:id', {
-        preHandler: [authenticate],
+        preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
         schema: {
             tags: ['Jornadas'], summary: 'Eliminar jornada',
             security: [{ bearerAuth: [] }],

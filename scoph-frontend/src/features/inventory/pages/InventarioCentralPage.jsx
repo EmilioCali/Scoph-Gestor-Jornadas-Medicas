@@ -17,9 +17,9 @@ import Badge from "../../../shared/components/ui/Badge";
 import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
-import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
-import { medicineCategories } from "../../../shared/utils/mockData";
+import { medicineCategories } from "../../../shared/constants/catalogOptions";
 import { useInventarioCentral } from "../hooks/useInventarioCentral";
+import { useAuthStore } from "../../../features/auth/store/authStore.js";
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +161,8 @@ const agregarInicial = { medicineId: "", minimumStock: "", batch: "", expiration
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function InventarioCentralPage() {
+    const currentUser = useAuthStore((state) => state.user);
+    const canModifyCentralInventory = currentUser?.rol !== "MEDICO";
     const {
         inventory, loading, error, refetch,
         availableMedicines,
@@ -210,6 +212,11 @@ export default function InventarioCentralPage() {
     // ── Agregar al inventario ─────────────────────────────────────────────────
     const handleAgregarAlInventario = async (e) => {
         e.preventDefault();
+        if (!canModifyCentralInventory) {
+            setFormError("No tienes permisos para modificar inventario central");
+            return;
+        }
+
         setSubmitting(true);
         setFormError(null);
         try {
@@ -226,6 +233,11 @@ export default function InventarioCentralPage() {
     // ── Registrar entrada ─────────────────────────────────────────────────────
     const handleRegistrarEntrada = async (e) => {
         e.preventDefault();
+        if (!canModifyCentralInventory) {
+            setFormError("No tienes permisos para registrar compras o donaciones");
+            return;
+        }
+
         setSubmitting(true);
         setFormError(null);
         try {
@@ -241,6 +253,11 @@ export default function InventarioCentralPage() {
     // ── Registrar salida ──────────────────────────────────────────────────────
     const handleRegistrarSalida = async (e) => {
         e.preventDefault();
+        if (!canModifyCentralInventory) {
+            setFormError("No tienes permisos para modificar inventario central");
+            return;
+        }
+
         setSubmitting(true);
         setFormError(null);
         try {
@@ -326,7 +343,7 @@ export default function InventarioCentralPage() {
         },
         {
             key: "acciones", label: "Acciones",
-            render: (row) => (
+            render: (row) => canModifyCentralInventory ? (
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" title="Registrar entrada"
                         onClick={() => { setSelectedItem(row); setFormEntrada(entradaInicial); setFormError(null); setModalEntrada(true); }}>
@@ -337,7 +354,7 @@ export default function InventarioCentralPage() {
                         <ArrowDownIcon className="w-4 h-4" />
                     </Button>
                 </div>
-            ),
+            ) : <span className="text-xs text-gray-400">Solo lectura</span>,
         },
     ];
 
@@ -347,7 +364,7 @@ export default function InventarioCentralPage() {
             <PageHeader
                 title="Inventario Central"
                 subtitle="Control de stock, lotes y vencimientos de medicamentos"
-                action={
+                action={canModifyCentralInventory ? (
                     <div className="flex gap-2">
                         <Button variant="outline" size="md" onClick={refetch} disabled={loading} title="Recargar">
                             <ArrowPathIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -356,7 +373,7 @@ export default function InventarioCentralPage() {
                             <PlusIcon className="w-4 h-4" /> Agregar al Inventario
                         </Button>
                     </div>
-                }
+                ) : null}
             />
 
             {error && (

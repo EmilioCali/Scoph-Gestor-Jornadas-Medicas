@@ -44,6 +44,8 @@ export async function login({ username, correo, password }) {
  * @returns {Promise<import('mongoose').Document>} Usuario creado
  */
 export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }) {
+  if (typeof telefono === 'string') telefono = telefono.trim()
+
   if (telefono && !/^\d{8}$/.test(telefono)) {
     throw new Error('El teléfono debe tener exactamente 8 dígitos')
   }
@@ -250,6 +252,8 @@ export async function updateUser(id, data) {
   for (const field of allowedFields) {
     if (data[field] !== undefined) update[field] = data[field]
   }
+
+  if (typeof update.telefono === 'string') update.telefono = update.telefono.trim()
 
   if (update.telefono && !/^\d{8}$/.test(update.telefono)) {
     throw new Error('El teléfono debe tener exactamente 8 dígitos')
