@@ -7,7 +7,7 @@ import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
-import { mockDepartamentos, mockUsers } from "../../../shared/utils/mockData";
+import { departamentosGuatemala } from "../../../shared/constants/catalogOptions";
 import { useWorkdayInventory } from "../hooks/useWorkdayInventory";
 
 // Badge según estado de la jornada - valores reales del backend
@@ -336,7 +336,7 @@ export default function JornadasPage() {
     // El body debe ser: { name, description, startDate, endDate, location, manager, estimatedPatients, estimatedMedicines, status }
     const handleCrearWorkday = async (e) => {
         e.preventDefault();
-        const manager = mockUsers.find((u) => u._id === formWorkday.managerId);
+        const manager = users.find((u) => u._id === formWorkday.managerId);
         setSubmitting(true);
         setFormError(null);
         try {
@@ -523,7 +523,7 @@ export default function JornadasPage() {
                 {formError && (
                     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{formError}</p>
                 )}
-                <WorkdayForm form={formWorkday} onChange={handleChangeWorkday} onSubmit={handleCrearWorkday} onClose={() => setModalCrear(false)} departamentos={mockDepartamentos} users={mockUsers} />
+                <WorkdayForm form={formWorkday} onChange={handleChangeWorkday} onSubmit={handleCrearWorkday} onClose={() => setModalCrear(false)} departamentos={departamentosGuatemala} users={mockUsers} />
             </Modal>
 
             <Modal isOpen={modalDetalle} onClose={() => setModalDetalle(false)} title={selectedWorkday?.name} size="lg">

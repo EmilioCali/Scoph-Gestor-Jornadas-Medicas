@@ -11,7 +11,6 @@ import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 
 // Datos mock - se reemplazarán por llamadas axios al conectar el backend
-import { mockInventario } from "../../../shared/utils/mockData";
 
 // Retorna badge según el nivel de stock del medicamento
 function getStockBadge(stockActual, stockMinimo) {
@@ -203,7 +202,7 @@ const movimientoInicial = { subtipo: "DONACION", cantidad: "", observacion: "" }
 const medicamentoInicial = { nombre: "", categoria: "", unidad: "", stockActual: "", stockMinimo: "", lote: "", fechaVencimiento: "" };
 
 export default function InventarioPage() {
-    const [inventario, setInventario] = useState(mockInventario);
+    const [inventario, setInventario] = useState([]);
     const [modalMedicamento, setModalMedicamento] = useState(false);
     const [modalEntrada, setModalEntrada] = useState(false);
     const [modalSalida, setModalSalida] = useState(false);

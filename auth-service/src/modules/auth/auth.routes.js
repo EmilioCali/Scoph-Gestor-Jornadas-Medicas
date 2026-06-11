@@ -183,7 +183,7 @@ async function authPlugin(fastify) {
             username: { type: 'string', minLength: 3 },
             correo: { type: 'string' },
             rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
-            telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^[0-9]{8}$' },
+            telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^\\d{8}$' },
             isActive: { type: 'boolean' }
           }
         }

@@ -18,7 +18,7 @@ import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
-import { medicineCategories } from "../../../shared/utils/mockData";
+import { medicineCategories } from "../../../shared/constants/catalogOptions";
 import { useMedicines } from "../hooks/useMedicines";
 
 const FORM_INICIAL = {
@@ -123,8 +123,33 @@ export default function CatalogoPage() {
     const handleChange = (e) =>
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
+    const validarDuplicado = (excludeId = null) => {
+        const nombre = form.name.trim().toLowerCase();
+        const barcode = form.barcode.trim();
+
+        const duplicated = medicines.find((medicine) => {
+            if (excludeId && medicine._id === excludeId) return false;
+
+            return (
+                medicine.name?.trim().toLowerCase() === nombre ||
+                (barcode && medicine.barcode === barcode)
+            );
+        });
+
+        if (!duplicated) return true;
+
+        setFormError(
+            duplicated.name?.trim().toLowerCase() === nombre
+                ? "Ya existe un medicamento con ese nombre"
+                : "Ya existe un medicamento con ese codigo de barras"
+        );
+        return false;
+    };
+
     const handleCrear = async (e) => {
         e.preventDefault();
+        if (!validarDuplicado()) return;
+
         setSubmitting(true);
         setFormError(null);
         try {
@@ -132,7 +157,7 @@ export default function CatalogoPage() {
             setForm(FORM_INICIAL);
             setModalCrear(false);
         } catch (err) {
-            setFormError(err.response?.data?.message ?? "No se pudo crear el medicamento");
+            setFormError(err.response?.data?.message ?? err.message ?? "No se pudo crear el medicamento");
         } finally {
             setSubmitting(false);
         }
@@ -140,11 +165,21 @@ export default function CatalogoPage() {
 
     const handleGuardarEdicion = async (e) => {
         e.preventDefault();
+        if (!validarDuplicado(selectedItem._id)) return;
+
         setSubmitting(true);
         setFormError(null);
         try {
-            // Descartar campos de solo lectura que no van al PUT
-            const { status, _id, createdAt, updatedAt, __v, ...campos } = form;
+            const { status } = form;
+            const campos = {
+                name: form.name,
+                compound: form.compound,
+                concentration: form.concentration,
+                barcode: form.barcode,
+                presentation: form.presentation,
+                unitOfMeasure: form.unitOfMeasure,
+                category: form.category,
+            };
 
             // Solo llamar PATCH /status si realmente cambió
             if (status !== selectedItem.status) {
@@ -161,7 +196,7 @@ export default function CatalogoPage() {
 
             setModalEditar(false);
         } catch (err) {
-            setFormError(err.response?.data?.message ?? "No se pudo actualizar el medicamento");
+            setFormError(err.response?.data?.message ?? err.message ?? "No se pudo actualizar el medicamento");
         } finally {
             setSubmitting(false);
         }

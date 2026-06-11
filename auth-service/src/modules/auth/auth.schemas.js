@@ -69,7 +69,7 @@ export const registerSchema = {
       username: { type: 'string', minLength: 3, example: 'dgomez' },
       correo: { type: 'string', example: 'daniel@gmail.com' },
       rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
-      telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^[0-9]{8}$', example: '12345678' }
+      telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^\\d{8}$', example: '12345678' }
     }
   },
   response: {

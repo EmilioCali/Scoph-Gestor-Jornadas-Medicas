@@ -52,8 +52,8 @@ const medicineSchema = new Schema(
     }
 );
 
-medicineSchema.index({ name: 1 });
+medicineSchema.index({ name: 1 }, { unique: true, collation: { locale: 'es', strength: 2 } });
 medicineSchema.index({ status: 1 });
-medicineSchema.index({ barcode: 1 }, { sparse: true });
+medicineSchema.index({ barcode: 1 }, { unique: true, sparse: true });
 
 export default model('Medicine', medicineSchema);

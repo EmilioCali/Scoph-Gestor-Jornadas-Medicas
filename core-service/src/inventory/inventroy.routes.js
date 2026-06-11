@@ -1,5 +1,5 @@
 import { getInventarioCentral, addMedicineToInventory, getInventarioJornada } from './inventory.controller.js';
-import { authenticate } from '../middlewares/authenticate.js';
+import { requireRole } from '../middlewares/authenticate.js';
 
 const inventoryRoutes = async (fastify) => {
 
@@ -54,7 +54,7 @@ const inventoryRoutes = async (fastify) => {
     fastify.post(
         '/inventario-central',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Agregar medicamento al inventario central',
