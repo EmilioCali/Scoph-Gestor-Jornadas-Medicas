@@ -5,6 +5,8 @@ import {
   getUserById,
   listUsers,
   toggleUserStatus,
+  updateUser,
+  deleteUser,
   changePassword,
   verifyEmail,
   resendVerificationCode,
@@ -59,7 +61,7 @@ async function authPlugin(fastify) {
   fastify.get(
     '/me',
     {
-      preHandler: [authenticate],
+      preHandler: [requireRole('ADMIN')],
       schema: {
         tags: ['Autenticación'],
         summary: 'Mi perfil',
@@ -130,7 +132,7 @@ async function authPlugin(fastify) {
   fastify.get(
     '/users',
     {
-      preHandler: [authenticate],
+      preHandler: [requireRole('ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Listar usuarios',
@@ -150,6 +152,82 @@ async function authPlugin(fastify) {
     async (request, reply) => {
       const users = await listUsers()
       return reply.send({ ok: true, users: users.map((u) => u.toSafeJSON()) })
+    }
+  )
+
+  /**
+   * PATCH /api/auth/users/:id
+   * Actualiza datos de un usuario. Solo ADMIN.
+   */
+  fastify.patch(
+    '/users/:id',
+    {
+      preHandler: [requireRole('ADMIN')],
+      schema: {
+        tags: ['Usuarios'],
+        summary: 'Actualizar usuario',
+        description: 'Actualiza datos generales de un usuario. Solo ADMIN.',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', description: 'ID del usuario (usr_...)' }
+          }
+        },
+        body: {
+          type: 'object',
+          properties: {
+            nombre: { type: 'string', minLength: 1 },
+            apellido: { type: 'string', minLength: 1 },
+            username: { type: 'string', minLength: 3 },
+            correo: { type: 'string' },
+            rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
+            telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^[0-9]{8}$' },
+            isActive: { type: 'boolean' }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        const user = await updateUser(request.params.id, request.body)
+        return reply.send({ ok: true, user: user.toSafeJSON() })
+      } catch (err) {
+        return reply.status(400).send({ ok: false, message: err.message })
+      }
+    }
+  )
+
+  /**
+   * DELETE /api/auth/users/:id
+   * Elimina un usuario. Solo ADMIN.
+   */
+  fastify.delete(
+    '/users/:id',
+    {
+      preHandler: [requireRole('ADMIN')],
+      schema: {
+        tags: ['Usuarios'],
+        summary: 'Eliminar usuario',
+        description: 'Elimina un usuario del sistema. Solo ADMIN.',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', description: 'ID del usuario (usr_...)' }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        await deleteUser(request.params.id)
+        return reply.send({ ok: true, message: 'Usuario eliminado correctamente' })
+      } catch (err) {
+        return reply.status(404).send({ ok: false, message: err.message })
+      }
     }
   )
 
@@ -205,8 +283,19 @@ async function authPlugin(fastify) {
     async (request, reply) => {
       try {
         const { correo, code } = request.body
-        await verifyEmail(correo, code)
-        return reply.send({ ok: true, message: 'Correo verificado correctamente' })
+        const user = await verifyEmail(correo, code)
+        const token = fastify.jwt.sign(
+          { id: user._id, rol: user.rol, username: user.username },
+          { expiresIn: '8h' }
+        )
+
+        return reply.send({
+          ok: true,
+          message: 'Correo verificado correctamente',
+          token,
+          user: user.toSafeJSON(),
+          mustChangePassword: user.mustChangePassword
+        })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })
       }

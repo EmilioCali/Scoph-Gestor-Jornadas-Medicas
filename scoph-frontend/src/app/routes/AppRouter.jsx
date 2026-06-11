@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
-import ProtectedRoute from "./ProtectedRoute";
+import ProtectedRoute, { RequireRole } from "./ProtectedRoute";
 import MovimientosPage from "../../features/inventory/pages/MovimientosPage";
 
 // Páginas de autenticación
 import LoginPage from "../../features/auth/pages/LoginPage";
 import RecoverPasswordPage from "../../features/auth/pages/RecoverPasswordPage";
 import ChangePasswordPage from "../../features/auth/pages/ChangePasswordPage";
+import VerifyEmailPage from "../../features/auth/pages/VerifyEmailPage";
 
 // Páginas principales
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
@@ -43,6 +44,7 @@ export default function AppRouter() {
         {/* Rutas públicas - accesibles sin autenticación */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/recover-password" element={<RecoverPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         {/* Ruta de cambio de contraseña obligatorio - requiere estar autenticado */}
         <Route path="/change-password" element={<ChangePasswordPage />} />
@@ -52,7 +54,9 @@ export default function AppRouter() {
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="usuarios" element={<UsuariosPage />} />
+            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+              <Route path="usuarios" element={<UsuariosPage />} />
+            </Route>
             <Route path="jornadas" element={<WorkdaysPage />} />
             <Route path="inventario/catalogo" element={<CatalogoPage />} />
             <Route

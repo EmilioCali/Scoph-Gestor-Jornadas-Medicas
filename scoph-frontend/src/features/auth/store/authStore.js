@@ -36,6 +36,24 @@ export const useAuthStore = create(
         }
       },
 
+      setSession: ({ token, user, mustChangePassword }) => {
+        const userDetails = { ...user };
+
+        if (mustChangePassword !== undefined) {
+          userDetails.mustChangePassword = mustChangePassword;
+        }
+
+        set({
+          user: userDetails,
+          token,
+          role: userDetails?.rol || null,
+          isAuthenticated: Boolean(token),
+          isLoadingAuth: false,
+          loading: false,
+          error: null,
+        });
+      },
+
       // Cierra sesión y limpia el storage
       logout: () => {
         localStorage.removeItem("auth-scoph-storage");
@@ -55,7 +73,7 @@ export const useAuthStore = create(
       // Inicia sesión interactuando con Fastify
       login: async (credentials) => {
         try {
-          set({ loading: true, error: null, isLoadingAuth: true });
+          set({ loading: true, error: null });
 
           // Llamada a tu API de Fastify
           const { data } = await loginReq(credentials);

@@ -9,7 +9,12 @@ import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 
-import { getUsers, createUser } from "../../../shared/apis/authService";
+import {
+  createUser,
+  deleteUser,
+  getUsers,
+  updateUser,
+} from "../../../shared/apis/authService";
 
 function getRolBadge(rol) {
   return rol === "ADMIN" ? (
@@ -71,6 +76,10 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
         value={form.telefono}
         onChange={onChange}
         placeholder="12345678"
+        inputMode="numeric"
+        maxLength={8}
+        pattern="[0-9]{8}"
+        title="El telefono debe tener exactamente 8 digitos"
       />
 
       <div className="flex flex-col gap-1">
@@ -157,14 +166,25 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarUsuarios();
   }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "telefono" && !/^\d{0,8}$/.test(value)) return;
     // Parchear valores booleanos que vienen del select como string
     const val = value === "true" ? true : value === "false" ? false : value;
     setForm((prev) => ({ ...prev, [name]: val }));
+  };
+
+  const validarFormulario = () => {
+    if (form.telefono && !/^\d{8}$/.test(form.telefono)) {
+      toast.error("El telefono debe tener exactamente 8 digitos");
+      return false;
+    }
+
+    return true;
   };
 
   const handleEditar = (user) => {
@@ -181,6 +201,7 @@ export default function UsuariosPage() {
   // Petición POST al Backend
   const handleCrear = async (e) => {
     e.preventDefault();
+    if (!validarFormulario()) return;
     const toastId = toast.loading("Creando usuario...");
     try {
       await createUser(form);
@@ -197,6 +218,7 @@ export default function UsuariosPage() {
   // Petición PUT/PATCH al Backend
   const handleGuardarEdicion = async (e) => {
     e.preventDefault();
+    if (!validarFormulario()) return;
     const toastId = toast.loading("Guardando cambios...");
     try {
       await updateUser(selectedUser._id, form);

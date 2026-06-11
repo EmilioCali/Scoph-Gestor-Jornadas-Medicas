@@ -69,7 +69,7 @@ export const registerSchema = {
       username: { type: 'string', minLength: 3, example: 'dgomez' },
       correo: { type: 'string', example: 'daniel@gmail.com' },
       rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
-      telefono: { type: 'string', example: '12345678' }
+      telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^[0-9]{8}$', example: '12345678' }
     }
   },
   response: {
@@ -127,7 +127,10 @@ export const verifyEmailSchema = {
       type: 'object',
       properties: {
         ok: { type: 'boolean', example: true },
-        message: { type: 'string', example: 'Correo verificado correctamente' }
+        message: { type: 'string', example: 'Correo verificado correctamente' },
+        token: { type: 'string', description: 'Token JWT valido para continuar con el cambio de contraseña' },
+        mustChangePassword: { type: 'boolean', description: 'Si es true, el usuario debe cambiar su contraseña antes de continuar' },
+        user: usuarioResponse
       }
     },
     400: {

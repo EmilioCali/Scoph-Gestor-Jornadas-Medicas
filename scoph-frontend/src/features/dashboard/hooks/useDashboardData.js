@@ -69,15 +69,26 @@ export function useDashboardData() {
     setLoading(true);
     setError(null);
     try {
-      const [dashboardRes, stockRes, expirationRes] = await Promise.all([
+      const [dashboardResult, stockResult, expirationResult] = await Promise.allSettled([
         getDashboardMetrics(),
         getLowStockAlerts(),
         getExpirationAlerts(60),
       ]);
 
+      if (dashboardResult.status === "rejected") {
+        throw dashboardResult.reason;
+      }
+
+      const dashboardRes = dashboardResult.value;
       const dashboard = dashboardRes.data.data ?? {};
-      const stockData = stockRes.data.data ?? dashboard.alertasStock ?? [];
-      const expirationData = expirationRes.data.data ?? dashboard.vencimientosProximos ?? [];
+      const stockData =
+        stockResult.status === "fulfilled"
+          ? stockResult.value.data.data ?? dashboard.alertasStock ?? []
+          : dashboard.alertasStock ?? [];
+      const expirationData =
+        expirationResult.status === "fulfilled"
+          ? expirationResult.value.data.data ?? dashboard.vencimientosProximos ?? []
+          : dashboard.vencimientosProximos ?? [];
 
       setMetrics({
         ...emptyMetrics,
@@ -98,6 +109,7 @@ export function useDashboardData() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDashboard();
   }, [fetchDashboard]);
 

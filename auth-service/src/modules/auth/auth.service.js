@@ -44,6 +44,10 @@ export async function login({ username, correo, password }) {
  * @returns {Promise<import('mongoose').Document>} Usuario creado
  */
 export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }) {
+  if (telefono && !/^\d{8}$/.test(telefono)) {
+    throw new Error('El teléfono debe tener exactamente 8 dígitos')
+  }
+
   const existingUser = await User.findOne({
     $or: [{ username: username.toLowerCase() }, { correo: correo.toLowerCase() }]
   })
@@ -110,6 +114,7 @@ export async function verifyEmail(correo, code) {
   }
 
   user.emailVerificado = true
+  user.isActive = true
   user.activationToken = null
   user.activationTokenExpires = null
   await user.save()
@@ -231,6 +236,62 @@ export async function getUserById(id) {
  */
 export async function listUsers() {
   return User.find({}, { passwordHash: 0 }).sort({ createdAt: -1 })
+}
+
+/**
+ * Actualiza datos administrativos de un usuario.
+ * @param {string} id
+ * @param {Object} data
+ */
+export async function updateUser(id, data) {
+  const allowedFields = ['nombre', 'apellido', 'username', 'correo', 'rol', 'telefono', 'isActive']
+  const update = {}
+
+  for (const field of allowedFields) {
+    if (data[field] !== undefined) update[field] = data[field]
+  }
+
+  if (update.telefono && !/^\d{8}$/.test(update.telefono)) {
+    throw new Error('El teléfono debe tener exactamente 8 dígitos')
+  }
+
+  if (update.username) update.username = update.username.toLowerCase()
+  if (update.correo) update.correo = update.correo.toLowerCase()
+
+  if (update.username || update.correo) {
+    const existingUser = await User.findOne({
+      _id: { $ne: id },
+      $or: [
+        ...(update.username ? [{ username: update.username }] : []),
+        ...(update.correo ? [{ correo: update.correo }] : [])
+      ]
+    })
+
+    if (existingUser) {
+      if (existingUser.username === update.username) {
+        throw new Error('El username ya está en uso')
+      }
+      throw new Error('El correo ya está en uso')
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(id, update, {
+    new: true,
+    runValidators: true
+  })
+
+  if (!user) throw new Error('Usuario no encontrado')
+  return user
+}
+
+/**
+ * Elimina un usuario.
+ * @param {string} id
+ */
+export async function deleteUser(id) {
+  const user = await User.findByIdAndDelete(id)
+  if (!user) throw new Error('Usuario no encontrado')
+  return user
 }
 
 /**

@@ -30,3 +30,13 @@ export default function ProtectedRoute() {
   //Si esta autenticado renderiza la vista solicitada
   return <Outlet />;
 }
+
+export function RequireRole({ allowedRoles = [] }) {
+  const { user } = useAuthStore();
+
+  if (!allowedRoles.includes(user?.rol)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}

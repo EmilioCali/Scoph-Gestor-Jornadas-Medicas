@@ -112,6 +112,8 @@ export async function sendCredentialsMail({ to, nombre, username, password }) {
  */
 export async function sendVerificationCodeMail({ to, nombre, code }) {
   const expiresMin = parseInt(process.env.VERIFICATION_TOKEN_EXPIRES_MINUTES || '10', 10)
+  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
+  const verificationUrl = `${frontendUrl}/verify-email?correo=${encodeURIComponent(to)}`
 
   await transporter.sendMail({
     from: FROM,
@@ -141,6 +143,21 @@ export async function sendVerificationCodeMail({ to, nombre, code }) {
               <p style="margin:0 0 8px;font-size:16px;color:#111827;">Hola, <strong>${nombre}</strong></p>
               <p style="margin:0 0 28px;font-size:15px;color:#4b5563;line-height:1.6;">
                 Para activar tu cuenta, ingresa el siguiente código de verificación:
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr>
+                  <td align="center">
+                    <a href="${verificationUrl}" style="display:inline-block;background:#1a56db;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 28px;border-radius:8px;">
+                      Ingresar código de verificación
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-align:center;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              <p style="margin:0 0 20px;font-size:12px;color:#1a56db;text-align:center;word-break:break-all;">
+                ${verificationUrl}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>

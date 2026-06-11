@@ -353,19 +353,20 @@ export default function LoginPage() {
       return;
     }
 
-    const response = await login({
-      username,
-      password,
-    });
+    const response = await login(
+      username.includes("@")
+        ? { correo: username, password }
+        : { username, password },
+    );
 
     if (response.success) {
       showSuccess("Inicio de sesión correcto");
       const currentUser = useAuthStore.getState().user;
 
       if (currentUser?.mustChangePassword) {
-        navigate("/change-password");
+        navigate("/change-password", { replace: true });
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     }
   };
