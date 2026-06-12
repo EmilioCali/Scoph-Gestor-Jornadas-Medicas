@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { Link } from "react-router-dom";
 
 // Componentes reutilizables heredados
 import StatCard from "../../../shared/components/ui/StatCard";
@@ -29,7 +30,9 @@ function getStatusBadge(status) {
   const map = {
     IN_PROGRESS: <Badge variant="success">En Curso</Badge>,
     PLANNED: <Badge variant="info">Planificada</Badge>,
+    FINISHED: <Badge variant="gray">Finalizada</Badge>,
     COMPLETED: <Badge variant="gray">Finalizada</Badge>,
+    CANCELLED: <Badge variant="danger">Cancelada</Badge>,
   };
   return map[status] || <Badge>{status}</Badge>;
 }
@@ -77,6 +80,7 @@ const workdayColumns = [
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const isAdmin = user?.rol === "ADMIN";
   const {
     metrics,
     movementsChart,
@@ -88,7 +92,7 @@ export default function DashboardPage() {
     loading,
     error,
     refetch,
-  } = useDashboardData();
+  } = useDashboardData({ enabled: isAdmin });
 
   const fechaActualizacion = updatedAt
     ? new Date(updatedAt).toLocaleString("es-GT")
@@ -110,10 +114,43 @@ export default function DashboardPage() {
           variant="secondary"
           onClick={refetch}
           loading={loading}
+          disabled={!isAdmin}
         >
           Actualizar datos
         </Button>
       </div>
+
+      {!isAdmin ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link
+            to="/jornadas"
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+          >
+            <MapPinIcon className="h-6 w-6 text-primary" />
+            <h2 className="mt-4 text-base font-extrabold text-gray-800">Jornadas</h2>
+            <p className="mt-1 text-sm text-gray-500">Consulta jornadas y registra consumo cuando estén en curso.</p>
+          </Link>
+          <Link
+            to="/inventario/catalogo"
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+          >
+            <ArchiveBoxIcon className="h-6 w-6 text-primary" />
+            <h2 className="mt-4 text-base font-extrabold text-gray-800">Catálogo</h2>
+            <p className="mt-1 text-sm text-gray-500">Revisa medicamentos disponibles y su información base.</p>
+          </Link>
+          <Link
+            to="/inventario/movimientos"
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+          >
+            <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+            <h2 className="mt-4 text-base font-extrabold text-gray-800">Movimientos</h2>
+            <p className="mt-1 text-sm text-gray-500">Consulta el historial permitido de entradas, salidas y consumos.</p>
+          </Link>
+        </div>
+      ) : null}
+
+      {!isAdmin ? null : (
+        <>
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
@@ -285,6 +322,8 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

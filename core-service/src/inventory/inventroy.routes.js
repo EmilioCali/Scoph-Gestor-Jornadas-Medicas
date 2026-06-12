@@ -1,11 +1,15 @@
 import { getInventarioCentral, addMedicineToInventory, getInventarioJornada } from './inventory.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
+const ADMINISTRATIVE_ROLES = ['ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+
 const inventoryRoutes = async (fastify) => {
 
     fastify.get(
         '/inventario-central',
         {
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Obtener inventario central',
@@ -54,7 +58,7 @@ const inventoryRoutes = async (fastify) => {
     fastify.post(
         '/inventario-central',
         {
-            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Agregar medicamento al inventario central',
@@ -97,6 +101,7 @@ const inventoryRoutes = async (fastify) => {
     fastify.get(
         '/inventario-jornada/:jornadaId',
         {
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Obtener inventario de jornada',

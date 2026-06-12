@@ -14,6 +14,7 @@ export default function Button({
     // Variantes de color
     const variants = {
         primary: "text-white shadow-md hover:shadow-lg",
+        secondary: "border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900",
         danger: "bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg",
         outline: "border-2 border-primary text-primary hover:bg-primary hover:text-white",
         ghost: "text-gray-500 hover:bg-gray-100 hover:text-gray-700",

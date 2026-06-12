@@ -1,4 +1,8 @@
 import { createMedicine, getMedicines, updateMedicine, toggleMedicineStatus } from './medicine.controller.js';
+import { requireRole } from '../middlewares/authenticate.js';
+
+const ADMINISTRATIVE_ROLES = ['ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
 
 const medicineSchema = {
     type: 'object',
@@ -49,6 +53,7 @@ const medicineRoutes = async (fastify) => {
     fastify.post(
         '/medicines',
         {
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
@@ -86,6 +91,7 @@ const medicineRoutes = async (fastify) => {
     fastify.get(
         '/medicines',
         {
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Listar medicamentos',
@@ -110,6 +116,7 @@ const medicineRoutes = async (fastify) => {
     fastify.put(
         '/medicines/:id',
         {
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Actualizar medicamento',
@@ -151,6 +158,7 @@ const medicineRoutes = async (fastify) => {
     fastify.patch(
         '/medicines/:id/status',
         {
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Cambiar estado de medicamento',

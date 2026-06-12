@@ -70,7 +70,8 @@ export const createTransferencia = async (request, reply) => {
         jornadaId,
         jornadaNombre,
         detalle,
-        userId: request.user?.id || 'system'
+        userId: request.user?.id || 'system',
+        authHeader: request.headers.authorization
         });
 
         await registerAudit({

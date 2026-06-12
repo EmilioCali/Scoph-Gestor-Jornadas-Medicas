@@ -6,7 +6,7 @@ export const usuarioResponse = {
     apellido: { type: 'string', example: 'Gómez' },
     username: { type: 'string', example: 'dgomez' },
     correo: { type: 'string', example: 'daniel@gmail.com' },
-    rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
+    rol: { type: 'string', enum: ['ADMIN', 'MEDICO'] },
     telefono: { type: 'string', example: '12345678' },
     fotoPerfil: { type: 'string', nullable: true },
     isActive: { type: 'boolean' },
@@ -68,7 +68,7 @@ export const registerSchema = {
       apellido: { type: 'string', minLength: 1, example: 'Gómez' },
       username: { type: 'string', minLength: 3, example: 'dgomez' },
       correo: { type: 'string', example: 'daniel@gmail.com' },
-      rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
+      rol: { type: 'string', enum: ['ADMIN', 'MEDICO'] },
       telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^\\d{8}$', example: '12345678' }
     }
   },

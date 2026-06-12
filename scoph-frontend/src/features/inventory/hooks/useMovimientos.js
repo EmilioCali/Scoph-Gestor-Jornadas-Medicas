@@ -23,8 +23,9 @@ export function useMovimientos(filtrosIniciales = {}) {
     }, [filtros]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchMovimientos(filtros);
-    }, [filtros]);
+    }, [fetchMovimientos, filtros]);
 
     const aplicarFiltros = useCallback((nuevosFiltros) => {
         setFiltros((prev) => ({ ...prev, ...nuevosFiltros, page: 1 }));

@@ -5,7 +5,6 @@ import {
     ArrowsRightLeftIcon,
     ArrowPathIcon,
     FunnelIcon,
-    MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 
 import PageHeader from "../../../shared/components/ui/PageHeader";
@@ -125,7 +124,6 @@ export default function MovimientosPage() {
     const [modalDetalle, setModalDetalle] = useState(false);
     const [selectedMovimiento, setSelectedMovimiento] = useState(null);
 
-    const [busqueda, setBusqueda] = useState("");
     const [filtroType, setFiltroType] = useState("");
     const [filtroSubType, setFiltroSubType] = useState("");
     const [filtroFecha, setFiltroFecha] = useState("");
@@ -144,7 +142,6 @@ export default function MovimientosPage() {
         setFiltroType("");
         setFiltroSubType("");
         setFiltroFecha("");
-        setBusqueda("");
         aplicarFiltros({ type: undefined, subType: undefined, fecha: undefined });
     };
 

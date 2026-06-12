@@ -61,7 +61,7 @@ async function authPlugin(fastify) {
   fastify.get(
     '/me',
     {
-      preHandler: [requireRole('ADMIN')],
+      preHandler: [authenticate],
       schema: {
         tags: ['Autenticación'],
         summary: 'Mi perfil',
@@ -182,7 +182,7 @@ async function authPlugin(fastify) {
             apellido: { type: 'string', minLength: 1 },
             username: { type: 'string', minLength: 3 },
             correo: { type: 'string' },
-            rol: { type: 'string', enum: ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE'] },
+            rol: { type: 'string', enum: ['ADMIN', 'MEDICO'] },
             telefono: { type: 'string', minLength: 8, maxLength: 8, pattern: '^\\d{8}$' },
             isActive: { type: 'boolean' }
           }
@@ -238,7 +238,7 @@ async function authPlugin(fastify) {
   fastify.patch(
     '/users/:id/status',
     {
-      preHandler: [authenticate],
+      preHandler: [requireRole('ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Cambiar estado de usuario',

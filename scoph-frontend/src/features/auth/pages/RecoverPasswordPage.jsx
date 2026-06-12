@@ -47,6 +47,39 @@ function BackgroundElements() {
     );
 }
 
+function LeftPanel() {
+    return (
+        <div className="hidden lg:flex w-1/2 relative flex-col items-center justify-center overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #F27405 0%, #D97236 60%, #8B3A0F 100%)" }}>
+            <div className="absolute inset-0">
+                <img src={personalMedico} alt="Personal Médico" className="w-full h-full object-cover opacity-15" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #F27405CC 0%, #D97236CC 60%, #8B3A0FCC 100%)" }} />
+            </div>
+            <FloatingElements />
+            <div className="relative z-10 flex flex-col items-center text-center px-10">
+                <div className="bg-white rounded-full shadow-2xl overflow-hidden w-28 h-28 flex items-center justify-center mb-5">
+                    <img src={logo} alt="SCOPH URL" className="w-full h-full object-cover" />
+                </div>
+                <h1 className="text-white text-3xl font-extrabold tracking-wide mb-2 drop-shadow-lg">SCOPH - URL</h1>
+                <p className="text-orange-100 text-base font-medium mb-5">Gestor de Jornadas Médicas</p>
+                <div className="w-12 h-1 bg-white/40 rounded-full mb-5" />
+                <p className="text-white/80 text-sm leading-relaxed max-w-xs">
+                    Optimizando la salud, <br />
+                    <span className="text-white font-semibold">organizando el futuro.</span>
+                </p>
+                <div className="flex gap-2 mt-8">
+                    <div className="w-2 h-2 rounded-full bg-white opacity-80" />
+                    <div className="w-6 h-2 rounded-full bg-white opacity-50" />
+                    <div className="w-2 h-2 rounded-full bg-white opacity-30" />
+                </div>
+            </div>
+            <div className="absolute bottom-4 left-0 right-0 text-center">
+                <p className="text-white/30 text-xs">© 2025 SCOPH - URL</p>
+            </div>
+        </div>
+    );
+}
+
 export default function RecoverPasswordPage() {
     const [step, setStep] = useState(1);
     const [correo, setCorreo] = useState("");
@@ -131,38 +164,6 @@ export default function RecoverPasswordPage() {
             setLoading(false);
         }
     };
-
-    // Panel izquierdo reutilizado del Login
-    const LeftPanel = () => (
-        <div className="hidden lg:flex w-1/2 relative flex-col items-center justify-center overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #F27405 0%, #D97236 60%, #8B3A0F 100%)" }}>
-            <div className="absolute inset-0">
-                <img src={personalMedico} alt="Personal Médico" className="w-full h-full object-cover opacity-15" />
-                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #F27405CC 0%, #D97236CC 60%, #8B3A0FCC 100%)" }} />
-            </div>
-            <FloatingElements />
-            <div className="relative z-10 flex flex-col items-center text-center px-10">
-                <div className="bg-white rounded-full shadow-2xl overflow-hidden w-28 h-28 flex items-center justify-center mb-5">
-                    <img src={logo} alt="SCOPH URL" className="w-full h-full object-cover" />
-                </div>
-                <h1 className="text-white text-3xl font-extrabold tracking-wide mb-2 drop-shadow-lg">SCOPH - URL</h1>
-                <p className="text-orange-100 text-base font-medium mb-5">Gestor de Jornadas Médicas</p>
-                <div className="w-12 h-1 bg-white/40 rounded-full mb-5" />
-                <p className="text-white/80 text-sm leading-relaxed max-w-xs">
-                    Optimizando la salud, <br />
-                    <span className="text-white font-semibold">organizando el futuro.</span>
-                </p>
-                <div className="flex gap-2 mt-8">
-                    <div className="w-2 h-2 rounded-full bg-white opacity-80" />
-                    <div className="w-6 h-2 rounded-full bg-white opacity-50" />
-                    <div className="w-2 h-2 rounded-full bg-white opacity-30" />
-                </div>
-            </div>
-            <div className="absolute bottom-4 left-0 right-0 text-center">
-                <p className="text-white/30 text-xs">© 2025 SCOPH - URL</p>
-            </div>
-        </div>
-    );
 
     return (
         <div className="min-h-screen flex items-center justify-center px-4 py-8 relative"

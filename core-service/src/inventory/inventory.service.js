@@ -120,9 +120,9 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
 
 }
 
-export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle, userId }) {
+export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle, userId, authHeader }) {
     const movimientos = [];
-    await getWorkdayById(jornadaId);
+    await getWorkdayById(jornadaId, authHeader);
 
     for (const item of detalle) {
         const { medicineId, batch, quantity } = item;

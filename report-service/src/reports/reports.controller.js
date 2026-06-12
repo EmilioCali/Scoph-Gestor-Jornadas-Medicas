@@ -5,7 +5,7 @@ import { getPaginationParams, paginatedResponse } from '../utils/pagination.js';
 export const getConsumoJornada = async (request, reply) => {
     try {
         const { id } = request.params;
-        const detalles = await obtenerConsumoJornada(id);
+        const detalles = await obtenerConsumoJornada(id, request.headers.authorization);
 
         return reply.status(200).send({
             success: true,
@@ -24,7 +24,7 @@ export const getConsumoJornada = async (request, reply) => {
 
 export const getStockActual = async (request, reply) => {
     try {
-        const stock = await obtenerStockActual();
+        const stock = await obtenerStockActual(request.headers.authorization);
         return reply.status(200).send({ success: true, message: "Stock actual", data: stock });
     } catch (err) {
         return reply.status(400).send({ success: false, message: "Error al consultar stock", error: err.message });
@@ -34,7 +34,7 @@ export const getStockActual = async (request, reply) => {
 export const getProximosAVencer = async (request, reply) => {
     try {
         const dias = request.query.dias ? parseInt(request.query.dias) : 30; //por defecto 30 dias
-        const proximos = await obtenerProximosAVencer(dias);
+        const proximos = await obtenerProximosAVencer(dias, request.headers.authorization);
         return reply.status(200).send({
             success: true,
             message: 'Estos son los medicamentos proximos a vencer',
@@ -54,7 +54,7 @@ export const getMovimientos = async (request, reply) => {
         const { fecha, jornadaId, tipo, usuario } = request.query;
         const { page, limit } = getPaginationParams(request.query);
 
-        const data = await obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page, limit });
+        const data = await obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page, limit }, request.headers.authorization);
 
         return reply.status(200).send({
         success: true,
@@ -72,7 +72,7 @@ export const getMovimientos = async (request, reply) => {
 
 export const getMetricasGenerales = async (request, reply) => {
     try {
-        const metricas = await obtenerMetricasGenerales();
+        const metricas = await obtenerMetricasGenerales(request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Métricas generales del sistema',
@@ -90,7 +90,7 @@ export const getMetricasGenerales = async (request, reply) => {
 export const getEstadisticasJornada = async (request, reply) => {
     try {
         const { jornadaId } = request.params;
-        const stats = await obtenerEstadisticasJornada(jornadaId);
+        const stats = await obtenerEstadisticasJornada(jornadaId, request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Estadísticas de la jornada',
@@ -107,7 +107,7 @@ export const getEstadisticasJornada = async (request, reply) => {
 
 export const getAlertasStockBajo = async (request, reply) => {
     try {
-        const alertas = await obtenerAlertasStockBajo();
+        const alertas = await obtenerAlertasStockBajo(request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Alertas de bajo stock',
@@ -125,7 +125,7 @@ export const getAlertasStockBajo = async (request, reply) => {
 export const getAlertasVencimiento = async (request, reply) => {
     try {
         const dias = request.query.dias ? parseInt(request.query.dias) : 30;
-        const alertas = await obtenerAlertasVencimiento(dias);
+        const alertas = await obtenerAlertasVencimiento(dias, request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Alertas de medicamentos próximos a vencer',
@@ -142,7 +142,7 @@ export const getAlertasVencimiento = async (request, reply) => {
 
 export const exportMovimientosExcel = async (request, reply) => {
     try {
-        const buffer = await exportarMovimientosExcel();
+        const buffer = await exportarMovimientosExcel(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .header('Content-Disposition', 'attachment; filename=movimientos.xlsx')
@@ -158,7 +158,7 @@ export const exportMovimientosExcel = async (request, reply) => {
 
 export const exportStockExcel = async (request, reply) => {
     try {
-        const buffer = await exportarStockExcel();
+        const buffer = await exportarStockExcel(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .header('Content-Disposition', 'attachment; filename=stock.xlsx')
@@ -174,7 +174,7 @@ export const exportStockExcel = async (request, reply) => {
 
 export const exportJornadasExcel = async (request, reply) => {
     try {
-        const buffer = await exportarJornadasExcel();
+        const buffer = await exportarJornadasExcel(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .header('Content-Disposition', 'attachment; filename=jornadas.xlsx')
@@ -190,7 +190,7 @@ export const exportJornadasExcel = async (request, reply) => {
 
 export const exportConsumoExcel = async (request, reply) => {
     try {
-        const buffer = await exportarConsumoExcel();
+        const buffer = await exportarConsumoExcel(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .header('Content-Disposition', 'attachment; filename=consumo.xlsx')
@@ -206,7 +206,7 @@ export const exportConsumoExcel = async (request, reply) => {
 
 export const exportMovimientosPDF = async (request, reply) => {
     try {
-        const buffer = await exportarMovimientosPDF();
+        const buffer = await exportarMovimientosPDF(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/pdf')
         .header('Content-Disposition', 'attachment; filename=movimientos.pdf')
@@ -222,7 +222,7 @@ export const exportMovimientosPDF = async (request, reply) => {
 
 export const exportStockPDF = async (request, reply) => {
     try {
-        const buffer = await exportarStockPDF();
+        const buffer = await exportarStockPDF(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/pdf')
         .header('Content-Disposition', 'attachment; filename=stock.pdf')
@@ -238,7 +238,7 @@ export const exportStockPDF = async (request, reply) => {
 
 export const exportJornadasPDF = async (request, reply) => {
     try {
-        const buffer = await exportarJornadasPDF();
+        const buffer = await exportarJornadasPDF(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/pdf')
         .header('Content-Disposition', 'attachment; filename=jornadas.pdf')
@@ -254,7 +254,7 @@ export const exportJornadasPDF = async (request, reply) => {
 
 export const exportConsumoPDF = async (request, reply) => {
     try {
-        const buffer = await exportarConsumoPDF();
+        const buffer = await exportarConsumoPDF(request.headers.authorization);
         return reply
         .header('Content-Type', 'application/pdf')
         .header('Content-Disposition', 'attachment; filename=consumo.pdf')
@@ -271,7 +271,7 @@ export const exportConsumoPDF = async (request, reply) => {
 export const getAuditorias = async (request, reply) => {
     try {
         const { userId, action, module, fecha } = request.query;
-        const auditorias = await obtenerAuditorias({ userId, action, module, fecha });
+        const auditorias = await obtenerAuditorias({ userId, action, module, fecha }, request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Auditorías del sistema',
@@ -288,7 +288,7 @@ export const getAuditorias = async (request, reply) => {
 
 export const getConsistenciaDatos = async (request, reply) => {
     try {
-        const resultado = await validarConsistenciaDatos();
+        const resultado = await validarConsistenciaDatos(request.headers.authorization);
         return reply.status(200).send({
         success: true,
         message: 'Validación de consistencia de datos',
