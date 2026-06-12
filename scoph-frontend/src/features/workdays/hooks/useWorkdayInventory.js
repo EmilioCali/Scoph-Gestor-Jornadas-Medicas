@@ -12,6 +12,7 @@ import {
   registerReturn,
 } from "../../../shared/apis/coreService";
 import { getUsers } from "../../../shared/apis/authService.js";
+import { useAuthStore } from "../../auth/store/authStore.js";
 
 function normalizeWorkdayInventoryItem(item) {
   const medicine =
@@ -42,6 +43,8 @@ async function getNormalizedWorkdayInventory(workdayId) {
 }
 
 export function useWorkdayInventory() {
+  const userRole = useAuthStore((state) => state.user?.rol);
+  const canLoadAdminResources = userRole === "ADMIN";
   const [workdays, setWorkdays] = useState([]);
   const [users, setUsers] = useState([]);
   const [centralInventory, setCentralInventory] = useState([]);
@@ -56,8 +59,8 @@ export function useWorkdayInventory() {
     try {
       const [workdaysRes, centralRes, userRes] = await Promise.all([
         getWorkdays(),
-        getCentralInventory(),
-        getUsers(),
+        canLoadAdminResources ? getCentralInventory() : Promise.resolve({ data: { data: [] } }),
+        canLoadAdminResources ? getUsers() : Promise.resolve({ data: { users: [] } }),
       ]);
       const loadedWorkdays = workdaysRes.data.data ?? [];
       const inventoryEntries = await Promise.all(
@@ -80,7 +83,7 @@ export function useWorkdayInventory() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canLoadAdminResources]);
 
   const fetchWorkdayInventory = useCallback(async (workdayId) => {
     if (!workdayId) return [];

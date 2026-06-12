@@ -8,6 +8,7 @@ import {
 const emptyMetrics = {
   totalMedicamentos: 0,
   jornadasActivas: 0,
+  stockBajo: 0,
   alertasVencimiento: 0,
   movimientosMes: 0,
   estadisticasJornadas: {
@@ -55,7 +56,7 @@ function normalizeWorkday(workday) {
   };
 }
 
-export function useDashboardData() {
+export function useDashboardData({ enabled = true } = {}) {
   const [metrics, setMetrics] = useState(emptyMetrics);
   const [movementsChart, setMovementsChart] = useState(emptyChart);
   const [stockAlerts, setStockAlerts] = useState([]);
@@ -66,6 +67,12 @@ export function useDashboardData() {
   const [error, setError] = useState(null);
 
   const fetchDashboard = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -106,7 +113,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

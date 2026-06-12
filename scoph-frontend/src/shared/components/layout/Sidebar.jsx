@@ -40,6 +40,7 @@ const inventarioItems = [
     to: "/inventario/central",
     label: "Inventario Central",
     icon: ArchiveBoxIcon,
+    allowedRoles: ["ADMIN"],
   },
   {
     to: "/inventario/movimientos",
@@ -118,7 +119,9 @@ export default function Sidebar() {
 
             {inventarioOpen && (
               <div className="ml-4 mt-1 space-y-1 border-l border-gray-700 pl-3">
-                {inventarioItems.map(({ to, label, icon: Icon }) => (
+                {inventarioItems
+                  .filter((item) => !item.allowedRoles || item.allowedRoles.includes(user?.rol))
+                  .map(({ to, label, icon: Icon }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -139,19 +142,21 @@ export default function Sidebar() {
           </div>
 
           {/* Reportes */}
-          <NavLink
-            to="/reportes"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-primary text-white shadow-md"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
-              }`
-            }
-          >
-            <ClipboardDocumentListIcon className="w-5 h-5 flex-shrink-0" />
-            Reportes
-          </NavLink>
+          {user?.rol === "ADMIN" && (
+            <NavLink
+              to="/reportes"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? "bg-primary text-white shadow-md"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                }`
+              }
+            >
+              <ClipboardDocumentListIcon className="w-5 h-5 flex-shrink-0" />
+              Reportes
+            </NavLink>
+          )}
         </nav>
 
         {/* Zona inferior del usuario - Clickeable para abrir el Perfil */}

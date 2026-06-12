@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { randomBytes } from 'crypto'
 
-export const ROLES = ['ADMIN', 'MEDICO', 'ENFERMERO', 'ASISTENTE']
+export const ROLES = ['ADMIN', 'MEDICO']
 
 const userSchema = new mongoose.Schema(
   {
@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ROLES,
       required: true,
-      default: 'ASISTENTE'
+      default: 'MEDICO'
     },
 
     telefono: {

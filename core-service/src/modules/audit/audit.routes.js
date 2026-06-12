@@ -1,4 +1,5 @@
 import { getAuditorias } from './audit.controller.js';
+import { requireRole } from '../../middlewares/authenticate.js';
 
 const auditSchema = {
     type: 'object',
@@ -39,6 +40,7 @@ const auditRoutes = async (fastify) => {
     fastify.get(
         '/auditoria',
         {
+            preHandler: [requireRole('ADMIN')],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Consultar auditorias',

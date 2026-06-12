@@ -1,6 +1,9 @@
 import { createEntrada, createSalidaReceta, createTransferencia } from './movement.controller.js'
 import { createConsumoJornada, createRetornoJornada, getMovimientos } from './movement.controller.js'
-import { authenticate, requireRole } from '../middlewares/authenticate.js';
+import { requireRole } from '../middlewares/authenticate.js';
+
+const ADMINISTRATIVE_ROLES = ['ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
 
 const movementDetailInputSchema = {
     type: 'object',
@@ -91,7 +94,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/entrada',
         {
-            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar entrada a inventario central',
@@ -134,7 +137,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/salida-receta',
         {
-            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar salida por receta',
@@ -167,7 +170,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/transferencia',
         {
-            preHandler: [requireRole('ADMIN', 'ENFERMERO', 'ASISTENTE')],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Transferir stock a jornada',
@@ -208,7 +211,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/consumo-jornada',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar consumo en jornada',
@@ -249,7 +252,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/retorno-jornada',
         {
-            preHandler: [authenticate],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar retorno de jornada',
@@ -290,6 +293,7 @@ const movementRoutes = async (fastify) => {
     fastify.get(
         '/movimientos',
         {
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Consultar movimientos',

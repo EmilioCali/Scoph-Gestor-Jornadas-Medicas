@@ -9,6 +9,7 @@ import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 import { departamentosGuatemala } from "../../../shared/constants/catalogOptions";
 import { useWorkdayInventory } from "../hooks/useWorkdayInventory";
+import { useAuthStore } from "../../auth/store/authStore.js";
 
 // Badge según estado de la jornada - valores reales del backend
 function getStatusBadge(status) {
@@ -196,6 +197,8 @@ function WorkdayDetail({
   onAssign,
   onConsumption,
   onReturn,
+  canAssign,
+  canReturn,
 }) {
   return (
     <div className="space-y-5">
@@ -258,7 +261,7 @@ function WorkdayDetail({
               ({workdayInventory.length} medicamentos)
             </span>
           </h3>
-          {workday.status !== "FINISHED" && workday.status !== "COMPLETED" && (
+          {canAssign && workday.status !== "FINISHED" && workday.status !== "COMPLETED" && (
             <Button variant="primary" size="sm" onClick={onAssign}>
               <PlusIcon className="w-4 h-4" />
               Asignar medicamento
@@ -303,13 +306,15 @@ function WorkdayDetail({
                       >
                         Consumo
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onReturn(item)}
-                      >
-                        Retorno
-                      </Button>
+                      {canReturn && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onReturn(item)}
+                        >
+                          Retorno
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -534,6 +539,8 @@ const assignInicial = { medicineId: "", batch: "", quantity: "" };
 const movementInicial = { quantity: "", observacion: "" };
 
 export default function JornadasPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageWorkdays = currentUser?.rol === "ADMIN";
   const {
     workdays,
     users = [],
@@ -794,7 +801,7 @@ export default function JornadasPage() {
           >
             <EyeIcon className="w-4 h-4" />
           </Button>
-          {row.status === "COMPLETED" && (
+          {canManageWorkdays && row.status === "COMPLETED" && (
             <Button
               variant="danger"
               size="sm"
@@ -813,7 +820,7 @@ export default function JornadasPage() {
       <PageHeader
         title="Gestión de Jornadas"
         subtitle="Administra las jornadas médicas y su inventario asignado"
-        action={
+        action={canManageWorkdays ? (
           <Button
             variant="primary"
             onClick={() => {
@@ -825,7 +832,7 @@ export default function JornadasPage() {
             <PlusIcon className="w-4 h-4" />
             Nueva Jornada
           </Button>
-        }
+        ) : null}
       />
 
       {error && (
@@ -917,6 +924,8 @@ export default function JornadasPage() {
               setFormError(null);
               setModalRetorno(true);
             }}
+            canAssign={canManageWorkdays}
+            canReturn={canManageWorkdays}
           />
         )}
       </Modal>

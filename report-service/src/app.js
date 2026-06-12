@@ -1,7 +1,9 @@
+import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import jwt from "@fastify/jwt";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import reportesRoutes from "./reports/reports.routes.js";
@@ -44,6 +46,14 @@ await app.register(rateLimit, {
     error: "RATE_LIMIT_EXCEEDED",
     retryAfter: context.after,
   }),
+});
+
+await app.register(jwt, {
+  secret:
+    process.env.JWT_SECRET ||
+    (() => {
+      throw new Error("JWT_SECRET es requerido");
+    })(),
 });
 
 //documentacion Swagger / OpenAPI

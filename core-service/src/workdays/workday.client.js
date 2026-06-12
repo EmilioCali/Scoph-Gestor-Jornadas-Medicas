@@ -1,13 +1,16 @@
 import { SERVICES } from '../config/services.js';
 
-export async function getWorkdayById(workdayId) {
+export async function getWorkdayById(workdayId, authHeader) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
         const response = await fetch(
             `${SERVICES.workday.baseUrl}/api/v1/workdays/${workdayId}`,
-            { signal: controller.signal }
+            {
+                signal: controller.signal,
+                headers: authHeader ? { Authorization: authHeader } : {}
+            }
         );
 
         if (response.status === 404) {

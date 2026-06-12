@@ -20,6 +20,7 @@ import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 import { medicineCategories } from "../../../shared/constants/catalogOptions";
 import { useMedicines } from "../hooks/useMedicines";
+import { useAuthStore } from "../../auth/store/authStore.js";
 
 const FORM_INICIAL = {
     name: "", compound: "", concentration: "", barcode: "",
@@ -95,6 +96,8 @@ function MedicineForm({ form, onChange, onSubmit, onClose, isEdit, submitting })
 
 export default function CatalogoPage() {
     const { medicines, loading, error, refetch, create, update, toggleStatus } = useMedicines();
+    const currentUser = useAuthStore((state) => state.user);
+    const canManageCatalog = currentUser?.rol === "ADMIN";
 
     const [busqueda, setBusqueda] = useState("");
     const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -263,7 +266,7 @@ export default function CatalogoPage() {
                 ? <Badge variant="success">Activo</Badge>
                 : <Badge variant="danger">Inactivo</Badge>
         },
-        {
+        canManageCatalog && {
             key: "acciones", label: "Acciones",
             render: (row) => (
                 <div className="flex gap-2">
@@ -281,7 +284,7 @@ export default function CatalogoPage() {
                 </div>
             ),
         },
-    ];
+    ].filter(Boolean);
 
     return (
         <div className="space-y-6">
@@ -293,9 +296,11 @@ export default function CatalogoPage() {
                         <Button variant="outline" size="md" onClick={refetch} disabled={loading} title="Recargar">
                             <ArrowPathIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                         </Button>
-                        <Button variant="primary" onClick={() => { setForm(FORM_INICIAL); setFormError(null); setModalCrear(true); }}>
-                            <PlusIcon className="w-4 h-4" /> Nuevo Medicamento
-                        </Button>
+                        {canManageCatalog && (
+                            <Button variant="primary" onClick={() => { setForm(FORM_INICIAL); setFormError(null); setModalCrear(true); }}>
+                                <PlusIcon className="w-4 h-4" /> Nuevo Medicamento
+                            </Button>
+                        )}
                     </div>
                 }
             />

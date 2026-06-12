@@ -59,24 +59,24 @@ const downloadFile = async (url, fileName) => {
 
 // Exportar movimientos
 export const exportMovementsExcel = () =>
-  downloadFile("/api/v1/reportes/exportar/movimientos/Excel", "movements.xlsx");
+  downloadFile("/api/v1/reportes/exportar/movimientos/excel", "movements.xlsx");
 export const exportMovementsPDF = () =>
   downloadFile("/api/v1/reportes/exportar/movimientos/pdf", "movements.pdf");
 
 // Exportar  stock
 export const exportStockExcel = () =>
-  downloadFile("/api/v1/reportes/exportar/stock/Excel", "stock.xlsx");
+  downloadFile("/api/v1/reportes/exportar/stock/excel", "stock.xlsx");
 export const exportStockPDF = () =>
   downloadFile("/api/v1/reportes/exportar/stock/pdf", "stock.pdf");
 
 // Exportar jornadas
 export const exportWorkdaysExcel = () =>
-  downloadFile("/api/v1/reportes/exportar/jornadas/Excel", "workdays.xlsx");
+  downloadFile("/api/v1/reportes/exportar/jornadas/excel", "workdays.xlsx");
 export const exportWorkdaysPDF = () =>
   downloadFile("/api/v1/reportes/exportar/jornadas/pdf", "workdays.pdf");
 
 // Exportar consumo
 export const exportConsumptionExcel = () =>
-  downloadFile("/api/v1/reportes/exportar/consumo/Excel", "consumption.xlsx");
+  downloadFile("/api/v1/reportes/exportar/consumo/excel", "consumption.xlsx");
 export const exportConsumptionPDF = () =>
   downloadFile("/api/v1/reportes/exportar/consumo/pdf", "consumption.pdf");

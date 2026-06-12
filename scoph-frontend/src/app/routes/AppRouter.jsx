@@ -59,12 +59,16 @@ export default function AppRouter() {
             </Route>
             <Route path="jornadas" element={<WorkdaysPage />} />
             <Route path="inventario/catalogo" element={<CatalogoPage />} />
-            <Route
-              path="inventario/central"
-              element={<InventarioCentralPage />}
-            />
+            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+              <Route
+                path="inventario/central"
+                element={<InventarioCentralPage />}
+              />
+            </Route>
             <Route path="inventario/movimientos" element={<MovimientosPage />} />
-            <Route path="reportes" element={<ReportesPage />} />
+            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+              <Route path="reportes" element={<ReportesPage />} />
+            </Route>
           </Route>
         </Route>
 

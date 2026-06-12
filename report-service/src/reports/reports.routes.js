@@ -18,6 +18,10 @@ import {
     getAuditorias,
     getConsistenciaDatos
 } from './reports.controller.js';
+import { requireRole } from '../middlewares/authenticate.js';
+
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMIN_ONLY = ['ADMIN'];
 
 const idParamSchema = (name = 'id') => ({
     type: 'object',
@@ -134,6 +138,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/consumo-jornada/:id',
         {
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar consumo por jornada',
@@ -158,6 +163,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/stock',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar stock actual',
@@ -181,6 +187,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/vencimientos',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar medicamentos proximos a vencer',
@@ -205,6 +212,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/movimientos',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar movimientos de inventario',
@@ -242,6 +250,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/dashboard',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar metricas generales',
@@ -259,6 +268,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/jornada/:jornadaId',
         {
+            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar estadisticas de jornada',
@@ -277,6 +287,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/alertas/stock-bajo',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Alertas'],
                 summary: 'Consultar alertas de stock bajo',
@@ -294,6 +305,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/alertas/vencimientos',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Alertas'],
                 summary: 'Consultar alertas de vencimiento',
@@ -309,18 +321,19 @@ const reportesRoutes = async (fastify) =>{
         getAlertasVencimiento
     );
 
-    fastify.get('/reportes/exportar/movimientos/excel', { schema: exportSchema('Exportar movimientos a Excel', 'Descarga un archivo XLSX con los movimientos de inventario.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportMovimientosExcel);
-    fastify.get('/reportes/exportar/stock/excel', { schema: exportSchema('Exportar stock a Excel', 'Descarga un archivo XLSX con el stock central por lote.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportStockExcel);
-    fastify.get('/reportes/exportar/jornadas/excel', { schema: exportSchema('Exportar jornadas a Excel', 'Descarga un archivo XLSX con el listado de jornadas medicas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportJornadasExcel);
-    fastify.get('/reportes/exportar/consumo/excel', { schema: exportSchema('Exportar consumo a Excel', 'Descarga un archivo XLSX con el consumo registrado en jornadas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportConsumoExcel);
-    fastify.get('/reportes/exportar/movimientos/pdf', { schema: exportSchema('Exportar movimientos a PDF', 'Descarga un archivo PDF con los movimientos de inventario.', 'application/pdf') }, exportMovimientosPDF);
-    fastify.get('/reportes/exportar/stock/pdf', { schema: exportSchema('Exportar stock a PDF', 'Descarga un archivo PDF con el stock central por lote.', 'application/pdf') }, exportStockPDF);
-    fastify.get('/reportes/exportar/jornadas/pdf', { schema: exportSchema('Exportar jornadas a PDF', 'Descarga un archivo PDF con el listado de jornadas medicas.', 'application/pdf') }, exportJornadasPDF);
-    fastify.get('/reportes/exportar/consumo/pdf', { schema: exportSchema('Exportar consumo a PDF', 'Descarga un archivo PDF con el consumo registrado en jornadas.', 'application/pdf') }, exportConsumoPDF);
+    fastify.get('/reportes/exportar/movimientos/excel', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar movimientos a Excel', 'Descarga un archivo XLSX con los movimientos de inventario.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportMovimientosExcel);
+    fastify.get('/reportes/exportar/stock/excel', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar stock a Excel', 'Descarga un archivo XLSX con el stock central por lote.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportStockExcel);
+    fastify.get('/reportes/exportar/jornadas/excel', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar jornadas a Excel', 'Descarga un archivo XLSX con el listado de jornadas medicas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportJornadasExcel);
+    fastify.get('/reportes/exportar/consumo/excel', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar consumo a Excel', 'Descarga un archivo XLSX con el consumo registrado en jornadas.', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }, exportConsumoExcel);
+    fastify.get('/reportes/exportar/movimientos/pdf', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar movimientos a PDF', 'Descarga un archivo PDF con los movimientos de inventario.', 'application/pdf') }, exportMovimientosPDF);
+    fastify.get('/reportes/exportar/stock/pdf', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar stock a PDF', 'Descarga un archivo PDF con el stock central por lote.', 'application/pdf') }, exportStockPDF);
+    fastify.get('/reportes/exportar/jornadas/pdf', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar jornadas a PDF', 'Descarga un archivo PDF con el listado de jornadas medicas.', 'application/pdf') }, exportJornadasPDF);
+    fastify.get('/reportes/exportar/consumo/pdf', { preHandler: [requireRole(...ADMIN_ONLY)], schema: exportSchema('Exportar consumo a PDF', 'Descarga un archivo PDF con el consumo registrado en jornadas.', 'application/pdf') }, exportConsumoPDF);
 
     fastify.get(
         '/reportes/auditoria',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Consultar auditorias',
@@ -353,6 +366,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/consistencia',
         {
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Validar consistencia de datos',

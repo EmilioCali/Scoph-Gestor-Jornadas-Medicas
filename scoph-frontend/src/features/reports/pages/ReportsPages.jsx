@@ -6,7 +6,6 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import PageHeader from "../../../shared/components/ui/PageHeader";
 import Badge from "../../../shared/components/ui/Badge";
 import Button from "../../../shared/components/ui/Button";
@@ -206,11 +205,13 @@ export default function ReportesPage() {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadReportData();
     }, [loadReportData]);
 
     useEffect(() => {
         if (activeTab === "movements") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchMovements();
         }
     }, [activeTab, fetchMovements]);
