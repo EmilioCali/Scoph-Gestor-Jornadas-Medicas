@@ -1,65 +1,99 @@
 // c:\IN6AM\gitIN6AM\Scoph-Gestor-Jornadas-Medicas\scoph-mobile\src\features\profile\hooks\useProfile.js
-import { useState, useCallback } from "react";
-import { useAuthStore } from "../../../shared/store/authStore.js";
-import { authClient } from "../../../shared/api/userClient.js";
+import { useState, useEffect, useCallback } from 'react';
+import { getProfile, updateProfile } from '../../../shared/api/userClient.js';
+import { useAuthStore } from '../../../shared/store/authStore.js';
 
-export const useProfile = () => {
-  const { user, updateUser, logout } = useAuthStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const normalizeApiProfile = (data) => {
+  if (!data) {
+    return data;
+  }
 
-  const updateProfile = useCallback(
-    async (data) => {
-      setLoading(true);
-      setError(null);
+  const profile = { ...data };
 
-      try {
-        if (!user?.id) throw new Error("User ID not found");
-        const response = await authClient.patch(`/api/auth/users/${user.id}`, data);
-        const updatedUser = response.data.data || response.data;
-        updateUser(updatedUser);
-        return updatedUser;
-      } catch (err) {
-        const message = err.response?.data?.message || err.message || "Error al actualizar perfil.";
-        setError(message);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user, updateUser],
-  );
+  Object.keys(profile).forEach((key) => {
+    if (Array.isArray(profile[key])) {
+      profile[key] = profile[key].join(', ');
+    }
+  });
 
-  const handleLogout = useCallback(async () => {
-    await logout();
-  }, [logout]);
-
-  return { user, loading, error, updateProfile, logout: handleLogout };
+  return profile;
 };
-// c:\IN6AM\gitIN6AM\Scoph-Gestor-Jornadas-Medicas\scoph-mobile\src\features\reports\hooks\useReports.js
-import { useState, useCallback } from "react";
-import { reportsClient } from "../../../shared/api/userClient.js";
 
-export const useReports = () => {
-  const [reports, setReports] = useState([]);
+const serializeProfilePayload = (original, values) => {
+  const payload = { ...values };
+
+  if (original) {
+    Object.keys(original).forEach((key) => {
+      if (Array.isArray(original[key]) && typeof values[key] === 'string') {
+        payload[key] = values[key]
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+    });
+  }
+
+  return payload;
+};
+
+export function useProfile() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [originalProfile, setOriginalProfile] = useState(null);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const logout = useAuthStore((state) => state.logout);
 
-  const fetchReports = useCallback(async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await reportsClient.get("/api/reports");
-      const data = response.data.data || response.data;
-      setReports(data);
+      const response = await getProfile();
+      setOriginalProfile(response);
+      setProfile(normalizeApiProfile(response));
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Error al cargar reportes.";
-      setError(message);
+      setError(err.response?.data?.message || err.message || 'Error al cargar el perfil');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { reports, loading, error, fetchReports };
-};
+  const saveProfile = useCallback(
+    async (values) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const payload = serializeProfilePayload(originalProfile, values);
+        payload._id = originalProfile?._id;
+        payload.id = originalProfile?.id;
+        const response = await updateProfile(payload);
+        setOriginalProfile(response);
+        const updatedProfile = normalizeApiProfile(response);
+        setProfile(updatedProfile);
+        updateUser(response);
+        return updatedProfile;
+      } catch (err) {
+        setError(err.response?.data?.message || err.message || 'Error al actualizar el perfil');
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [originalProfile, updateUser]
+  );
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  return {
+    loading,
+    error,
+    profile,
+    fetchProfile,
+    saveProfile,
+    logout
+  };
+}

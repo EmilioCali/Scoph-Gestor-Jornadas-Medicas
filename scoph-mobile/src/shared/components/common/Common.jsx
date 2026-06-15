@@ -1,62 +1,86 @@
 // c:\IN6AM\gitIN6AM\Scoph-Gestor-Jornadas-Medicas\scoph-mobile\src\shared\components\common\Common.jsx
-import React from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { COLORS, SPACING, FONT_SIZES } from "../../constants/theme.js";
+import React from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme.js';
 
-export const LoadingSpinner = ({ size = "large" }) => (
-  <View style={styles.spinnerContainer}>
-    <ActivityIndicator size={size} color={COLORS.primary} />
-  </View>
-);
+export function HomeScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Bienvenido a Scoph Mobile</Text>
+      <Text style={styles.subtitle}>Reserva canchas, organiza equipos y gestiona torneos desde tu celular.</Text>
+    </View>
+  );
+}
 
-export const EmptyState = ({ message = "No hay datos disponibles", icon = "📭" }) => (
-  <View style={styles.emptyContainer}>
-    <Text style={styles.emptyIcon}>{icon}</Text>
-    <Text style={styles.emptyText}>{message}</Text>
-  </View>
-);
+export function LoadingSpinner({ size = 'large', color = COLORS.primary }) {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size={size} color={color} />
+    </View>
+  );
+}
 
-export const Card = ({ children, style }) => (
-  <View style={[styles.card, style]}>
-    {children}
-  </View>
-);
+export function EmptyState({ title = 'Nada para mostrar', message = 'No se encontraron resultados.' }) {
+  return (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyMessage}>{message}</Text>
+    </View>
+  );
+}
 
-export const Common = {
-  LoadingSpinner,
-  EmptyState,
-  Card,
-};
+export function Card({ children, style }) {
+  return <View style={[styles.card, style]}>{children}</View>;
+}
 
 const styles = StyleSheet.create({
-  spinnerContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: SPACING.lg,
     backgroundColor: COLORS.background,
+    justifyContent: 'center'
+  },
+  title: {
+    fontSize: FONT_SIZE.xxl,
+    color: COLORS.text,
+    fontWeight: '700',
+    marginBottom: SPACING.sm
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    lineHeight: 24
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.lg,
+    padding: SPACING.lg,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    ...SHADOWS.sm
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: SPACING.md,
+  emptyTitle: {
+    fontSize: FONT_SIZE.lg,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+    fontWeight: '700'
   },
-  emptyText: {
-    color: COLORS.textLight,
-    fontSize: FONT_SIZES.base,
-    textAlign: "center",
+  emptyMessage: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    lineHeight: 22
   },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: SPACING.md,
-    marginVertical: SPACING.sm,
-    borderWidth: 1,
+    borderRadius: 16,
+    padding: SPACING.lg,
     borderColor: COLORS.border,
-  },
+    borderWidth: 1,
+    ...SHADOWS.sm
+  }
 });

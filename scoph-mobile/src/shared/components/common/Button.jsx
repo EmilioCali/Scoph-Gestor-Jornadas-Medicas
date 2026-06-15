@@ -1,37 +1,39 @@
 // c:\IN6AM\gitIN6AM\Scoph-Gestor-Jornadas-Medicas\scoph-mobile\src\shared\components\common\Button.jsx
-import React from "react";
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { COLORS, SPACING, FONT_SIZES } from "../../constants/theme.js";
+import React from 'react';
+import { Pressable, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme.js';
 
-export default function Button({
-  label,
-  onPress,
-  loading = false,
-  disabled = false,
-  variant = "primary",
-  style,
-}) {
-  const isDisabled = loading || disabled;
-  const backgroundColor =
-    variant === "primary" ? COLORS.primary : variant === "secondary" ? COLORS.secondary : COLORS.primary;
-  const opacity = isDisabled ? 0.6 : 1;
+const variants = {
+  primary: {
+    backgroundColor: COLORS.primary,
+    textColor: COLORS.surface
+  },
+  secondary: {
+    backgroundColor: COLORS.secondary,
+    textColor: COLORS.text
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    textColor: COLORS.primary
+  }
+};
+
+export function Button({ title, onPress, variant = 'primary', disabled = false, loading = false, style }) {
+  const color = variants[variant] || variants.primary;
+  const shouldDisable = disabled || loading;
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        { backgroundColor, opacity },
-        style,
-      ]}
+    <Pressable
       onPress={onPress}
-      disabled={isDisabled}
+      disabled={shouldDisable}
+      style={[styles.button, { backgroundColor: color.backgroundColor }, shouldDisable && styles.disabled, style]}
     >
       {loading ? (
-        <ActivityIndicator color={COLORS.surface} size="small" />
+        <ActivityIndicator color={color.textColor} />
       ) : (
-        <Text style={styles.text}>{label}</Text>
+        <Text style={[styles.text, { color: color.textColor }]}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -39,14 +41,16 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: SPACING.sm,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.sm
   },
   text: {
-    color: COLORS.surface,
-    fontSize: FONT_SIZES.base,
-    fontWeight: "600",
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700'
   },
+  disabled: {
+    opacity: 0.6
+  }
 });

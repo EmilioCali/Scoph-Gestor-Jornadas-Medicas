@@ -1,27 +1,35 @@
 // c:\IN6AM\gitIN6AM\Scoph-Gestor-Jornadas-Medicas\scoph-mobile\src\features\users\hooks\useUsers.js
-import { useState, useCallback } from "react";
-import { authClient } from "../../../shared/api/userClient.js";
+import { useState, useEffect, useCallback } from 'react';
+import { getUsers } from '../../../shared/api/usersService.js';
 
-export const useUsers = () => {
-  const [users, setUsers] = useState([]);
+export function useUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [users, setUsers] = useState([]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await authClient.get("/api/auth/users");
-      const data = response.data.data || response.data;
-      setUsers(data);
+      const response = await getUsers();
+      const payload = response?.data;
+      setUsers(payload?.users ?? []);
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Error al cargar usuarios.";
-      setError(message);
+      setError(err.response?.data?.message || err.message || 'Error al cargar los usuarios');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { users, loading, error, fetchUsers };
-};
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  return {
+    loading,
+    error,
+    users,
+    refreshUsers: fetchUsers
+  };
+}
