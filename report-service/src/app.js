@@ -180,10 +180,18 @@ app.setErrorHandler((error, request, reply) => {
     return reply.status(429).send(error);
   }
 
-  reply.status(error.statusCode || 500).send({
-    status: "error",
+  const statusCode = error.statusCode || 500;
+  const responseBody = {
+    success: false,
     message: error.message || "Internal Server Error",
-  });
+  };
+
+  
+  if (statusCode === 401 || statusCode === 403) {
+    responseBody.error = statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN";
+  }
+
+  reply.status(statusCode).send(responseBody);
 });
 
 export default app;
