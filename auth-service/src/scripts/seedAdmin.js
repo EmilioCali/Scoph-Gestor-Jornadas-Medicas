@@ -5,7 +5,7 @@ import { User } from '../models/user.model.js'
 const SALT_ROUNDS = 12
 
 /**
- * Crea el primer usuario ADMIN si no existe ninguno en la base de datos.
+ * Crea el primer usuario SUPER_ADMIN si no existe ninguno en la base de datos.
  * Configurable via variables de entorno:
  *   ADMIN_NOMBRE    (default: Administrador)
  *   ADMIN_APELLIDO  (default: SCOPH)
@@ -13,10 +13,10 @@ const SALT_ROUNDS = 12
  *   ADMIN_CORREO    (requerido si no existe admin)
  *   ADMIN_PASSWORD  (default: se genera uno aleatorio)
  *
- * Se ejecuta una sola vez al inicio. Si ya existe un ADMIN, no hace nada.
+ * Se ejecuta una sola vez al inicio. Si ya existe un SUPER_ADMIN, no hace nada.
  */
 export async function seedAdmin() {
-  const existingAdmin = await User.findOne({ rol: 'ADMIN' })
+  const existingAdmin = await User.findOne({ rol: 'SUPER_ADMIN' })
 
   if (existingAdmin) {
     return
@@ -25,7 +25,7 @@ export async function seedAdmin() {
   const correo = process.env.ADMIN_CORREO
   if (!correo) {
     console.warn('')
-    console.warn('  ⚠️  No existe ningún ADMIN y ADMIN_CORREO no está definido en el .env')
+    console.warn('  ⚠️  No existe ningún SUPER_ADMIN y ADMIN_CORREO no está definido en el .env')
     console.warn('     Agrega ADMIN_CORREO al .env y reinicia el servicio para crear el admin inicial.')
     console.warn('')
     return
@@ -44,7 +44,7 @@ export async function seedAdmin() {
     username: username.toLowerCase(),
     correo: correo.toLowerCase(),
     passwordHash,
-    rol: 'ADMIN',
+    rol: 'SUPER_ADMIN',
     mustChangePassword: true,
     emailVerificado: true,
     isActive: true
@@ -54,7 +54,7 @@ export async function seedAdmin() {
 
   console.log('')
   console.log('  ╔══════════════════════════════════════════════════╗')
-  console.log('  ║        👤  Usuario ADMIN creado                  ║')
+  console.log('  ║        👤  Usuario SUPER_ADMIN creado            ║')
   console.log('  ╠══════════════════════════════════════════════════╣')
   console.log(`  ║  Username  : ${username.padEnd(34)}║`)
   console.log(`  ║  Correo    : ${correo.padEnd(34)}║`)
