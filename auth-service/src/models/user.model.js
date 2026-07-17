@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { randomBytes } from 'crypto'
 
-export const ROLES = ['ADMIN', 'MEDICO']
+export const ROLES = ['SUPER_ADMIN', 'ADMIN', 'MEDICO']
 
 const userSchema = new mongoose.Schema(
   {

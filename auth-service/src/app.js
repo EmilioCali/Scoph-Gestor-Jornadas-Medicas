@@ -38,7 +38,7 @@ export async function buildApp() {
             tags: [
                 { name: 'Sistema', description: 'Estado y salud del servicio' },
                 { name: 'Autenticación', description: 'Login y sesiones' },
-                { name: 'Usuarios', description: 'Gestión de usuarios (solo ADMIN)' }
+                { name: 'Usuarios', description: 'Gestión de usuarios (solo ADMIN y SUPER_ADMIN)' }
             ],
             components: {
                 securitySchemes: {
