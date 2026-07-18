@@ -20,8 +20,8 @@ import {
 } from './reports.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
-const ADMIN_ONLY = ['ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
+const ADMIN_ONLY = ['ADMIN', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const idParamSchema = (name = 'id') => ({
@@ -164,11 +164,11 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/stock',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar stock actual',
-                description: 'Retorna el stock central actual por medicamento y lote. Solo SUPER_ADMIN.',
+                description: 'Retorna el stock central actual por medicamento y lote. ADMIN puede ver.',
                 response: {
                     200: successArrayResponseSchema('Stock actual'),
                     400: {
@@ -188,11 +188,11 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/vencimientos',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar medicamentos proximos a vencer',
-                description: 'Lista lotes con fecha de vencimiento dentro del rango indicado en dias. Solo SUPER_ADMIN.',
+                description: 'Lista lotes con fecha de vencimiento dentro del rango indicado en dias. ADMIN puede ver.',
                 querystring: diasQuerySchema,
                 response: {
                     200: successArrayResponseSchema('Estos son los medicamentos proximos a vencer'),
@@ -213,7 +213,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/movimientos',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar movimientos de inventario',
@@ -251,7 +251,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/dashboard',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar metricas generales',
@@ -288,7 +288,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/alertas/stock-bajo',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Alertas'],
                 summary: 'Consultar alertas de stock bajo',
@@ -306,7 +306,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/alertas/vencimientos',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Alertas'],
                 summary: 'Consultar alertas de vencimiento',
@@ -334,7 +334,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/auditoria',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Consultar auditorias',
@@ -367,7 +367,7 @@ const reportesRoutes = async (fastify) =>{
     fastify.get(
         '/reportes/consistencia',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMIN_ONLY)],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Validar consistencia de datos',

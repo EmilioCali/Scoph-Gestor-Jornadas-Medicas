@@ -2,8 +2,8 @@ import { createEntrada, createSalidaReceta, createTransferencia } from './moveme
 import { createConsumoJornada, createRetornoJornada, getMovimientos } from './movement.controller.js'
 import { requireRole } from '../middlewares/authenticate.js';
 
-const ADMINISTRATIVE_ROLES = ['ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const movementDetailInputSchema = {
@@ -95,11 +95,11 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/entrada',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar entrada a inventario central',
-                description: 'Registra una compra o donacion y aumenta el stock del inventario central. Solo SUPER_ADMIN.',
+                description: 'Registra una compra o donacion y aumenta el stock del inventario central. ADMIN puede registrar.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',

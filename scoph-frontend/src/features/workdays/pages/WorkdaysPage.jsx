@@ -540,7 +540,7 @@ const movementInicial = { quantity: "", observacion: "" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
-  const canManageWorkdays = currentUser?.rol === "ADMIN";
+  const canManageWorkdays = currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
     users = [],

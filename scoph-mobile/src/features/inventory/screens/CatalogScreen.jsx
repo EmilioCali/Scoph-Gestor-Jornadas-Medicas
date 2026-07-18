@@ -69,7 +69,7 @@ function OptionGroup({ label, value, options, onChange }) {
 export function CatalogScreen() {
   const { loading, error, catalog, refetch, create, update, toggleStatus } = useInventory();
   const currentUser = useAuthStore((state) => state.user);
-  const canManageCatalog = currentUser?.rol === 'ADMIN';
+  const canManageCatalog = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'SUPER_ADMIN';
 
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('');

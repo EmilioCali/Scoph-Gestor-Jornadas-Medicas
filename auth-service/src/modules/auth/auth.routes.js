@@ -90,12 +90,13 @@ async function authPlugin(fastify) {
 
   /**
    * POST /api/auth/register
-   * Crea un nuevo usuario. Solo SUPER_ADMIN.
+   * Crea un nuevo usuario. Solo SUPER_ADMIN puede crear usuarios con cualquier rol.
+   * ADMIN puede crear usuarios solo con rol MEDICO.
    * Genera contraseña temporal y la envía al correo del usuario automáticamente.
    */
   fastify.post(
     '/register',
-    { schema: registerSchema, preHandler: [requireRole('SUPER_ADMIN')] },
+    { schema: registerSchema, preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')] },
     async (request, reply) => {
       try {
         const user = await register({ ...request.body, creadoPor: request.user.id }, request.user.rol)
@@ -127,16 +128,16 @@ async function authPlugin(fastify) {
 
   /**
    * GET /api/auth/users
-   * Lista todos los usuarios. Solo SUPER_ADMIN.
+   * Lista todos los usuarios. ADMIN puede ver, SUPER_ADMIN puede gestionar todo.
    */
   fastify.get(
     '/users',
     {
-      preHandler: [requireRole('SUPER_ADMIN')],
+      preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Listar usuarios',
-        description: 'Retorna la lista completa de usuarios registrados. Solo SUPER_ADMIN.',
+        description: 'Retorna la lista completa de usuarios registrados. ADMIN puede ver, SUPER_ADMIN puede gestionar todo.',
         security: [{ bearerAuth: [] }],
         response: {
           200: {
@@ -157,16 +158,16 @@ async function authPlugin(fastify) {
 
   /**
    * PATCH /api/auth/users/:id
-   * Actualiza datos de un usuario. Solo SUPER_ADMIN.
+   * Actualiza datos de un usuario. ADMIN puede actualizar datos básicos, SUPER_ADMIN puede cambiar roles.
    */
   fastify.patch(
     '/users/:id',
     {
-      preHandler: [requireRole('SUPER_ADMIN')],
+      preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Actualizar usuario',
-        description: 'Actualiza datos generales de un usuario. Solo SUPER_ADMIN.',
+        description: 'Actualiza datos generales de un usuario. ADMIN puede actualizar datos básicos, SUPER_ADMIN puede cambiar roles.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -233,16 +234,16 @@ async function authPlugin(fastify) {
 
   /**
    * PATCH /api/auth/users/:id/status
-   * Activa o desactiva un usuario. Solo SUPER_ADMIN.
+   * Activa o desactiva un usuario. ADMIN puede activar/desactivar, SUPER_ADMIN puede eliminar.
    */
   fastify.patch(
     '/users/:id/status',
     {
-      preHandler: [requireRole('SUPER_ADMIN')],
+      preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Cambiar estado de usuario',
-        description: 'Activa o desactiva una cuenta de usuario. Solo SUPER_ADMIN.',
+        description: 'Activa o desactiva una cuenta de usuario. ADMIN puede activar/desactivar, SUPER_ADMIN puede eliminar.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',

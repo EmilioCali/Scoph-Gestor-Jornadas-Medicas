@@ -80,7 +80,7 @@ const workdayColumns = [
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const isAdmin = user?.rol === "ADMIN";
+  const isAdmin = user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN";
   const {
     metrics,
     movementsChart,

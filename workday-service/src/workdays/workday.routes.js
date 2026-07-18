@@ -8,8 +8,8 @@ import {
 } from './workday.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const ADMINISTRATIVE_ROLES = ['ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const locationSchema = {

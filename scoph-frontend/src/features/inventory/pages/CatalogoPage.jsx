@@ -97,7 +97,7 @@ function MedicineForm({ form, onChange, onSubmit, onClose, isEdit, submitting })
 export default function CatalogoPage() {
     const { medicines, loading, error, refetch, create, update, toggleStatus } = useMedicines();
     const currentUser = useAuthStore((state) => state.user);
-    const canManageCatalog = currentUser?.rol === "ADMIN";
+    const canManageCatalog = currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
 
     const [busqueda, setBusqueda] = useState("");
     const [filtroCategoria, setFiltroCategoria] = useState("");

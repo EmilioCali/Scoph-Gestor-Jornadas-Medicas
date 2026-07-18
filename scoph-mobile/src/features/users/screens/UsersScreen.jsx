@@ -38,7 +38,7 @@ const initialForm = {
 };
 
 function getRolBadge(rol) {
-  return rol === 'ADMIN' ? (
+  return rol === 'ADMIN' || rol === 'SUPER_ADMIN' ? (
     <Badge variant="primary">Administrador</Badge>
   ) : (
     <Badge variant="info">Médico</Badge>
@@ -276,7 +276,7 @@ export function UsersScreen() {
                 <View style={styles.selectorRow}>
                   <Text style={styles.selectorLabel}>Rol</Text>
                   <View style={styles.selectorGroup}>
-                    {['MEDICO', 'ADMIN'].map((role) => (
+                    {['MEDICO', 'ADMIN', 'SUPER_ADMIN'].map((role) => (
                       <TouchableOpacity
                         key={role}
                         onPress={() => handleChange('rol', role)}
@@ -291,7 +291,7 @@ export function UsersScreen() {
                             form.rol === role && styles.selectorButtonTextActive
                           ]}
                         >
-                          {role === 'ADMIN' ? 'Administrador' : 'Médico'}
+                          {role === 'ADMIN' ? 'Administrador' : role === 'SUPER_ADMIN' ? 'Super Administrador' : 'Médico'}
                         </Text>
                       </TouchableOpacity>
                     ))}

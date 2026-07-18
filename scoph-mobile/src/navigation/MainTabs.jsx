@@ -66,7 +66,7 @@ function ReportsStack() {
 
 export function MainTabs() {
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.rol === 'ADMIN';
+  const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'SUPER_ADMIN';
   const [inventoryExpanded, setInventoryExpanded] = useState(false);
   const tabNavigationRef = useRef(null);
 

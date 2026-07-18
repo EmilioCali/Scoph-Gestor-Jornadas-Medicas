@@ -40,7 +40,7 @@ const inventarioItems = [
     to: "/inventario/central",
     label: "Inventario Central",
     icon: ArchiveBoxIcon,
-    allowedRoles: ["ADMIN"],
+    allowedRoles: ["ADMIN", "SUPER_ADMIN"],
   },
   {
     to: "/inventario/movimientos",
@@ -82,9 +82,9 @@ export default function Sidebar() {
 
         {/* Navegación principal */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          {/* Mapeo con FILTRO DE ROLES: Oculta "Usuarios" si no es ADMIN */}
+          {/* Mapeo con FILTRO DE ROLES: Oculta "Usuarios" si no es ADMIN o SUPER_ADMIN */}
           {navItems
-            .filter((item) => !item.adminOnly || user?.rol === "ADMIN")
+            .filter((item) => !item.adminOnly || user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN")
             .map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -142,7 +142,7 @@ export default function Sidebar() {
           </div>
 
           {/* Reportes */}
-          {user?.rol === "ADMIN" && (
+          {(user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN") && (
             <NavLink
               to="/reportes"
               className={({ isActive }) =>

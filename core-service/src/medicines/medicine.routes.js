@@ -1,8 +1,8 @@
 import { createMedicine, getMedicines, updateMedicine, toggleMedicineStatus } from './medicine.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const ADMINISTRATIVE_ROLES = ['ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const medicineSchema = {
@@ -54,11 +54,11 @@ const medicineRoutes = async (fastify) => {
     fastify.post(
         '/medicines',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
-                description: 'Registra un medicamento en el catálogo. Solo SUPER_ADMIN. No crea stock; el stock se registra con un movimiento de entrada.',
+                description: 'Registra un medicamento en el catálogo. ADMIN puede crear. No crea stock; el stock se registra con un movimiento de entrada.',
                 body: {
                     type: 'object',
                     required: ['name', 'compound', 'concentration', 'presentation', 'unitOfMeasure', 'category'],
@@ -117,11 +117,11 @@ const medicineRoutes = async (fastify) => {
     fastify.put(
         '/medicines/:id',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Actualizar medicamento',
-                description: 'Actualiza los datos de un medicamento. Solo SUPER_ADMIN. No modifica el estado (usar PATCH /medicines/:id/status).',
+                description: 'Actualiza los datos de un medicamento. ADMIN puede actualizar. No modifica el estado (usar PATCH /medicines/:id/status).',
                 params: {
                     type: 'object',
                     required: ['id'],
@@ -159,11 +159,11 @@ const medicineRoutes = async (fastify) => {
     fastify.patch(
         '/medicines/:id/status',
         {
-            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Cambiar estado de medicamento',
-                description: 'Activa o desactiva un medicamento. Solo SUPER_ADMIN.',
+                description: 'Activa o desactiva un medicamento. ADMIN puede cambiar estado.',
                 params: {
                     type: 'object',
                     required: ['id'],
