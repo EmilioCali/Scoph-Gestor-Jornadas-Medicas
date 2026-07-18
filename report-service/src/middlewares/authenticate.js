@@ -12,6 +12,11 @@ export function requireRole(...roles) {
     return async function (request, reply) {
         await authenticate(request, reply);
 
+        // SUPER_ADMIN tiene acceso a todo.
+        if (request.user?.rol === 'SUPER_ADMIN') {
+            return;
+        }
+
         if (!roles.includes(request.user?.rol)) {
             const err = new Error('Acceso denegado');
             err.statusCode = 403;

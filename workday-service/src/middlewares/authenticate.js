@@ -15,6 +15,11 @@ export function requireRole(...roles) {
         await authenticate(request, reply);
         if (reply.sent) return;
 
+        // SUPER_ADMIN tiene acceso a todo.
+        if (request.user?.rol === 'SUPER_ADMIN') {
+            return;
+        }
+
         if (!roles.includes(request.user?.rol)) {
             return reply.status(403).send({
                 success: false,

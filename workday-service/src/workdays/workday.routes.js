@@ -10,6 +10,7 @@ import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN'];
 const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const locationSchema = {
     type: 'object',
@@ -177,9 +178,10 @@ async function workdayRoutes(fastify) {
     }, updateWorkdayStatus);
 
     fastify.delete('/workdays/:id', {
-        preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+        preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
         schema: {
             tags: ['Jornadas'], summary: 'Eliminar jornada',
+            description: 'Elimina una jornada. Solo SUPER_ADMIN.',
             security: [{ bearerAuth: [] }],
             params: idParam,
             response: {
