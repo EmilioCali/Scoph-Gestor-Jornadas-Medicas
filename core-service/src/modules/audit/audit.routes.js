@@ -40,11 +40,11 @@ const auditRoutes = async (fastify) => {
     fastify.get(
         '/auditoria',
         {
-            preHandler: [requireRole('ADMIN')],
+            preHandler: [requireRole('SUPER_ADMIN')],
             schema: {
                 tags: ['Auditoria'],
                 summary: 'Consultar auditorias',
-                description: 'Lista eventos de auditoria generados por movimientos del Core Service.',
+                description: 'Lista eventos de auditoria generados por movimientos del Core Service. Solo SUPER_ADMIN.',
                 querystring: {
                     type: 'object',
                     properties: {

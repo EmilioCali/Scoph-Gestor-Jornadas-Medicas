@@ -4,6 +4,7 @@ import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN'];
 const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const movementDetailInputSchema = {
     type: 'object',
@@ -94,11 +95,11 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/entrada',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar entrada a inventario central',
-                description: 'Registra una compra o donacion y aumenta el stock del inventario central.',
+                description: 'Registra una compra o donacion y aumenta el stock del inventario central. Solo SUPER_ADMIN.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',

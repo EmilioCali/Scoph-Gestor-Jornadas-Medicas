@@ -3,6 +3,7 @@ import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN'];
 const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const medicineSchema = {
     type: 'object',
@@ -53,11 +54,11 @@ const medicineRoutes = async (fastify) => {
     fastify.post(
         '/medicines',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
-                description: 'Registra un medicamento en el catálogo. No crea stock; el stock se registra con un movimiento de entrada.',
+                description: 'Registra un medicamento en el catálogo. Solo SUPER_ADMIN. No crea stock; el stock se registra con un movimiento de entrada.',
                 body: {
                     type: 'object',
                     required: ['name', 'compound', 'concentration', 'presentation', 'unitOfMeasure', 'category'],
@@ -116,11 +117,11 @@ const medicineRoutes = async (fastify) => {
     fastify.put(
         '/medicines/:id',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Actualizar medicamento',
-                description: 'Actualiza los datos de un medicamento. No modifica el estado (usar PATCH /medicines/:id/status).',
+                description: 'Actualiza los datos de un medicamento. Solo SUPER_ADMIN. No modifica el estado (usar PATCH /medicines/:id/status).',
                 params: {
                     type: 'object',
                     required: ['id'],
@@ -158,11 +159,11 @@ const medicineRoutes = async (fastify) => {
     fastify.patch(
         '/medicines/:id/status',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Cambiar estado de medicamento',
-                description: 'Activa o desactiva un medicamento.',
+                description: 'Activa o desactiva un medicamento. Solo SUPER_ADMIN.',
                 params: {
                     type: 'object',
                     required: ['id'],

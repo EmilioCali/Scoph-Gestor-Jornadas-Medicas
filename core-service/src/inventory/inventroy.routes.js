@@ -3,17 +3,18 @@ import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN'];
 const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const inventoryRoutes = async (fastify) => {
 
     fastify.get(
         '/inventario-central',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Obtener inventario central',
-                description: 'Retorna todos los medicamentos en inventario central con sus lotes, stock total y stock mínimo.',
+                description: 'Retorna todos los medicamentos en inventario central con sus lotes, stock total y stock mínimo. Solo SUPER_ADMIN.',
                 response: {
                     200: {
                         type: 'object',
@@ -58,11 +59,11 @@ const inventoryRoutes = async (fastify) => {
     fastify.post(
         '/inventario-central',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Inventario'],
                 summary: 'Agregar medicamento al inventario central',
-                description: 'Crea el registro de inventario para un medicamento. Si initialStock > 0 genera un movimiento de entrada tipo DONACION.',
+                description: 'Crea el registro de inventario para un medicamento. Solo SUPER_ADMIN. Si initialStock > 0 genera un movimiento de entrada tipo DONACION.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',
