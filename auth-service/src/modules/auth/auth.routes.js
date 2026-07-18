@@ -98,7 +98,7 @@ async function authPlugin(fastify) {
     { schema: registerSchema, preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')] },
     async (request, reply) => {
       try {
-        const user = await register({ ...request.body, creadoPor: request.user.id })
+        const user = await register({ ...request.body, creadoPor: request.user.id }, request.user.rol)
         return reply.status(201).send({ ok: true, user: user.toSafeJSON() })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })
@@ -191,7 +191,7 @@ async function authPlugin(fastify) {
     },
     async (request, reply) => {
       try {
-        const user = await updateUser(request.params.id, request.body)
+        const user = await updateUser(request.params.id, request.body, request.user.rol)
         return reply.send({ ok: true, user: user.toSafeJSON() })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })
@@ -201,16 +201,16 @@ async function authPlugin(fastify) {
 
   /**
    * DELETE /api/auth/users/:id
-   * Elimina un usuario. Solo ADMIN o SUPER_ADMIN.
+   * Elimina un usuario. Solo SUPER_ADMIN.
    */
   fastify.delete(
     '/users/:id',
     {
-      preHandler: [requireRole('SUPER_ADMIN', 'ADMIN')],
+      preHandler: [requireRole('SUPER_ADMIN')],
       schema: {
         tags: ['Usuarios'],
         summary: 'Eliminar usuario',
-        description: 'Elimina un usuario del sistema. Solo ADMIN o SUPER_ADMIN.',
+        description: 'Elimina un usuario del sistema. Solo SUPER_ADMIN.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',

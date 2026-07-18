@@ -38,16 +38,22 @@ export async function login({ username, correo, password }) {
 }
 
 /**
- * Registra un nuevo usuario (solo puede hacerlo un ADMIN).
+ * Registra un nuevo usuario (solo puede hacerlo un ADMIN o SUPER_ADMIN).
  * Genera una contraseña temporal y la envía por correo automáticamente.
  * @param {Object} data - Datos del usuario a crear
+ * @param {string} requesterRole - Rol del usuario que está creando el usuario
  * @returns {Promise<import('mongoose').Document>} Usuario creado
  */
-export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }) {
+export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }, requesterRole) {
   if (typeof telefono === 'string') telefono = telefono.trim()
 
   if (telefono && !/^\d{8}$/.test(telefono)) {
     throw new Error('El teléfono debe tener exactamente 8 dígitos')
+  }
+
+  // Validación de permisos: ADMIN solo puede crear usuarios con rol MEDICO
+  if (requesterRole === 'ADMIN' && rol !== 'MEDICO') {
+    throw new Error('Los administradores solo pueden crear usuarios con rol MEDICO')
   }
 
   const existingUser = await User.findOne({
@@ -244,8 +250,9 @@ export async function listUsers() {
  * Actualiza datos administrativos de un usuario.
  * @param {string} id
  * @param {Object} data
+ * @param {string} requesterRole - Rol del usuario que está actualizando
  */
-export async function updateUser(id, data) {
+export async function updateUser(id, data, requesterRole) {
   const allowedFields = ['nombre', 'apellido', 'username', 'correo', 'rol', 'telefono', 'isActive']
   const update = {}
 
@@ -261,6 +268,11 @@ export async function updateUser(id, data) {
 
   if (update.username) update.username = update.username.toLowerCase()
   if (update.correo) update.correo = update.correo.toLowerCase()
+
+  // Validación de permisos: ADMIN no puede cambiar roles a SUPER_ADMIN o ADMIN
+  if (requesterRole === 'ADMIN' && update.rol && update.rol !== 'MEDICO') {
+    throw new Error('Los administradores solo pueden asignar el rol MEDICO')
+  }
 
   if (update.username || update.correo) {
     const existingUser = await User.findOne({
