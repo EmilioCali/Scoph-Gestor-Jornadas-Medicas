@@ -365,6 +365,8 @@ export default function LoginPage() {
 
       if (currentUser?.mustChangePassword) {
         navigate("/change-password", { replace: true });
+      } else if (currentUser?.rol === "MEDICO") {
+        navigate("/jornadas", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

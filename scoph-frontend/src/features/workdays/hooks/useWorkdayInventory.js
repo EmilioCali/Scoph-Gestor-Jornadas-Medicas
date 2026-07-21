@@ -99,7 +99,7 @@ export function useWorkdayInventory() {
         err.response?.data?.message ??
           "No se pudo cargar el inventario de la jornada",
       );
-      return [];
+      throw err;
     } finally {
       setInventoryLoading(false);
     }

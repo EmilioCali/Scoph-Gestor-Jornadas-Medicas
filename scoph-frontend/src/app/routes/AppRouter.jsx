@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
-import ProtectedRoute, { RequireRole } from "./ProtectedRoute";
+import ProtectedRoute, { RequireRole, HomeRedirect } from "./ProtectedRoute";
 import MovimientosPage from "../../features/inventory/pages/MovimientosPage";
 
 // Páginas de autenticación
@@ -22,6 +22,8 @@ import InventarioCentralPage from "../../features/inventory/pages/InventarioCent
 
 // Página de reportes
 import ReportesPage from "../../features/reports/pages/ReportsPages";
+
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 export default function AppRouter() {
   const { checkAuth, isLoadingAuth } = useAuthStore();
@@ -52,28 +54,24 @@ export default function AppRouter() {
         {/* Rutas protegidas - requieren autenticación y mustChangePassword = false */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
+            <Route index element={<HomeRedirect />} />
+            <Route element={<RequireRole allowedRoles={ADMIN_ROLES} />}>
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="usuarios" element={<UsuariosPage />} />
-            </Route>
-            <Route path="jornadas" element={<WorkdaysPage />} />
-            <Route path="inventario/catalogo" element={<CatalogoPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
+              <Route path="inventario/catalogo" element={<CatalogoPage />} />
               <Route
                 path="inventario/central"
                 element={<InventarioCentralPage />}
               />
-            </Route>
-            <Route path="inventario/movimientos" element={<MovimientosPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
+              <Route path="inventario/movimientos" element={<MovimientosPage />} />
               <Route path="reportes" element={<ReportesPage />} />
             </Route>
+            <Route path="jornadas" element={<WorkdaysPage />} />
           </Route>
         </Route>
 
         {/* Ruta no encontrada */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<HomeRedirect />} />
       </Routes>
     </BrowserRouter>
   );

@@ -3,9 +3,11 @@ import {
     registrarEntrada,
     registrarSalidaReceta,
     registrarTransferencia,
+    validarStockJornada,
     descontarStockJornada,
     procesarRetornoJornada
 } from '../inventory/inventory.service.js';
+import { getWorkdayById } from '../workdays/workday.client.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { successResponse } from '../utils/response.js';
 import { registerAudit } from '../modules/audit/audit.service.js';
@@ -95,6 +97,12 @@ export const createTransferencia = async (request, reply) => {
 export const createConsumoJornada = async (request, reply) => {
     try {
         const { productoId, cantidad } = request.body;
+
+        // Autorizar antes de mutar stock (TKT-80)
+        if (request.user?.rol === 'MEDICO') {
+            const { inventory: preview } = await validarStockJornada(productoId, cantidad);
+            await getWorkdayById(preview.workdayId, request.headers.authorization);
+        }
 
         const { inventory, lote, medicine } = await descontarStockJornada(productoId, cantidad);
 

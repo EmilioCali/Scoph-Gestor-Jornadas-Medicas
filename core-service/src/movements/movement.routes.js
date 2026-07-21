@@ -294,11 +294,12 @@ const movementRoutes = async (fastify) => {
     fastify.get(
         '/movimientos',
         {
-            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Consultar movimientos',
-                description: 'Lista movimientos con paginacion y filtros opcionales por subtipo o jornada.',
+                description: 'Lista movimientos con paginacion y filtros. Solo roles administrativos. MEDICO registra consumo vía /movimientos/consumo-jornada.',
+                security: [{ bearerAuth: [] }],
                 querystring: {
                     type: 'object',
                     properties: {
