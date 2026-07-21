@@ -61,6 +61,26 @@ const workdaySchema = new Schema(
             },
         },
 
+        // Médicos asignados a la jornada (soporta asignación múltiple)
+        doctors: {
+            type: [
+                {
+                    userId: {
+                        type: String,
+                        required: [true, 'El ID del médico es requerido'],
+                        trim: true,
+                    },
+                    name: {
+                        type: String,
+                        required: [true, 'El nombre del médico es requerido'],
+                        trim: true,
+                        maxLength: [100, 'El nombre no puede exceder 100 caracteres'],
+                    },
+                },
+            ],
+            default: [],
+        },
+
         estimatedPatients: {
             type: Number,
             required: [true, 'La cantidad estimada de pacientes es requerida'],
@@ -92,6 +112,7 @@ const workdaySchema = new Schema(
 workdaySchema.index({ status: 1 });
 workdaySchema.index({ startDate: 1 });
 workdaySchema.index({ 'location.department': 1 });
+workdaySchema.index({ 'doctors.userId': 1 });
 
 workdaySchema.pre('validate', function () {
     if (this.startDate && this.endDate && this.startDate > this.endDate) {

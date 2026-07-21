@@ -9,8 +9,7 @@ export const getWorkday = (id) =>
   workdayAPI.get(`/api/v1/workdays/${id}`);
 
 // POST /api/v1/workdays
-// El userId del manager se toma del JWT en el backend;
-// solo se envía manager.name como snapshot.
+// Body: name, dates, location, manager{userId,name}, doctors[{userId,name}], estimates, status
 export const createWorkday = (data) =>
   workdayAPI.post("/api/v1/workdays", data);
 

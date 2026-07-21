@@ -44,7 +44,8 @@ async function getNormalizedWorkdayInventory(workdayId) {
 
 export function useWorkdayInventory() {
   const userRole = useAuthStore((state) => state.user?.rol);
-  const canLoadAdminResources = userRole === "ADMIN";
+  const canLoadAdminResources =
+    userRole === "ADMIN" || userRole === "SUPER_ADMIN";
   const [workdays, setWorkdays] = useState([]);
   const [users, setUsers] = useState([]);
   const [centralInventory, setCentralInventory] = useState([]);

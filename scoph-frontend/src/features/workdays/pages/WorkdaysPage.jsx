@@ -25,11 +25,12 @@ function getStatusBadge(status) {
 
 // Formulario para crear jornada
 // Body alineado con backend: name, description, startDate, endDate,
-// location{department, municipality, address}, manager{name},
-// estimatedPatients, estimatedMedicines, status
+// location{department, municipality, address}, manager{userId,name},
+// doctors[{userId,name}], estimatedPatients, estimatedMedicines, status
 function WorkdayForm({
   form,
   onChange,
+  onToggleDoctor,
   onSubmit,
   onClose,
   departamentos,
@@ -37,6 +38,7 @@ function WorkdayForm({
 }) {
   const municipios =
     departamentos.find((d) => d.nombre === form.department)?.municipios || [];
+  const medicos = users.filter((u) => u.rol === "MEDICO");
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -141,6 +143,41 @@ function WorkdayForm({
           ))}
         </select>
       </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-gray-600">
+          Médicos asignados
+        </label>
+        {medicos.length === 0 ? (
+          <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+            No hay usuarios con rol MÉDICO disponibles para asignar.
+          </p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
+            {medicos.map((u) => {
+              const checked = form.doctorIds.includes(u._id);
+              return (
+                <label
+                  key={u._id}
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggleDoctor(u._id)}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <span className="text-sm text-gray-700">
+                    {u.nombre} {u.apellido}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mt-1">
+          Selecciona uno o más médicos que participarán en la jornada.
+        </p>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Pacientes estimados"
@@ -223,6 +260,14 @@ function WorkdayDetail({
           <p className="text-xs text-gray-400">Responsable</p>
           <p className="text-sm font-semibold text-gray-700">
             {workday.manager?.name || "—"}
+          </p>
+        </div>
+        <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+          <p className="text-xs text-gray-400">Médicos asignados</p>
+          <p className="text-sm font-semibold text-gray-700">
+            {(workday.doctors || []).length > 0
+              ? workday.doctors.map((d) => d.name).join(", ")
+              : "Sin médicos asignados"}
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -531,6 +576,7 @@ const workdayInicial = {
   municipality: "",
   address: "",
   managerId: "",
+  doctorIds: [],
   estimatedPatients: "",
   estimatedMedicines: "",
   status: "PLANNED",
@@ -586,6 +632,18 @@ export default function JornadasPage() {
     }
   };
 
+  const handleToggleDoctor = (doctorId) => {
+    setFormWorkday((prev) => {
+      const exists = prev.doctorIds.includes(doctorId);
+      return {
+        ...prev,
+        doctorIds: exists
+          ? prev.doctorIds.filter((id) => id !== doctorId)
+          : [...prev.doctorIds, doctorId],
+      };
+    });
+  };
+
   const handleChangeAssign = (e) => {
     const { name, value } = e.target;
     if (name === "medicineId") {
@@ -610,13 +668,24 @@ export default function JornadasPage() {
     setConfirmEliminar(true);
   };
 
-  // Crea jornada - cuando se conecte el backend usar createWorkday() de workdayService
-  // El body debe ser: { name, description, startDate, endDate, location, manager, estimatedPatients, estimatedMedicines, status }
+  // Crea jornada - body alineado con backend (manager + doctors)
   const handleCrearWorkday = async (e) => {
     e.preventDefault();
     const manager = users.find(
       (u) => String(u._id) === String(formWorkday.managerId),
     );
+    const doctors = users
+      .filter((u) => formWorkday.doctorIds.includes(u._id))
+      .map((u) => ({
+        userId: u._id,
+        name: `${u.nombre} ${u.apellido}`.trim(),
+      }));
+
+    if (doctors.length === 0) {
+      setFormError("Debes asignar al menos un médico a la jornada");
+      return;
+    }
+
     setSubmitting(true);
     setFormError(null);
     try {
@@ -631,10 +700,12 @@ export default function JornadasPage() {
           address: formWorkday.address,
         },
         manager: {
+          userId: manager?._id || currentUser?.id || currentUser?._id,
           name: manager
             ? `${manager.nombre} ${manager.apellido}`
             : "Sin asignar",
         },
+        doctors,
         estimatedPatients: Number(formWorkday.estimatedPatients),
         estimatedMedicines: Number(formWorkday.estimatedMedicines),
         status: formWorkday.status,
@@ -760,6 +831,27 @@ export default function JornadasPage() {
       key: "manager",
       label: "Responsable",
       render: (row) => row.manager?.name || "—",
+    },
+    {
+      key: "doctors",
+      label: "Médicos",
+      render: (row) => {
+        const doctors = row.doctors || [];
+        if (doctors.length === 0) {
+          return <span className="text-xs text-gray-400">Sin asignar</span>;
+        }
+        if (doctors.length === 1) {
+          return doctors[0].name;
+        }
+        return (
+          <div>
+            <p className="text-sm text-gray-700">{doctors[0].name}</p>
+            <p className="text-xs text-gray-400">
+              +{doctors.length - 1} más
+            </p>
+          </div>
+        );
+      },
     },
     {
       key: "estimados",
@@ -889,6 +981,7 @@ export default function JornadasPage() {
         <WorkdayForm
           form={formWorkday}
           onChange={handleChangeWorkday}
+          onToggleDoctor={handleToggleDoctor}
           onSubmit={handleCrearWorkday}
           onClose={() => setModalCrear(false)}
           departamentos={departamentosGuatemala}

@@ -31,6 +31,21 @@ const managerSchema = {
     }
 };
 
+const doctorSchema = {
+    type: 'object',
+    required: ['userId', 'name'],
+    properties: {
+        userId: { type: 'string', example: 'usr_abc123' },
+        name:   { type: 'string', example: 'Dra. Ana Lopez' }
+    }
+};
+
+const doctorsSchema = {
+    type: 'array',
+    items: doctorSchema,
+    default: []
+};
+
 const workdayInputSchema = {
     type: 'object',
     required: ['name', 'startDate', 'endDate', 'location', 'estimatedPatients', 'estimatedMedicines'],
@@ -41,6 +56,7 @@ const workdayInputSchema = {
         endDate:            { type: 'string', format: 'date-time' },
         location:           locationSchema,
         manager:            managerSchema,
+        doctors:            doctorsSchema,
         estimatedPatients:  { type: 'number', minimum: 0 },
         estimatedMedicines: { type: 'number', minimum: 0 },
         status:             { type: 'string', enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'], default: 'PLANNED' }
@@ -56,6 +72,7 @@ const workdayUpdateSchema = {
         endDate:            { type: 'string', format: 'date-time' },
         location:           locationSchema,
         manager:            managerSchema,
+        doctors:            doctorsSchema,
         estimatedPatients:  { type: 'number', minimum: 0 },
         estimatedMedicines: { type: 'number', minimum: 0 },
         status:             { type: 'string', enum: ['PLANNED', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'] }
@@ -78,6 +95,7 @@ const workdayResponseSchema = {
                 name:   { type: 'string' }
             }
         },
+        doctors:            doctorsSchema,
         estimatedPatients:  { type: 'number' },
         estimatedMedicines: { type: 'number' },
         status:             { type: 'string' },

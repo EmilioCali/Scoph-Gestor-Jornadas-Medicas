@@ -11,6 +11,7 @@ function normalizeWorkday(workday) {
     endDate: workday.endDate,
     location: workday.location,
     manager: workday.manager,
+    doctors: workday.doctors || [],
     status: workday.status,
     estimatedPatients: workday.estimatedPatients ?? 0,
     estimatedMedicines: workday.estimatedMedicines ?? 0

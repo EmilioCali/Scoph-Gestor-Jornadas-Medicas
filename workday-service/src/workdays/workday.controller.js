@@ -17,16 +17,51 @@ function assertValidDateRange(startDate, endDate) {
     }
 }
 
+/**
+ * Normaliza y valida el arreglo de médicos asignados.
+ * Deduplica por userId preservando el primer nombre encontrado.
+ */
+function normalizeDoctors(doctors) {
+    if (doctors === undefined || doctors === null) {
+        return [];
+    }
+
+    if (!Array.isArray(doctors)) {
+        throw badRequest('doctors debe ser un arreglo');
+    }
+
+    const seen = new Set();
+    const normalized = [];
+
+    for (const doctor of doctors) {
+        const userId = doctor?.userId != null ? String(doctor.userId).trim() : '';
+        const name = doctor?.name != null ? String(doctor.name).trim() : '';
+
+        if (!userId || !name) {
+            throw badRequest('Cada médico asignado requiere userId y name');
+        }
+
+        if (seen.has(userId)) continue;
+        seen.add(userId);
+        normalized.push({ userId, name });
+    }
+
+    return normalized;
+}
+
 export const createWorkday = async (request, reply) => {
     try {
         assertValidDateRange(request.body.startDate, request.body.endDate);
+
+        const doctors = normalizeDoctors(request.body.doctors);
 
         const workdayData = {
             ...request.body,
             manager: {
                 userId: request.body.manager?.userId || request.user.id,
                 name: request.body.manager?.name || request.user.username
-            }
+            },
+            doctors,
         };
 
         const workday = await Workday.create(workdayData);
@@ -90,7 +125,7 @@ export const updateWorkday = async (request, reply) => {
         }
 
         // status tiene su propio endpoint — se ignora aquí
-        const { status, manager, ...rest } = request.body;
+        const { status, manager, doctors, ...rest } = request.body;
         assertValidDateRange(
             rest.startDate ?? currentWorkday.startDate,
             rest.endDate ?? currentWorkday.endDate
@@ -100,6 +135,9 @@ export const updateWorkday = async (request, reply) => {
         const updateFields = { ...rest };
         if (manager?.name)   updateFields['manager.name']   = manager.name;
         if (manager?.userId) updateFields['manager.userId'] = manager.userId;
+        if (doctors !== undefined) {
+            updateFields.doctors = normalizeDoctors(doctors);
+        }
 
         const workday = await Workday.findByIdAndUpdate(
             request.params.id,
