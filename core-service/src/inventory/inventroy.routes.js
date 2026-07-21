@@ -106,6 +106,8 @@ const inventoryRoutes = async (fastify) => {
             schema: {
                 tags: ['Inventario'],
                 summary: 'Obtener inventario de jornada',
+                description: 'MEDICO solo puede consultar inventario de jornadas donde está asignado (403 en caso contrario).',
+                security: [{ bearerAuth: [] }],
                 params: {
                     type: 'object',
                     required: ['jornadaId'],
@@ -118,6 +120,22 @@ const inventoryRoutes = async (fastify) => {
                             success: { type: 'boolean' },
                             message: { type: 'string' },
                             data: { type: 'array', items: { type: 'object', additionalProperties: true } }
+                        }
+                    },
+                    403: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string', example: 'No tienes permiso para acceder a esta jornada' },
+                            error: { type: 'string', example: 'ServiceError' }
+                        }
+                    },
+                    404: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string', example: 'La jornada no existe' },
+                            error: { type: 'string' }
                         }
                     }
                 }

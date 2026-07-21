@@ -2,7 +2,6 @@ import { createMedicine, getMedicines, updateMedicine, toggleMedicineStatus } fr
 import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const medicineSchema = {
@@ -92,11 +91,12 @@ const medicineRoutes = async (fastify) => {
     fastify.get(
         '/medicines',
         {
-            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Listar medicamentos',
-                description: 'Retorna todos los medicamentos (ACTIVO e INACTIVO). El filtrado por estado se hace en el cliente.',
+                description: 'Retorna todos los medicamentos (ACTIVO e INACTIVO). Solo roles administrativos. El filtrado por estado se hace en el cliente.',
+                security: [{ bearerAuth: [] }],
                 response: {
                     200: {
                         type: 'object',
