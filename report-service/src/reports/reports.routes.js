@@ -20,8 +20,9 @@ import {
 } from './reports.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
-const ADMIN_ONLY = ['ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
+const ADMIN_ONLY = ['ADMIN', 'SUPER_ADMIN'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const idParamSchema = (name = 'id') => ({
     type: 'object',
@@ -167,7 +168,7 @@ const reportesRoutes = async (fastify) =>{
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar stock actual',
-                description: 'Retorna el stock central actual por medicamento y lote.',
+                description: 'Retorna el stock central actual por medicamento y lote. ADMIN puede ver.',
                 response: {
                     200: successArrayResponseSchema('Stock actual'),
                     400: {
@@ -191,7 +192,7 @@ const reportesRoutes = async (fastify) =>{
             schema: {
                 tags: ['Reportes'],
                 summary: 'Consultar medicamentos proximos a vencer',
-                description: 'Lista lotes con fecha de vencimiento dentro del rango indicado en dias.',
+                description: 'Lista lotes con fecha de vencimiento dentro del rango indicado en dias. ADMIN puede ver.',
                 querystring: diasQuerySchema,
                 response: {
                     200: successArrayResponseSchema('Estos son los medicamentos proximos a vencer'),

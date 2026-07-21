@@ -27,7 +27,7 @@ function getExpirationBadge(days) {
 
 export function DashboardScreen({ navigation }) {
   const { user } = useAuthStore();
-  const isAdmin = user?.rol === "ADMIN";
+  const isAdmin = user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN";
   const {
     metrics,
     stockAlerts,

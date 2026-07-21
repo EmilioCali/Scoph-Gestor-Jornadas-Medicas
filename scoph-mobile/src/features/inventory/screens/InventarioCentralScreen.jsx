@@ -75,7 +75,7 @@ function SelectorGroup({ label, options, value, onChange, getLabel = (option) =>
 
 export function InventarioCentralScreen() {
   const currentUser = useAuthStore((state) => state.user);
-  const canModifyCentralInventory = currentUser?.rol === 'ADMIN';
+  const canModifyCentralInventory = currentUser?.rol === 'ADMIN' || currentUser?.rol === 'SUPER_ADMIN';
   const {
     inventory,
     loading,

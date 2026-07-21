@@ -162,7 +162,7 @@ const agregarInicial = { medicineId: "", minimumStock: "", batch: "", expiration
 
 export default function InventarioCentralPage() {
     const currentUser = useAuthStore((state) => state.user);
-    const canModifyCentralInventory = currentUser?.rol === "ADMIN";
+    const canModifyCentralInventory = currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
     const {
         inventory, loading, error, refetch,
         availableMedicines,

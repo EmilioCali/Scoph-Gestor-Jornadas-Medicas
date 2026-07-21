@@ -1,8 +1,9 @@
 import { createMedicine, getMedicines, updateMedicine, toggleMedicineStatus } from './medicine.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const ADMINISTRATIVE_ROLES = ['ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const medicineSchema = {
     type: 'object',
@@ -57,7 +58,7 @@ const medicineRoutes = async (fastify) => {
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
-                description: 'Registra un medicamento en el catálogo. No crea stock; el stock se registra con un movimiento de entrada.',
+                description: 'Registra un medicamento en el catálogo. ADMIN puede crear. No crea stock; el stock se registra con un movimiento de entrada.',
                 body: {
                     type: 'object',
                     required: ['name', 'compound', 'concentration', 'presentation', 'unitOfMeasure', 'category'],
@@ -120,7 +121,7 @@ const medicineRoutes = async (fastify) => {
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Actualizar medicamento',
-                description: 'Actualiza los datos de un medicamento. No modifica el estado (usar PATCH /medicines/:id/status).',
+                description: 'Actualiza los datos de un medicamento. ADMIN puede actualizar. No modifica el estado (usar PATCH /medicines/:id/status).',
                 params: {
                     type: 'object',
                     required: ['id'],
@@ -162,7 +163,7 @@ const medicineRoutes = async (fastify) => {
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Cambiar estado de medicamento',
-                description: 'Activa o desactiva un medicamento.',
+                description: 'Activa o desactiva un medicamento. ADMIN puede cambiar estado.',
                 params: {
                     type: 'object',
                     required: ['id'],

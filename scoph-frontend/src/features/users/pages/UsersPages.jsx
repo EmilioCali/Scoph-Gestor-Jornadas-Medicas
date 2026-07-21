@@ -17,7 +17,7 @@ import {
 } from "../../../shared/apis/authService";
 
 function getRolBadge(rol) {
-  return rol === "ADMIN" ? (
+  return rol === "ADMIN" || rol === "SUPER_ADMIN" ? (
     <Badge variant="primary">Administrador</Badge>
   ) : (
     <Badge variant="info">Médico</Badge>
@@ -93,6 +93,7 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
         >
           <option value="MEDICO">Médico</option>
           <option value="ADMIN">Administrador</option>
+          <option value="SUPER_ADMIN">Super Administrador</option>
         </select>
       </div>
 

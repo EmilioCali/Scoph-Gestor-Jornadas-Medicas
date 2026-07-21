@@ -1,8 +1,9 @@
 import { getInventarioCentral, addMedicineToInventory, getInventarioJornada } from './inventory.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
-const ADMINISTRATIVE_ROLES = ['ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO'];
+const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
+const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const inventoryRoutes = async (fastify) => {
 
@@ -13,7 +14,7 @@ const inventoryRoutes = async (fastify) => {
             schema: {
                 tags: ['Inventario'],
                 summary: 'Obtener inventario central',
-                description: 'Retorna todos los medicamentos en inventario central con sus lotes, stock total y stock mínimo.',
+                description: 'Retorna todos los medicamentos en inventario central con sus lotes, stock total y stock mínimo. ADMIN puede ver.',
                 response: {
                     200: {
                         type: 'object',
@@ -62,7 +63,7 @@ const inventoryRoutes = async (fastify) => {
             schema: {
                 tags: ['Inventario'],
                 summary: 'Agregar medicamento al inventario central',
-                description: 'Crea el registro de inventario para un medicamento. Si initialStock > 0 genera un movimiento de entrada tipo DONACION.',
+                description: 'Crea el registro de inventario para un medicamento. ADMIN puede agregar. Si initialStock > 0 genera un movimiento de entrada tipo DONACION.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',

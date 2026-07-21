@@ -54,19 +54,19 @@ export default function AppRouter() {
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route path="usuarios" element={<UsuariosPage />} />
             </Route>
             <Route path="jornadas" element={<WorkdaysPage />} />
             <Route path="inventario/catalogo" element={<CatalogoPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route
                 path="inventario/central"
                 element={<InventarioCentralPage />}
               />
             </Route>
             <Route path="inventario/movimientos" element={<MovimientosPage />} />
-            <Route element={<RequireRole allowedRoles={["ADMIN"]} />}>
+            <Route element={<RequireRole allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route path="reportes" element={<ReportesPage />} />
             </Route>
           </Route>

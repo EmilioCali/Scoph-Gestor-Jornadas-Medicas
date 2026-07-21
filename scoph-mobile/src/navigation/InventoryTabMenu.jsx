@@ -10,7 +10,7 @@ export function InventoryTabMenu({ onSelectOption, expanded, onToggle, userRole 
     { label: 'Movimientos', route: 'Movimientos', icon: 'trending-up' }
   ];
 
-  const filteredOptions = options.filter((option) => !option.adminOnly || userRole === 'ADMIN');
+  const filteredOptions = options.filter((option) => !option.adminOnly || userRole === 'ADMIN' || userRole === 'SUPER_ADMIN');
   const [activeOption, setActiveOption] = useState('Catalogo');
 
   const handleSelectOption = (route) => {
