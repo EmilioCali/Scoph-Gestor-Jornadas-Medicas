@@ -225,6 +225,14 @@ export function JornadasScreen() {
 
             <View style={styles.detailRow}>
               <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Médicos</Text>
+                <Text style={styles.detailValue}>
+                  {(item.doctors || []).length > 0
+                    ? item.doctors.map((d) => d.name).join(', ')
+                    : 'Sin médicos asignados'}
+                </Text>
+              </View>
+              <View style={styles.detailBlock}>
                 <Text style={styles.detailLabel}>Medicamentos</Text>
                 <Text style={styles.detailValue}>{item.estimatedMedicines}</Text>
               </View>
