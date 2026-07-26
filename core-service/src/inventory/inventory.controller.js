@@ -1,6 +1,7 @@
 import centralInventory from "./centralInventory.model.js";
 import WorkdayInventory from './workdayInventory.model.js';
 import { registrarEntrada } from './inventory.service.js';
+import { getWorkdayById } from '../workdays/workday.client.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { successResponse } from '../utils/response.js';
 
@@ -89,6 +90,10 @@ export const addMedicineToInventory = async (request, reply) => {
 export const getInventarioJornada = async (request, reply) => {
     try {
         const { jornadaId } = request.params;
+
+        // Valida existencia y, para MEDICO, asignación a la jornada (propaga 403)
+        await getWorkdayById(jornadaId, request.headers.authorization);
+
         const inventario = await WorkdayInventory.find({ workdayId: jornadaId }).populate('medicineId');
 
         return successResponse(reply, {

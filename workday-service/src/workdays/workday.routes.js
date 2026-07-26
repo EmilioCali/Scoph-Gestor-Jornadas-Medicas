@@ -143,7 +143,10 @@ async function workdayRoutes(fastify) {
     fastify.get('/workdays', {
         preHandler: [requireRole(...AUTHENTICATED_ROLES)],
         schema: {
-            tags: ['Jornadas'], summary: 'Listar jornadas médicas',
+            tags: ['Jornadas'],
+            summary: 'Listar jornadas médicas',
+            description: 'ADMIN/SUPER_ADMIN ven todas. MEDICO solo ve jornadas donde está asignado en doctors.',
+            security: [{ bearerAuth: [] }],
             response: { 200: successBody({ type: 'array', items: workdayResponseSchema }) }
         }
     }, getWorkdays);
@@ -151,10 +154,14 @@ async function workdayRoutes(fastify) {
     fastify.get('/workdays/:id', {
         preHandler: [requireRole(...AUTHENTICATED_ROLES)],
         schema: {
-            tags: ['Jornadas'], summary: 'Obtener jornada por ID',
+            tags: ['Jornadas'],
+            summary: 'Obtener jornada por ID',
+            description: 'MEDICO recibe 403 si no está asignado a la jornada.',
+            security: [{ bearerAuth: [] }],
             params: idParam,
             response: {
                 200: successBody(workdayResponseSchema),
+                403: errorSchema('No tienes permiso para acceder a esta jornada'),
                 404: errorSchema('Jornada no encontrada')
             }
         }

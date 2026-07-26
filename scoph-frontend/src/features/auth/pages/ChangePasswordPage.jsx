@@ -81,8 +81,8 @@ export default function ChangePasswordPage() {
       updateUser({ mustChangePassword: false });
       showSuccess("Contraseña actualizada correctamente");
 
-      // ahora el router leerá el localStorage actualizado y nos dejará pasar
-      navigate("/dashboard");
+      const rol = useAuthStore.getState().user?.rol;
+      navigate(rol === "MEDICO" ? "/jornadas" : "/dashboard");
     } catch (err) {
       const message =
         err.response?.data?.message ||

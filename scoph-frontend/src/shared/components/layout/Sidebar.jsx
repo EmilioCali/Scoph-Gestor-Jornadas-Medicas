@@ -20,21 +20,22 @@ import {
 } from "@heroicons/react/24/outline";
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: HomeIcon, adminOnly: false },
-  { to: "/usuarios", label: "Usuarios", icon: UserGroupIcon, adminOnly: true },
+  { to: "/dashboard", label: "Dashboard", icon: HomeIcon, allowedRoles: ["ADMIN", "SUPER_ADMIN"] },
+  { to: "/usuarios", label: "Usuarios", icon: UserGroupIcon, allowedRoles: ["ADMIN", "SUPER_ADMIN"] },
   {
     to: "/jornadas",
     label: "Jornadas",
     icon: CalendarDaysIcon,
-    adminOnly: false,
+    allowedRoles: ["ADMIN", "SUPER_ADMIN", "MEDICO"],
   },
-]; //
+];
 
 const inventarioItems = [
   {
     to: "/inventario/catalogo",
     label: "Catálogo",
     icon: ClipboardDocumentListIcon,
+    allowedRoles: ["ADMIN", "SUPER_ADMIN"],
   },
   {
     to: "/inventario/central",
@@ -46,6 +47,7 @@ const inventarioItems = [
     to: "/inventario/movimientos",
     label: "Movimientos",
     icon: ArrowsRightLeftIcon,
+    allowedRoles: ["ADMIN", "SUPER_ADMIN"],
   },
 ];
 
@@ -54,6 +56,15 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const [inventarioOpen, setInventarioOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false); // Estado para el modal
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.allowedRoles || item.allowedRoles.includes(user?.rol),
+  );
+  const visibleInventarioItems = inventarioItems.filter(
+    (item) => !item.allowedRoles || item.allowedRoles.includes(user?.rol),
+  );
+  const canSeeInventario = visibleInventarioItems.length > 0;
+  const canSeeReportes = user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN";
 
   const handleLogout = () => {
     logout();
@@ -82,10 +93,7 @@ export default function Sidebar() {
 
         {/* Navegación principal */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          {/* Mapeo con FILTRO DE ROLES: Oculta "Usuarios" si no es ADMIN o SUPER_ADMIN */}
-          {navItems
-            .filter((item) => !item.adminOnly || user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN")
-            .map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -103,6 +111,7 @@ export default function Sidebar() {
             ))}
 
           {/* Módulo de Inventario con submenú desplegable */}
+          {canSeeInventario && (
           <div>
             <button
               onClick={() => setInventarioOpen(!inventarioOpen)}
@@ -119,9 +128,7 @@ export default function Sidebar() {
 
             {inventarioOpen && (
               <div className="ml-4 mt-1 space-y-1 border-l border-gray-700 pl-3">
-                {inventarioItems
-                  .filter((item) => !item.allowedRoles || item.allowedRoles.includes(user?.rol))
-                  .map(({ to, label, icon: Icon }) => (
+                {visibleInventarioItems.map(({ to, label, icon: Icon }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -140,9 +147,10 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+          )}
 
           {/* Reportes */}
-          {(user?.rol === "ADMIN" || user?.rol === "SUPER_ADMIN") && (
+          {canSeeReportes && (
             <NavLink
               to="/reportes"
               className={({ isActive }) =>

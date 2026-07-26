@@ -658,10 +658,23 @@ export default function JornadasPage() {
     setFormMovement((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleVerDetalle = (workday) => {
+  const handleVerDetalle = async (workday) => {
     setSelectedWorkday(workday);
     setModalDetalle(true);
-    fetchWorkdayInventory(workday._id);
+    setFormError(null);
+    try {
+      await fetchWorkdayInventory(workday._id);
+    } catch (err) {
+      const status = err.response?.status;
+      const message =
+        err.response?.data?.message ??
+        "No se pudo cargar el inventario de la jornada";
+      if (status === 403) {
+        setModalDetalle(false);
+        setSelectedWorkday(null);
+      }
+      setFormError(message);
+    }
   };
   const handleEliminar = (workday) => {
     setSelectedWorkday(workday);

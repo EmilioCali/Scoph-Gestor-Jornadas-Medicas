@@ -49,6 +49,21 @@ function normalizeDoctors(doctors) {
     return normalized;
 }
 
+function isDoctorAssigned(workday, userId) {
+    if (!workday || userId == null) return false;
+    return (workday.doctors || []).some(
+        (doctor) => String(doctor.userId) === String(userId)
+    );
+}
+
+function forbiddenAccess(reply, message = 'No tienes permiso para acceder a esta jornada') {
+    return reply.status(403).send({
+        success: false,
+        message,
+        error: 'FORBIDDEN'
+    });
+}
+
 export const createWorkday = async (request, reply) => {
     try {
         assertValidDateRange(request.body.startDate, request.body.endDate);
@@ -78,7 +93,14 @@ export const createWorkday = async (request, reply) => {
 
 export const getWorkdays = async (request, reply) => {
     try {
-        const workdays = await Workday.find().sort({ startDate: -1 });
+        const filter = {};
+
+        // TKT-79: el médico solo ve jornadas donde está asignado
+        if (request.user?.rol === 'MEDICO') {
+            filter['doctors.userId'] = request.user.id;
+        }
+
+        const workdays = await Workday.find(filter).sort({ startDate: -1 });
 
         return successResponse(reply, {
             message: 'Jornadas obtenidas exitosamente',
@@ -100,6 +122,11 @@ export const getWorkdayById = async (request, reply) => {
                 message: 'Jornada no encontrada',
                 error: 'NOT_FOUND'
             });
+        }
+
+        // TKT-80: bloquear acceso por URL si el médico no está asignado
+        if (request.user?.rol === 'MEDICO' && !isDoctorAssigned(workday, request.user.id)) {
+            return forbiddenAccess(reply);
         }
 
         return successResponse(reply, {

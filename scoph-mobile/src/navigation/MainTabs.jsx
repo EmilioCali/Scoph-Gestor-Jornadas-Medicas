@@ -88,6 +88,7 @@ export function MainTabs() {
   return (
     <>
       <Tab.Navigator
+        initialRouteName={isAdmin ? 'Dashboard' : 'Jornadas'}
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarActiveTintColor: '#ffffff',
@@ -129,11 +130,13 @@ export function MainTabs() {
           }
         })}
       >
-        <Tab.Screen 
-          name="Dashboard" 
-          component={DashboardStack}
-          options={{ title: 'Inicio' }}
-        />
+        {isAdmin && (
+          <Tab.Screen 
+            name="Dashboard" 
+            component={DashboardStack}
+            options={{ title: 'Inicio' }}
+          />
+        )}
         {isAdmin && (
           <Tab.Screen 
             name="Usuarios" 
@@ -146,25 +149,27 @@ export function MainTabs() {
           component={JornadasStack}
           options={{ title: 'Jornadas' }}
         />
-        <Tab.Screen 
-          name="Inventario"
-          component={InventoryScreenBridge}
-          options={{ title: 'Inventario' }}
-          listeners={({ navigation }) => ({
-            tabPress: (e) => {
-              // Guardar la referencia de navegación
-              tabNavigationRef.current = navigation;
-              // Si el menú ya está expandido, permitir navegación normal
-              if (inventoryExpanded) {
-                setInventoryExpanded(false);
-              } else {
-                // Si no está expandido, abrir el menú
-                e.preventDefault();
-                handleInventoryTabPress();
+        {isAdmin && (
+          <Tab.Screen 
+            name="Inventario"
+            component={InventoryScreenBridge}
+            options={{ title: 'Inventario' }}
+            listeners={({ navigation }) => ({
+              tabPress: (e) => {
+                // Guardar la referencia de navegación
+                tabNavigationRef.current = navigation;
+                // Si el menú ya está expandido, permitir navegación normal
+                if (inventoryExpanded) {
+                  setInventoryExpanded(false);
+                } else {
+                  // Si no está expandido, abrir el menú
+                  e.preventDefault();
+                  handleInventoryTabPress();
+                }
               }
-            }
-          })}
-        />
+            })}
+          />
+        )}
         {isAdmin && (
           <Tab.Screen 
             name="Reportes" 
@@ -174,12 +179,14 @@ export function MainTabs() {
         )}
       </Tab.Navigator>
 
-      <InventoryTabMenu
-        expanded={inventoryExpanded}
-        onToggle={() => setInventoryExpanded(!inventoryExpanded)}
-        onSelectOption={handleSelectInventoryOption}
-        userRole={user?.rol}
-      />
+      {isAdmin && (
+        <InventoryTabMenu
+          expanded={inventoryExpanded}
+          onToggle={() => setInventoryExpanded(!inventoryExpanded)}
+          onSelectOption={handleSelectInventoryOption}
+          userRole={user?.rol}
+        />
+      )}
     </>
   );
 }
