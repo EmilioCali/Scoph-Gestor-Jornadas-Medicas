@@ -25,7 +25,7 @@ export async function seedAdmin() {
   const correo = process.env.ADMIN_CORREO
   if (!correo) {
     console.warn('')
-    console.warn('  ⚠️  No existe ningún SUPER_ADMIN y ADMIN_CORREO no está definido en el .env')
+    console.warn('  No existe ningún SUPER_ADMIN y ADMIN_CORREO no está definido en el .env')
     console.warn('     Agrega ADMIN_CORREO al .env y reinicia el servicio para crear el admin inicial.')
     console.warn('')
     return
@@ -60,7 +60,7 @@ export async function seedAdmin() {
   console.log(`  ║  Correo    : ${correo.padEnd(34)}║`)
   console.log(`  ║  Password  : ${password.padEnd(34)}║`)
   console.log('  ╠══════════════════════════════════════════════════╣')
-  console.log('  ║  ⚠️  Cambia la contraseña al iniciar sesión       ║')
+  console.log('  ║   Cambia la contraseña al iniciar sesión       ║')
   console.log('  ╚══════════════════════════════════════════════════╝')
   console.log('')
 }
