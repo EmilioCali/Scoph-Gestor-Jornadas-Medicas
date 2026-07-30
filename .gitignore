@@ -2,6 +2,10 @@
 node_modules/
 .pnpm-store/
 
+# Secretos locales (cada servicio mantiene su propio archivo)
+.env
+.env.local
+
 # Archivos de logs
 logs
 *.log
