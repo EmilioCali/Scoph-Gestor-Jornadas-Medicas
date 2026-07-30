@@ -1,0 +1,102 @@
+# Los valores con sync: false se solicitan en Render y no se guardan en Git.
+services:
+  - type: web
+    name: scoph-auth-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: auth-service
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm start
+    healthCheckPath: /api/healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: VERIFICATION_TOKEN_EXPIRES_MINUTES
+        value: "10"
+      - key: ADMIN_CORREO
+        sync: false
+      - key: ADMIN_NOMBRE
+        value: Administrador
+      - key: ADMIN_APELLIDO
+        value: SCOPH
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: scoph-workday-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: workday-service
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm start
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          name: scoph-auth-api
+          type: web
+          envVarKey: JWT_SECRET
+
+  - type: web
+    name: scoph-core-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: core-service
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm start
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          name: scoph-auth-api
+          type: web
+          envVarKey: JWT_SECRET
+      - key: WORKDAY_SERVICE_URL
+        sync: false
+
+  - type: web
+    name: scoph-report-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: report-service
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm start
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          name: scoph-auth-api
+          type: web
+          envVarKey: JWT_SECRET
+      - key: WORKDAY_SERVICE_URL
+        sync: false
+      - key: CORE_SERVICE_URL
+        sync: false

@@ -1,8 +1,21 @@
+const resolveServiceUrl = (internalHostPort, publicUrl, localUrl) => {
+    if (internalHostPort) return `http://${internalHostPort}`;
+    return publicUrl || localUrl;
+};
+
 export const SERVICES = {
     workday: {
-        baseUrl: process.env.WORKDAY_SERVICE_URL || 'http://localhost:3021',
+        baseUrl: resolveServiceUrl(
+            process.env.WORKDAY_SERVICE_HOSTPORT,
+            process.env.WORKDAY_SERVICE_URL,
+            'http://localhost:3021'
+        ),
     },
     core: {
-        baseUrl:process.env.CORE_SERVICE_URL || 'http://localhost:3022'
+        baseUrl: resolveServiceUrl(
+            process.env.CORE_SERVICE_HOSTPORT,
+            process.env.CORE_SERVICE_URL,
+            'http://localhost:3022'
+        ),
     }
-}
+};
