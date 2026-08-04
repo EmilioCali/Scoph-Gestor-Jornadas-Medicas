@@ -1,8 +1,28 @@
 import Medicine from './medicine.model.js';
+import Category from '../categories/category.model.js';
 import { NotFoundError, ValidationError } from '../utils/errorHandler.js';
 
 function escapeRegex(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function assertCategoryExists(categoryName) {
+    if (!categoryName || !categoryName.trim()) {
+        throw new ValidationError('La categoría es requerida');
+    }
+
+    const category = await Category.findOne({
+        name: { $regex: `^${escapeRegex(categoryName.trim())}$`, $options: 'i' },
+        status: 'ACTIVO',
+    });
+
+    if (!category) {
+        throw new ValidationError(
+            `La categoría "${categoryName.trim()}" no existe. Selecciona una categoría creada por el sistema.`,
+        );
+    }
+
+    return category;
 }
 
 function normalizeMedicineData(data) {
@@ -53,6 +73,8 @@ async function assertUniqueMedicine({ name, barcode, excludeId = null }) {
 
 export const createMedicineRecord = async (medicineData) => {
     const normalizedData = normalizeMedicineData(medicineData);
+    const category = await assertCategoryExists(normalizedData.category);
+    normalizedData.category = category.name;
     await assertUniqueMedicine(normalizedData);
 
     const medicine = new Medicine(normalizedData);
@@ -66,6 +88,11 @@ export const getAllMedicines = async () => {
 export const updateMedicineRecord = async (id, updateData) => {
     const { status, ...safeData } = updateData;
     const normalizedData = normalizeMedicineData(safeData);
+
+    if (normalizedData.category) {
+        const category = await assertCategoryExists(normalizedData.category);
+        normalizedData.category = category.name;
+    }
 
     await assertUniqueMedicine({
         name: normalizedData.name,
