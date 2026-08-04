@@ -1,9 +1,18 @@
-import bcrypt from 'bcryptjs'
-import { User } from '../../models/user.model.js'
-import { generateCode, generateTempPassword, getExpiresAt, isExpired } from '../../lib/tokens.js'
-import { sendCredentialsMail, sendVerificationCodeMail, sendPasswordResetMail } from '../../lib/mailer.js'
+import bcrypt from "bcryptjs";
+import { User } from "../../models/user.model.js";
+import {
+  generateCode,
+  generateTempPassword,
+  getExpiresAt,
+  isExpired,
+} from "../../lib/tokens.js";
+import {
+  sendCredentialsMail,
+  sendVerificationCodeMail,
+  sendPasswordResetMail,
+} from "../../lib/mailer.js";
 
-const SALT_ROUNDS = 12
+const SALT_ROUNDS = 12;
 
 /**
  * Autentica un usuario por username o correo.
@@ -12,29 +21,31 @@ const SALT_ROUNDS = 12
  */
 export async function login({ username, correo, password }) {
   if (!username && !correo) {
-    throw new Error('Debes proporcionar un username o correo')
+    throw new Error("Debes proporcionar un username o correo");
   }
 
-  const query = username ? { username: username.toLowerCase() } : { correo: correo.toLowerCase() }
-  const user = await User.findOne(query)
+  const query = username
+    ? { username: username.toLowerCase() }
+    : { correo: correo.toLowerCase() };
+  const user = await User.findOne(query);
 
   if (!user) {
-    throw new Error('Credenciales inválidas')
+    throw new Error("Credenciales inválidas");
   }
 
   if (!user.isActive) {
-    throw new Error('Tu cuenta está desactivada. Contacta al administrador.')
+    throw new Error("Tu cuenta está desactivada. Contacta al administrador.");
   }
 
-  const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
   if (!isValidPassword) {
-    throw new Error('Credenciales inválidas')
+    throw new Error("Credenciales inválidas");
   }
 
-  await User.findByIdAndUpdate(user._id, { ultimoAcceso: new Date() })
+  await User.findByIdAndUpdate(user._id, { ultimoAcceso: new Date() });
 
-  return user
+  return user;
 }
 
 /**
@@ -44,33 +55,41 @@ export async function login({ username, correo, password }) {
  * @param {string} requesterRole - Rol del usuario que está creando el usuario
  * @returns {Promise<import('mongoose').Document>} Usuario creado
  */
-export async function register({ nombre, apellido, username, correo, rol, telefono, creadoPor }, requesterRole) {
-  if (typeof telefono === 'string') telefono = telefono.trim()
+export async function register(
+  { nombre, apellido, username, correo, rol, telefono, creadoPor },
+  requesterRole,
+) {
+  if (typeof telefono === "string") telefono = telefono.trim();
 
   if (telefono && !/^\d{8}$/.test(telefono)) {
-    throw new Error('El teléfono debe tener exactamente 8 dígitos')
+    throw new Error("El teléfono debe tener exactamente 8 dígitos");
   }
 
   // Validación de permisos: ADMIN solo puede crear usuarios con rol MEDICO
-  if (requesterRole === 'ADMIN' && rol !== 'MEDICO') {
-    throw new Error('Los administradores solo pueden crear usuarios con rol MEDICO')
+  if (requesterRole === "ADMIN" && rol !== "MEDICO") {
+    throw new Error(
+      "Los administradores solo pueden crear usuarios con rol MEDICO",
+    );
   }
 
   const existingUser = await User.findOne({
-    $or: [{ username: username.toLowerCase() }, { correo: correo.toLowerCase() }]
-  })
+    $or: [
+      { username: username.toLowerCase() },
+      { correo: correo.toLowerCase() },
+    ],
+  });
 
   if (existingUser) {
     if (existingUser.username === username.toLowerCase()) {
-      throw new Error('El username ya está en uso')
+      throw new Error("El username ya está en uso");
     }
-    throw new Error('El correo ya está en uso')
+    throw new Error("El correo ya está en uso");
   }
 
-  const tempPassword = generateTempPassword()
-  const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS)
-  const activationCode = generateCode()
-  const activationTokenExpires = getExpiresAt()
+  const tempPassword = generateTempPassword();
+  const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+  const activationCode = generateCode();
+  const activationTokenExpires = getExpiresAt();
 
   const user = new User({
     nombre,
@@ -85,16 +104,23 @@ export async function register({ nombre, apellido, username, correo, rol, telefo
     emailVerificado: false,
     isActive: false,
     activationToken: activationCode,
-    activationTokenExpires
-  })
+    activationTokenExpires,
+  });
 
-  await user.save()
+  await user.save();
 
   // Enviar credenciales y código de verificación (no bloquean si fallan)
-  sendCredentialsMail({ to: correo, nombre, username, password: tempPassword }).catch(() => {})
-  sendVerificationCodeMail({ to: correo, nombre, code: activationCode }).catch(() => {})
+  sendCredentialsMail({
+    to: correo,
+    nombre,
+    username,
+    password: tempPassword,
+  }).catch(() => {});
+  sendVerificationCodeMail({ to: correo, nombre, code: activationCode }).catch(
+    () => {},
+  );
 
-  return user
+  return user;
 }
 
 /**
@@ -103,31 +129,33 @@ export async function register({ nombre, apellido, username, correo, rol, telefo
  * @param {string} code
  */
 export async function verifyEmail(correo, code) {
-  const user = await User.findOne({ correo: correo.toLowerCase() })
+  const user = await User.findOne({ correo: correo.toLowerCase() });
 
   if (!user) {
-    throw new Error('Correo no encontrado')
+    throw new Error("Correo no encontrado");
   }
 
   if (user.emailVerificado) {
-    throw new Error('El correo ya fue verificado anteriormente')
+    throw new Error("El correo ya fue verificado anteriormente");
   }
 
   if (!user.activationToken || user.activationToken !== code) {
-    throw new Error('Código de verificación incorrecto')
+    throw new Error("Código de verificación incorrecto");
   }
 
   if (isExpired(user.activationTokenExpires)) {
-    throw new Error('El código de verificación ha expirado. Solicita uno nuevo.')
+    throw new Error(
+      "El código de verificación ha expirado. Solicita uno nuevo.",
+    );
   }
 
-  user.emailVerificado = true
-  user.isActive = true
-  user.activationToken = null
-  user.activationTokenExpires = null
-  await user.save()
+  user.emailVerificado = true;
+  user.isActive = true;
+  user.activationToken = null;
+  user.activationTokenExpires = null;
+  await user.save();
 
-  return user
+  return user;
 }
 
 /**
@@ -135,22 +163,22 @@ export async function verifyEmail(correo, code) {
  * @param {string} correo
  */
 export async function resendVerificationCode(correo) {
-  const user = await User.findOne({ correo: correo.toLowerCase() })
+  const user = await User.findOne({ correo: correo.toLowerCase() });
 
-  if (!user) return // respuesta genérica por seguridad
+  if (!user) return; // respuesta genérica por seguridad
 
   if (user.emailVerificado) {
-    throw new Error('El correo ya fue verificado')
+    throw new Error("El correo ya fue verificado");
   }
 
-  const code = generateCode()
-  const activationTokenExpires = getExpiresAt()
+  const code = generateCode();
+  const activationTokenExpires = getExpiresAt();
 
-  user.activationToken = code
-  user.activationTokenExpires = activationTokenExpires
-  await user.save()
+  user.activationToken = code;
+  user.activationTokenExpires = activationTokenExpires;
+  await user.save();
 
-  await sendVerificationCodeMail({ to: correo, nombre: user.nombre, code })
+  await sendVerificationCodeMail({ to: correo, nombre: user.nombre, code });
 }
 
 /**
@@ -161,19 +189,19 @@ export async function resendVerificationCode(correo) {
  * @param {string} newPassword
  */
 export async function changePassword(id, currentPassword, newPassword) {
-  const user = await User.findById(id)
-  if (!user) throw new Error('Usuario no encontrado')
+  const user = await User.findById(id);
+  if (!user) throw new Error("Usuario no encontrado");
 
-  const isValid = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!isValid) throw new Error('La contraseña actual es incorrecta')
+  const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isValid) throw new Error("La contraseña actual es incorrecta");
 
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
-  user.passwordHash = passwordHash
-  user.mustChangePassword = false
-  user.isActive = true
-  await user.save()
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.passwordHash = passwordHash;
+  user.mustChangePassword = false;
+  user.isActive = true;
+  await user.save();
 
-  return user
+  return user;
 }
 
 /**
@@ -182,20 +210,20 @@ export async function changePassword(id, currentPassword, newPassword) {
  * @param {string} correo
  */
 export async function requestPasswordReset(correo) {
-  const user = await User.findOne({ correo: correo.toLowerCase() })
+  const user = await User.findOne({ correo: correo.toLowerCase() });
 
   if (!user || !user.isActive) {
-    return
+    return;
   }
 
-  const code = generateCode()
-  const resetPasswordExpires = getExpiresAt()
+  const code = generateCode();
+  const resetPasswordExpires = getExpiresAt();
 
-  user.resetPassword = code
-  user.resetPasswordExpires = resetPasswordExpires
-  await user.save()
+  user.resetPassword = code;
+  user.resetPasswordExpires = resetPasswordExpires;
+  await user.save();
 
-  await sendPasswordResetMail({ to: correo, nombre: user.nombre, code })
+  await sendPasswordResetMail({ to: correo, nombre: user.nombre, code });
 }
 
 /**
@@ -205,28 +233,30 @@ export async function requestPasswordReset(correo) {
  * @param {string} newPassword
  */
 export async function resetPassword(correo, code, newPassword) {
-  const user = await User.findOne({ correo: correo.toLowerCase() })
+  const user = await User.findOne({ correo: correo.toLowerCase() });
 
   if (!user) {
-    throw new Error('Correo no encontrado')
+    throw new Error("Correo no encontrado");
   }
 
   if (!user.resetPassword || user.resetPassword !== code) {
-    throw new Error('Código de restablecimiento incorrecto')
+    throw new Error("Código de restablecimiento incorrecto");
   }
 
   if (isExpired(user.resetPasswordExpires)) {
-    throw new Error('El código de restablecimiento ha expirado. Solicita uno nuevo.')
+    throw new Error(
+      "El código de restablecimiento ha expirado. Solicita uno nuevo.",
+    );
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
-  user.passwordHash = passwordHash
-  user.mustChangePassword = false
-  user.resetPassword = null
-  user.resetPasswordExpires = null
-  await user.save()
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.passwordHash = passwordHash;
+  user.mustChangePassword = false;
+  user.resetPassword = null;
+  user.resetPasswordExpires = null;
+  await user.save();
 
-  return user
+  return user;
 }
 
 /**
@@ -234,16 +264,16 @@ export async function resetPassword(correo, code, newPassword) {
  * @param {string} id
  */
 export async function getUserById(id) {
-  const user = await User.findById(id)
-  if (!user) throw new Error('Usuario no encontrado')
-  return user
+  const user = await User.findById(id);
+  if (!user) throw new Error("Usuario no encontrado");
+  return user;
 }
 
 /**
  * Lista todos los usuarios (sin passwordHash).
  */
 export async function listUsers() {
-  return User.find({}, { passwordHash: 0 }).sort({ createdAt: -1 })
+  return User.find({}, { passwordHash: 0 }).sort({ createdAt: -1 });
 }
 
 /**
@@ -254,30 +284,39 @@ export async function listUsers() {
  * @param {string} requesterRole - Rol del usuario que está actualizando
  */
 export async function updateUser(id, data, requesterId, requesterRole) {
-  const allowedFields = ['nombre', 'apellido', 'username', 'correo', 'rol', 'telefono', 'isActive']
-  const update = {}
+  const allowedFields = [
+    "nombre",
+    "apellido",
+    "username",
+    "correo",
+    "rol",
+    "telefono",
+    "isActive",
+  ];
+  const update = {};
 
   for (const field of allowedFields) {
-    if (data[field] !== undefined) update[field] = data[field]
+    if (data[field] !== undefined) update[field] = data[field];
   }
 
-  if (typeof update.telefono === 'string') update.telefono = update.telefono.trim()
+  if (typeof update.telefono === "string")
+    update.telefono = update.telefono.trim();
 
   if (update.telefono && !/^\d{8}$/.test(update.telefono)) {
-    throw new Error('El teléfono debe tener exactamente 8 dígitos')
+    throw new Error("El teléfono debe tener exactamente 8 dígitos");
   }
 
-  if (update.username) update.username = update.username.toLowerCase()
-  if (update.correo) update.correo = update.correo.toLowerCase()
+  if (update.username) update.username = update.username.toLowerCase();
+  if (update.correo) update.correo = update.correo.toLowerCase();
 
   // Si el usuario está editando su propia cuenta, no se permite cambiar el rol aquí.
   if (id === requesterId && update.rol) {
-    throw new Error('No puedes cambiar tu propio rol desde aquí')
+    throw new Error("No puedes cambiar tu propio rol desde aquí");
   }
 
   // Validación de permisos: ADMIN no puede cambiar roles a SUPER_ADMIN o ADMIN
-  if (requesterRole === 'ADMIN' && update.rol && update.rol !== 'MEDICO') {
-    throw new Error('Los administradores solo pueden asignar el rol MEDICO')
+  if (requesterRole === "ADMIN" && update.rol && update.rol !== "MEDICO") {
+    throw new Error("Los administradores solo pueden asignar el rol MEDICO");
   }
 
   if (update.username || update.correo) {
@@ -285,25 +324,25 @@ export async function updateUser(id, data, requesterId, requesterRole) {
       _id: { $ne: id },
       $or: [
         ...(update.username ? [{ username: update.username }] : []),
-        ...(update.correo ? [{ correo: update.correo }] : [])
-      ]
-    })
+        ...(update.correo ? [{ correo: update.correo }] : []),
+      ],
+    });
 
     if (existingUser) {
       if (existingUser.username === update.username) {
-        throw new Error('El username ya está en uso')
+        throw new Error("El username ya está en uso");
       }
-      throw new Error('El correo ya está en uso')
+      throw new Error("El correo ya está en uso");
     }
   }
 
   const user = await User.findByIdAndUpdate(id, update, {
     new: true,
-    runValidators: true
-  })
+    runValidators: true,
+  });
 
-  if (!user) throw new Error('Usuario no encontrado')
-  return user
+  if (!user) throw new Error("Usuario no encontrado");
+  return user;
 }
 
 /**
@@ -311,9 +350,9 @@ export async function updateUser(id, data, requesterId, requesterRole) {
  * @param {string} id
  */
 export async function deleteUser(id) {
-  const user = await User.findByIdAndDelete(id)
-  if (!user) throw new Error('Usuario no encontrado')
-  return user
+  const user = await User.findByIdAndDelete(id);
+  if (!user) throw new Error("Usuario no encontrado");
+  return user;
 }
 
 /**
@@ -322,7 +361,7 @@ export async function deleteUser(id) {
  * @param {boolean} isActive
  */
 export async function toggleUserStatus(id, isActive) {
-  const user = await User.findByIdAndUpdate(id, { isActive }, { new: true })
-  if (!user) throw new Error('Usuario no encontrado')
-  return user
+  const user = await User.findByIdAndUpdate(id, { isActive }, { new: true });
+  if (!user) throw new Error("Usuario no encontrado");
+  return user;
 }
