@@ -20,8 +20,18 @@ import {
 } from "@heroicons/react/24/outline";
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: HomeIcon, allowedRoles: ["ADMIN", "SUPER_ADMIN"] },
-  { to: "/usuarios", label: "Usuarios", icon: UserGroupIcon, allowedRoles: ["ADMIN", "SUPER_ADMIN"] },
+  {
+    to: "/dashboard",
+    label: "Dashboard",
+    icon: HomeIcon,
+    allowedRoles: ["ADMIN", "SUPER_ADMIN"],
+  },
+  {
+    to: "/usuarios",
+    label: "Usuarios",
+    icon: UserGroupIcon,
+    allowedRoles: ["ADMIN", "SUPER_ADMIN"],
+  },
   {
     to: "/jornadas",
     label: "Jornadas",
@@ -36,6 +46,12 @@ const inventarioItems = [
     label: "Catálogo",
     icon: ClipboardDocumentListIcon,
     allowedRoles: ["ADMIN", "SUPER_ADMIN"],
+  },
+  {
+    to: "/inventario/categorias",
+    label: "Categorías",
+    icon: ClipboardDocumentListIcon,
+    allowedRoles: ["SUPER_ADMIN"],
   },
   {
     to: "/inventario/central",
@@ -94,59 +110,59 @@ export default function Sidebar() {
         {/* Navegación principal */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {visibleNavItems.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-primary text-white shadow-md"
-                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
-                  }`
-                }
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {label}
-              </NavLink>
-            ))}
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? "bg-primary text-white shadow-md"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                }`
+              }
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {label}
+            </NavLink>
+          ))}
 
           {/* Módulo de Inventario con submenú desplegable */}
           {canSeeInventario && (
-          <div>
-            <button
-              onClick={() => setInventarioOpen(!inventarioOpen)}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all duration-200"
-            >
-              <div className="flex items-center gap-3">
-                <BeakerIcon className="w-5 h-5 flex-shrink-0" />
-                Inventario
-              </div>
-              <ChevronDownIcon
-                className={`w-4 h-4 transition-transform duration-200 ${inventarioOpen ? "rotate-180" : ""}`}
-              />
-            </button>
+            <div>
+              <button
+                onClick={() => setInventarioOpen(!inventarioOpen)}
+                className="flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <BeakerIcon className="w-5 h-5 flex-shrink-0" />
+                  Inventario
+                </div>
+                <ChevronDownIcon
+                  className={`w-4 h-4 transition-transform duration-200 ${inventarioOpen ? "rotate-180" : ""}`}
+                />
+              </button>
 
-            {inventarioOpen && (
-              <div className="ml-4 mt-1 space-y-1 border-l border-gray-700 pl-3">
-                {visibleInventarioItems.map(({ to, label, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-primary text-white shadow-md"
-                          : "text-gray-400 hover:bg-gray-800 hover:text-white"
-                      }`
-                    }
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
+              {inventarioOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l border-gray-700 pl-3">
+                  {visibleInventarioItems.map(({ to, label, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-primary text-white shadow-md"
+                            : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                        }`
+                      }
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Reportes */}
