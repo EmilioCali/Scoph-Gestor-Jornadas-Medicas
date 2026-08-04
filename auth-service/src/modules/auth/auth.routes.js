@@ -192,7 +192,12 @@ async function authPlugin(fastify) {
     },
     async (request, reply) => {
       try {
-        const user = await updateUser(request.params.id, request.body, request.user.rol)
+        const user = await updateUser(
+          request.params.id,
+          request.body,
+          request.user.id,
+          request.user.rol,
+        )
         return reply.send({ ok: true, user: user.toSafeJSON() })
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message })

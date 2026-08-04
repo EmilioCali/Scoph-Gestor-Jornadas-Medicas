@@ -7,6 +7,7 @@ import {
 } from "./category.controller.js";
 import { requireRole } from "../middlewares/authenticate.js";
 
+const ADMINISTRATIVE_ROLES = ["ADMIN", "SUPER_ADMIN"];
 const SUPER_ADMIN_ONLY = ["SUPER_ADMIN"];
 
 const categorySchema = {
@@ -87,12 +88,12 @@ const categoryRoutes = async (fastify) => {
   fastify.get(
     "/categories",
     {
-      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
       schema: {
         tags: ["Categorías"],
         summary: "Listar categorías",
         description:
-          "Retorna todas las categorías de medicamentos. Solo SUPER_ADMIN puede ver.",
+          "Retorna todas las categorías de medicamentos. ADMIN y SUPER_ADMIN pueden ver.",
         security: [{ bearerAuth: [] }],
         response: {
           200: {
@@ -116,12 +117,12 @@ const categoryRoutes = async (fastify) => {
   fastify.get(
     "/categories/:id",
     {
-      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
+      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
       schema: {
         tags: ["Categorías"],
         summary: "Obtener categoría por ID",
         description:
-          "Retorna una categoría por su identificador. Solo SUPER_ADMIN puede ver.",
+          "Retorna una categoría por su identificador. ADMIN y SUPER_ADMIN pueden ver.",
         params: {
           type: "object",
           required: ["id"],

@@ -250,9 +250,10 @@ export async function listUsers() {
  * Actualiza datos administrativos de un usuario.
  * @param {string} id
  * @param {Object} data
+ * @param {string} requesterId - ID del usuario que está actualizando
  * @param {string} requesterRole - Rol del usuario que está actualizando
  */
-export async function updateUser(id, data, requesterRole) {
+export async function updateUser(id, data, requesterId, requesterRole) {
   const allowedFields = ['nombre', 'apellido', 'username', 'correo', 'rol', 'telefono', 'isActive']
   const update = {}
 
@@ -268,6 +269,11 @@ export async function updateUser(id, data, requesterRole) {
 
   if (update.username) update.username = update.username.toLowerCase()
   if (update.correo) update.correo = update.correo.toLowerCase()
+
+  // Si el usuario está editando su propia cuenta, no se permite cambiar el rol aquí.
+  if (id === requesterId && update.rol) {
+    throw new Error('No puedes cambiar tu propio rol desde aquí')
+  }
 
   // Validación de permisos: ADMIN no puede cambiar roles a SUPER_ADMIN o ADMIN
   if (requesterRole === 'ADMIN' && update.rol && update.rol !== 'MEDICO') {
