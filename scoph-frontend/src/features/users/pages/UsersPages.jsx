@@ -9,6 +9,7 @@ import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 
+import { useAuthStore } from "../../auth/store/authStore.js";
 import {
   createUser,
   deleteUser,
@@ -32,7 +33,7 @@ function getStatusBadge(isActive) {
   );
 }
 
-function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
+function UserForm({ form, onChange, onSubmit, onClose, isEdit, isSelf }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -88,13 +89,19 @@ function UserForm({ form, onChange, onSubmit, onClose, isEdit }) {
           name="rol"
           value={form.rol}
           onChange={onChange}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+          disabled={isSelf}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition disabled:cursor-not-allowed disabled:bg-gray-100"
           required
         >
           <option value="MEDICO">Médico</option>
           <option value="ADMIN">Administrador</option>
           <option value="SUPER_ADMIN">Super Administrador</option>
         </select>
+        {isSelf && (
+          <p className="text-xs text-gray-500 mt-1">
+            No puedes cambiar tu propio rol desde aquí.
+          </p>
+        )}
       </div>
 
       {!isEdit && (
@@ -151,6 +158,8 @@ export default function UsuariosPage() {
   const [confirmEliminar, setConfirmEliminar] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(formInicial);
+  const currentUser = useAuthStore((state) => state.user);
+  const isEditingSelf = selectedUser?._id === currentUser?._id;
 
   // Cargar usuarios desde Fastify
   const cargarUsuarios = async () => {
@@ -378,6 +387,7 @@ export default function UsuariosPage() {
           onSubmit={handleGuardarEdicion}
           onClose={() => setModalEditar(false)}
           isEdit={true}
+          isSelf={isEditingSelf}
         />
       </Modal>
 

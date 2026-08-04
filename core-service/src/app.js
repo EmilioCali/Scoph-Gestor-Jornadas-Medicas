@@ -10,6 +10,7 @@ import medicineRoutes from "./medicines/medicine.routes.js";
 import movementPlugin from "./movements/movement.routes.js";
 import inventoryRoutes from "./inventory/inventroy.routes.js";
 import auditRoutes from "./modules/audit/audit.routes.js";
+import categoryRoutes from "./categories/category.routes.js";
 
 const app = Fastify({
   ajv: {
@@ -121,6 +122,10 @@ await app.register(movementPlugin, {
 });
 
 await app.register(inventoryRoutes, {
+  prefix: "/api/v1",
+});
+
+await app.register(categoryRoutes, {
   prefix: "/api/v1",
 });
 

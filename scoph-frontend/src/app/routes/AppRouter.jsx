@@ -18,6 +18,7 @@ import WorkdaysPage from "../../features/workdays/pages/WorkdaysPage.jsx";
 
 // Páginas de inventario
 import CatalogoPage from "../../features/inventory/pages/CatalogoPage";
+import CategoriesPage from "../../features/inventory/pages/CategoriesPage";
 import InventarioCentralPage from "../../features/inventory/pages/InventarioCentralPage";
 
 // Página de reportes
@@ -60,10 +61,17 @@ export default function AppRouter() {
               <Route path="usuarios" element={<UsuariosPage />} />
               <Route path="inventario/catalogo" element={<CatalogoPage />} />
               <Route
+                path="inventario/categorias"
+                element={<CategoriesPage />}
+              />
+              <Route
                 path="inventario/central"
                 element={<InventarioCentralPage />}
               />
-              <Route path="inventario/movimientos" element={<MovimientosPage />} />
+              <Route
+                path="inventario/movimientos"
+                element={<MovimientosPage />}
+              />
               <Route path="reportes" element={<ReportesPage />} />
             </Route>
             <Route path="jornadas" element={<WorkdaysPage />} />
