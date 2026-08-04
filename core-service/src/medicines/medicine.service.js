@@ -1,122 +1,136 @@
-import Medicine from './medicine.model.js';
-import Category from '../categories/category.model.js';
-import { NotFoundError, ValidationError } from '../utils/errorHandler.js';
+import Medicine from "./medicine.model.js";
+import Category from "../categories/category.model.js";
+import { NotFoundError, ValidationError } from "../utils/errorHandler.js";
 
 function escapeRegex(value) {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function assertCategoryExists(categoryName) {
-    if (!categoryName || !categoryName.trim()) {
-        throw new ValidationError('La categoría es requerida');
-    }
+  if (!categoryName || !categoryName.trim()) {
+    throw new ValidationError("La categoría es requerida");
+  }
 
-    const category = await Category.findOne({
-        name: { $regex: `^${escapeRegex(categoryName.trim())}$`, $options: 'i' },
-        status: 'ACTIVO',
-    });
+  const category = await Category.findOne({
+    name: { $regex: `^${escapeRegex(categoryName.trim())}$`, $options: "i" },
+    status: "ACTIVO",
+  });
 
-    if (!category) {
-        throw new ValidationError(
-            `La categoría "${categoryName.trim()}" no existe. Selecciona una categoría creada por el sistema.`,
-        );
-    }
+  if (!category) {
+    throw new ValidationError(
+      `La categoría "${categoryName.trim()}" no existe. Selecciona una categoría creada por el sistema.`,
+    );
+  }
 
-    return category;
+  return category;
 }
 
 function normalizeMedicineData(data) {
-    const normalized = { ...data };
+  const normalized = { ...data };
 
-    for (const field of ['barcode', 'name', 'compound', 'concentration', 'presentation', 'unitOfMeasure', 'category']) {
-        if (typeof normalized[field] === 'string') {
-            normalized[field] = normalized[field].trim();
-        }
+  for (const field of [
+    "barcode",
+    "name",
+    "compound",
+    "concentration",
+    "presentation",
+    "unitOfMeasure",
+    "category",
+  ]) {
+    if (typeof normalized[field] === "string") {
+      normalized[field] = normalized[field].trim();
     }
+  }
 
-    if (normalized.barcode === '') {
-        normalized.barcode = null;
-    }
+  if (normalized.barcode === "") {
+    normalized.barcode = null;
+  }
 
-    return normalized;
+  return normalized;
 }
 
 async function assertUniqueMedicine({ name, barcode, excludeId = null }) {
-    const conditions = [];
+  const conditions = [];
 
-    if (name) {
-        conditions.push({ name: { $regex: `^${escapeRegex(name)}$`, $options: 'i' } });
-    }
+  if (name) {
+    conditions.push({
+      name: { $regex: `^${escapeRegex(name)}$`, $options: "i" },
+    });
+  }
 
-    if (barcode) {
-        conditions.push({ barcode });
-    }
+  if (barcode) {
+    conditions.push({ barcode });
+  }
 
-    if (conditions.length === 0) return;
+  if (conditions.length === 0) return;
 
-    const query = { $or: conditions };
-    if (excludeId) {
-        query._id = { $ne: excludeId };
-    }
+  const query = { $or: conditions };
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
 
-    const existing = await Medicine.findOne(query);
-    if (!existing) return;
+  const existing = await Medicine.findOne(query);
+  if (!existing) return;
 
-    if (name && existing.name.toLowerCase() === name.toLowerCase()) {
-        throw new ValidationError('Ya existe un medicamento con ese nombre');
-    }
+  if (name && existing.name.toLowerCase() === name.toLowerCase()) {
+    throw new ValidationError("Ya existe un medicamento con ese nombre");
+  }
 
-    if (barcode && existing.barcode === barcode) {
-        throw new ValidationError('Ya existe un medicamento con ese codigo de barras');
-    }
+  if (barcode && existing.barcode === barcode) {
+    throw new ValidationError(
+      "Ya existe un medicamento con ese codigo de barras",
+    );
+  }
 }
 
 export const createMedicineRecord = async (medicineData) => {
-    const normalizedData = normalizeMedicineData(medicineData);
-    const category = await assertCategoryExists(normalizedData.category);
-    normalizedData.category = category.name;
-    await assertUniqueMedicine(normalizedData);
+  const normalizedData = normalizeMedicineData(medicineData);
+  const category = await assertCategoryExists(normalizedData.category);
+  normalizedData.category = category.name;
+  await assertUniqueMedicine(normalizedData);
 
-    const medicine = new Medicine(normalizedData);
-    return await medicine.save();
+  const medicine = new Medicine(normalizedData);
+  return await medicine.save();
 };
 
 export const getAllMedicines = async () => {
-    return await Medicine.find().sort({ name: 1 });
+  return await Medicine.find().sort({ name: 1 });
 };
 
 export const updateMedicineRecord = async (id, updateData) => {
-    const { status, ...safeData } = updateData;
-    const normalizedData = normalizeMedicineData(safeData);
+  const { status, ...safeData } = updateData;
+  const normalizedData = normalizeMedicineData(safeData);
 
-    if (normalizedData.category) {
-        const category = await assertCategoryExists(normalizedData.category);
-        normalizedData.category = category.name;
-    }
+  if (normalizedData.category) {
+    const category = await assertCategoryExists(normalizedData.category);
+    normalizedData.category = category.name;
+  }
 
-    await assertUniqueMedicine({
-        name: normalizedData.name,
-        barcode: normalizedData.barcode,
-        excludeId: id
-    });
+  await assertUniqueMedicine({
+    name: normalizedData.name,
+    barcode: normalizedData.barcode,
+    excludeId: id,
+  });
 
-    const medicine = await Medicine.findByIdAndUpdate(
-        id,
-        { $set: normalizedData },
-        { new: true, runValidators: true }
-    );
+  const medicine = await Medicine.findByIdAndUpdate(
+    id,
+    { $set: normalizedData },
+    { new: true, runValidators: true },
+  );
 
-    if (!medicine) throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
-    return medicine;
+  if (!medicine)
+    throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
+  return medicine;
 };
 
 export const toggleMedicineStatusRecord = async (id, status) => {
-    const medicine = await Medicine.findByIdAndUpdate(
-        id,
-        { $set: { status } },
-        { new: true }
-    );
+  const medicine = await Medicine.findByIdAndUpdate(
+    id,
+    { $set: { status } },
+    { new: true },
+  );
 
-    if (!medicine) throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
-    return medicine;
+  if (!medicine)
+    throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
+  return medicine;
 };

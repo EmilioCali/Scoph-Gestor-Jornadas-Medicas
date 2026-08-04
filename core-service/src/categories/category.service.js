@@ -37,7 +37,10 @@ async function assertUniqueCategoryName(name, excludeId = null) {
   }
 
   const exactMatch = await Category.findOne({
-    name: { $regex: `^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    name: {
+      $regex: `^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+      $options: "i",
+    },
     ...(excludeId ? { _id: { $ne: excludeId } } : {}),
   });
 
@@ -53,12 +56,11 @@ async function assertUniqueCategoryName(name, excludeId = null) {
   for (const category of categories) {
     const normalizedCandidate = normalizeText(category.name);
     const distance = levenshteinDistance(normalizedName, normalizedCandidate);
-    const maxLength = Math.max(normalizedName.length, normalizedCandidate.length);
-    if (
-      maxLength >= 5
-        ? distance <= 2
-        : distance <= 1
-    ) {
+    const maxLength = Math.max(
+      normalizedName.length,
+      normalizedCandidate.length,
+    );
+    if (maxLength >= 5 ? distance <= 2 : distance <= 1) {
       throw new ValidationError(
         `Ya existe una categorÃ­a similar: "${category.name}". Verifica la ortografÃ­a.`,
       );
@@ -112,4 +114,3 @@ export async function deleteCategoryRecord(categoryId) {
   }
   return category;
 }
-
