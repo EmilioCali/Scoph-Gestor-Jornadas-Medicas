@@ -1,20 +1,22 @@
-import Workday from './workday.model.js';
-import { badRequest, handleServiceError } from '../utils/errorHandler.js';
-import { successResponse } from '../utils/response.js';
+import Workday from "./workday.model.js";
+import { badRequest, handleServiceError } from "../utils/errorHandler.js";
+import { successResponse } from "../utils/response.js";
 
 function assertValidDateRange(startDate, endDate) {
-    if (!startDate || !endDate) return;
+  if (!startDate || !endDate) return;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        throw badRequest('Las fechas de la jornada no son validas');
-    }
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw badRequest("Las fechas de la jornada no son validas");
+  }
 
-    if (start > end) {
-        throw badRequest('La fecha de inicio no puede ser posterior a la fecha de finalizacion');
-    }
+  if (start > end) {
+    throw badRequest(
+      "La fecha de inicio no puede ser posterior a la fecha de finalizacion",
+    );
+  }
 }
 
 /**
@@ -22,220 +24,247 @@ function assertValidDateRange(startDate, endDate) {
  * Deduplica por userId preservando el primer nombre encontrado.
  */
 function normalizeDoctors(doctors) {
-    if (doctors === undefined || doctors === null) {
-        return [];
+  if (doctors === undefined || doctors === null) {
+    return [];
+  }
+
+  if (!Array.isArray(doctors)) {
+    throw badRequest("doctors debe ser un arreglo");
+  }
+
+  const seen = new Set();
+  const normalized = [];
+
+  for (const doctor of doctors) {
+    const userId = doctor?.userId != null ? String(doctor.userId).trim() : "";
+    const name = doctor?.name != null ? String(doctor.name).trim() : "";
+
+    if (!userId || !name) {
+      throw badRequest("Cada médico asignado requiere userId y name");
     }
 
-    if (!Array.isArray(doctors)) {
-        throw badRequest('doctors debe ser un arreglo');
-    }
+    if (seen.has(userId)) continue;
+    seen.add(userId);
+    normalized.push({ userId, name });
+  }
 
-    const seen = new Set();
-    const normalized = [];
-
-    for (const doctor of doctors) {
-        const userId = doctor?.userId != null ? String(doctor.userId).trim() : '';
-        const name = doctor?.name != null ? String(doctor.name).trim() : '';
-
-        if (!userId || !name) {
-            throw badRequest('Cada médico asignado requiere userId y name');
-        }
-
-        if (seen.has(userId)) continue;
-        seen.add(userId);
-        normalized.push({ userId, name });
-    }
-
-    return normalized;
+  return normalized;
 }
 
 function isDoctorAssigned(workday, userId) {
-    if (!workday || userId == null) return false;
-    return (workday.doctors || []).some(
-        (doctor) => String(doctor.userId) === String(userId)
-    );
+  if (!workday || userId == null) return false;
+  return (workday.doctors || []).some(
+    (doctor) => String(doctor.userId) === String(userId),
+  );
 }
 
-function forbiddenAccess(reply, message = 'No tienes permiso para acceder a esta jornada') {
-    return reply.status(403).send({
-        success: false,
-        message,
-        error: 'FORBIDDEN'
-    });
+function forbiddenAccess(
+  reply,
+  message = "No tienes permiso para acceder a esta jornada",
+) {
+  return reply.status(403).send({
+    success: false,
+    message,
+    error: "FORBIDDEN",
+  });
 }
 
 export const createWorkday = async (request, reply) => {
-    try {
-        assertValidDateRange(request.body.startDate, request.body.endDate);
+  try {
+    assertValidDateRange(request.body.startDate, request.body.endDate);
 
-        const doctors = normalizeDoctors(request.body.doctors);
+    const doctors = normalizeDoctors(request.body.doctors);
+    const companions = Array.isArray(request.body.companions)
+      ? request.body.companions
+          .map((name) => String(name ?? "").trim())
+          .filter(Boolean)
+      : [];
 
-        const workdayData = {
-            ...request.body,
-            manager: {
-                userId: request.body.manager?.userId || request.user.id,
-                name: request.body.manager?.name || request.user.username
-            },
-            doctors,
-        };
+    const manager = {
+      userId: request.body.manager?.userId
+        ? String(request.body.manager.userId).trim()
+        : undefined,
+      name: String(
+        request.body.manager?.name ?? request.user?.username ?? "",
+      ).trim(),
+    };
 
-        const workday = await Workday.create(workdayData);
-
-        return successResponse(reply, {
-            message: 'Jornada creada exitosamente',
-            data: workday,
-            statusCode: 201
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    if (!manager.name) {
+      throw badRequest("El nombre del responsable es requerido");
     }
+
+    const workdayData = {
+      ...request.body,
+      manager,
+      doctors,
+      companions,
+    };
+
+    const workday = await Workday.create(workdayData);
+
+    return successResponse(reply, {
+      message: "Jornada creada exitosamente",
+      data: workday,
+      statusCode: 201,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
 
 export const getWorkdays = async (request, reply) => {
-    try {
-        const filter = {};
+  try {
+    const filter = {};
 
-        // TKT-79: el médico solo ve jornadas donde está asignado
-        if (request.user?.rol === 'MEDICO') {
-            filter['doctors.userId'] = request.user.id;
-        }
-
-        const workdays = await Workday.find(filter).sort({ startDate: -1 });
-
-        return successResponse(reply, {
-            message: 'Jornadas obtenidas exitosamente',
-            data: workdays,
-            statusCode: 200
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    // TKT-79: el médico solo ve jornadas donde está asignado
+    if (request.user?.rol === "MEDICO") {
+      filter["doctors.userId"] = request.user.id;
     }
+
+    const workdays = await Workday.find(filter).sort({ startDate: -1 });
+
+    return successResponse(reply, {
+      message: "Jornadas obtenidas exitosamente",
+      data: workdays,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
 
 export const getWorkdayById = async (request, reply) => {
-    try {
-        const workday = await Workday.findById(request.params.id);
+  try {
+    const workday = await Workday.findById(request.params.id);
 
-        if (!workday) {
-            return reply.status(404).send({
-                success: false,
-                message: 'Jornada no encontrada',
-                error: 'NOT_FOUND'
-            });
-        }
-
-        // TKT-80: bloquear acceso por URL si el médico no está asignado
-        if (request.user?.rol === 'MEDICO' && !isDoctorAssigned(workday, request.user.id)) {
-            return forbiddenAccess(reply);
-        }
-
-        return successResponse(reply, {
-            message: 'Jornada obtenida exitosamente',
-            data: workday,
-            statusCode: 200
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    if (!workday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
     }
+
+    // TKT-80: bloquear acceso por URL si el médico no está asignado
+    if (
+      request.user?.rol === "MEDICO" &&
+      !isDoctorAssigned(workday, request.user.id)
+    ) {
+      return forbiddenAccess(reply);
+    }
+
+    return successResponse(reply, {
+      message: "Jornada obtenida exitosamente",
+      data: workday,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
 
 export const updateWorkday = async (request, reply) => {
-    try {
-        const currentWorkday = await Workday.findById(request.params.id);
+  try {
+    const currentWorkday = await Workday.findById(request.params.id);
 
-        if (!currentWorkday) {
-            return reply.status(404).send({
-                success: false,
-                message: 'Jornada no encontrada',
-                error: 'NOT_FOUND'
-            });
-        }
-
-        // status tiene su propio endpoint — se ignora aquí
-        const { status, manager, doctors, ...rest } = request.body;
-        assertValidDateRange(
-            rest.startDate ?? currentWorkday.startDate,
-            rest.endDate ?? currentWorkday.endDate
-        );
-
-        // Dot notation para no pisar manager.userId
-        const updateFields = { ...rest };
-        if (manager?.name)   updateFields['manager.name']   = manager.name;
-        if (manager?.userId) updateFields['manager.userId'] = manager.userId;
-        if (doctors !== undefined) {
-            updateFields.doctors = normalizeDoctors(doctors);
-        }
-
-        const workday = await Workday.findByIdAndUpdate(
-            request.params.id,
-            { $set: updateFields },
-            { new: true, runValidators: true }
-        );
-
-        if (!workday) {
-            return reply.status(404).send({
-                success: false,
-                message: 'Jornada no encontrada',
-                error: 'NOT_FOUND'
-            });
-        }
-
-        return successResponse(reply, {
-            message: 'Jornada actualizada exitosamente',
-            data: workday,
-            statusCode: 200
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    if (!currentWorkday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
     }
+
+    // status tiene su propio endpoint — se ignora aquí
+    const { status, manager, doctors, companions, ...rest } = request.body;
+    assertValidDateRange(
+      rest.startDate ?? currentWorkday.startDate,
+      rest.endDate ?? currentWorkday.endDate,
+    );
+
+    // Dot notation para no pisar manager.userId
+    const updateFields = { ...rest };
+    if (manager?.name) updateFields["manager.name"] = manager.name;
+    if (manager?.userId) updateFields["manager.userId"] = manager.userId;
+    if (doctors !== undefined) {
+      updateFields.doctors = normalizeDoctors(doctors);
+    }
+    if (companions !== undefined) {
+      updateFields.companions = Array.isArray(companions)
+        ? companions.map((name) => String(name ?? "").trim()).filter(Boolean)
+        : [];
+    }
+
+    const workday = await Workday.findByIdAndUpdate(
+      request.params.id,
+      { $set: updateFields },
+      { new: true, runValidators: true },
+    );
+
+    if (!workday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
+    }
+
+    return successResponse(reply, {
+      message: "Jornada actualizada exitosamente",
+      data: workday,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
 
 export const updateWorkdayStatus = async (request, reply) => {
-    try {
-        const { status } = request.body;
+  try {
+    const { status } = request.body;
 
-        const workday = await Workday.findByIdAndUpdate(
-            request.params.id,
-            { $set: { status } },
-            { new: true }
-        );
+    const workday = await Workday.findByIdAndUpdate(
+      request.params.id,
+      { $set: { status } },
+      { new: true },
+    );
 
-        if (!workday) {
-            return reply.status(404).send({
-                success: false,
-                message: 'Jornada no encontrada',
-                error: 'NOT_FOUND'
-            });
-        }
-
-        return successResponse(reply, {
-            message: `Estado de jornada actualizado a ${status}`,
-            data: workday,
-            statusCode: 200
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    if (!workday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
     }
+
+    return successResponse(reply, {
+      message: `Estado de jornada actualizado a ${status}`,
+      data: workday,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
 
 export const deleteWorkday = async (request, reply) => {
-    try {
-        const workday = await Workday.findByIdAndDelete(request.params.id);
+  try {
+    const workday = await Workday.findByIdAndDelete(request.params.id);
 
-        if (!workday) {
-            return reply.status(404).send({
-                success: false,
-                message: 'Jornada no encontrada',
-                error: 'NOT_FOUND'
-            });
-        }
-
-        return successResponse(reply, {
-            message: 'Jornada eliminada exitosamente',
-            data: workday,
-            statusCode: 200
-        });
-    } catch (error) {
-        return handleServiceError(error, reply);
+    if (!workday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
     }
+
+    return successResponse(reply, {
+      message: "Jornada eliminada exitosamente",
+      data: workday,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
 };
