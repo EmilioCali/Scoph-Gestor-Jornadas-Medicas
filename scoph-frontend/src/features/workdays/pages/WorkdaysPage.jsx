@@ -27,18 +27,37 @@ function getStatusBadge(status) {
 // Body alineado con backend: name, description, startDate, endDate,
 // location{department, municipality, address}, manager{userId,name},
 // doctors[{userId,name}], estimatedPatients, estimatedMedicines, status
-function WorkdayForm({
-  form,
-  onChange,
-  onToggleDoctor,
-  onSubmit,
-  onClose,
-  departamentos,
-  users,
-}) {
+function WorkdayForm({ form, onChange, onSubmit, onClose, departamentos }) {
+  const [companionName, setCompanionName] = useState("");
+
   const municipios =
     departamentos.find((d) => d.nombre === form.department)?.municipios || [];
-  const medicos = users.filter((u) => u.rol === "MEDICO");
+
+  const handleAddCompanion = () => {
+    const normalized = companionName.trim();
+    if (!normalized) return;
+    if ((form.companions || []).includes(normalized)) {
+      setCompanionName("");
+      return;
+    }
+
+    onChange({
+      target: {
+        name: "companions",
+        value: [...(form.companions || []), normalized],
+      },
+    });
+    setCompanionName("");
+  };
+
+  const handleRemoveCompanion = (name) => {
+    onChange({
+      target: {
+        name: "companions",
+        value: (form.companions || []).filter((item) => item !== name),
+      },
+    });
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -124,58 +143,64 @@ function WorkdayForm({
         placeholder="Centro comunitario, Salón municipal..."
         required
       />
+      <Input
+        label="Responsable"
+        name="managerName"
+        value={form.managerName}
+        onChange={onChange}
+        placeholder="Nombre del responsable"
+        required
+      />
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">
-          Responsable
+          Acompañantes
         </label>
-        <select
-          name="managerId"
-          value={form.managerId}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-          required
-        >
-          <option value="">Seleccionar responsable</option>
-          {users.map((u) => (
-            <option key={u._id} value={u._id}>
-              {u.nombre} {u.apellido} — {u.rol}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-gray-600">
-          Médicos asignados
-        </label>
-        {medicos.length === 0 ? (
-          <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-            No hay usuarios con rol MÉDICO disponibles para asignar.
-          </p>
-        ) : (
-          <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
-            {medicos.map((u) => {
-              const checked = form.doctorIds.includes(u._id);
-              return (
-                <label
-                  key={u._id}
-                  className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white cursor-pointer"
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <Input
+            label="Nombre del acompañante"
+            name="companionName"
+            value={companionName}
+            onChange={(e) => setCompanionName(e.target.value)}
+            placeholder="Ej. María Pérez"
+          />
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={handleAddCompanion}
+            className="h-12 whitespace-nowrap"
+          >
+            Agregar
+          </Button>
+        </div>
+        <div className="min-h-[120px] rounded-xl border border-gray-200 bg-gray-50 p-3">
+          {form.companions?.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {form.companions.map((name) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onToggleDoctor(u._id)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <span className="text-sm text-gray-700">
-                    {u.nombre} {u.apellido}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-        <p className="text-xs text-gray-400 mt-1">
-          Selecciona uno o más médicos que participarán en la jornada.
+                  <span>{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCompanion(name)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label={`Eliminar acompañante ${name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">
+              No hay acompañantes agregados aún.
+            </p>
+          )}
+        </div>
+        <p className="text-xs text-gray-400">
+          Escribe un nombre y haz clic en Agregar. Usa la x para quitar un
+          acompañante del listado.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -263,11 +288,13 @@ function WorkdayDetail({
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-          <p className="text-xs text-gray-400">Médicos asignados</p>
+          <p className="text-xs text-gray-400">Acompañantes</p>
           <p className="text-sm font-semibold text-gray-700">
-            {(workday.doctors || []).length > 0
-              ? workday.doctors.map((d) => d.name).join(", ")
-              : "Sin médicos asignados"}
+            {(workday.companions || []).length > 0
+              ? workday.companions.join(", ")
+              : (workday.doctors || []).length > 0
+                ? workday.doctors.map((d) => d.name).join(", ")
+                : "Sin acompañantes"}
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -306,12 +333,14 @@ function WorkdayDetail({
               ({workdayInventory.length} medicamentos)
             </span>
           </h3>
-          {canAssign && workday.status !== "FINISHED" && workday.status !== "COMPLETED" && (
-            <Button variant="primary" size="sm" onClick={onAssign}>
-              <PlusIcon className="w-4 h-4" />
-              Asignar medicamento
-            </Button>
-          )}
+          {canAssign &&
+            workday.status !== "FINISHED" &&
+            workday.status !== "COMPLETED" && (
+              <Button variant="primary" size="sm" onClick={onAssign}>
+                <PlusIcon className="w-4 h-4" />
+                Asignar medicamento
+              </Button>
+            )}
         </div>
 
         {loading ? (
@@ -575,8 +604,8 @@ const workdayInicial = {
   department: "",
   municipality: "",
   address: "",
-  managerId: "",
-  doctorIds: [],
+  managerName: "",
+  companions: [],
   estimatedPatients: "",
   estimatedMedicines: "",
   status: "PLANNED",
@@ -586,7 +615,8 @@ const movementInicial = { quantity: "", observacion: "" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
-  const canManageWorkdays = currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
+  const canManageWorkdays =
+    currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
     users = [],
@@ -632,18 +662,6 @@ export default function JornadasPage() {
     }
   };
 
-  const handleToggleDoctor = (doctorId) => {
-    setFormWorkday((prev) => {
-      const exists = prev.doctorIds.includes(doctorId);
-      return {
-        ...prev,
-        doctorIds: exists
-          ? prev.doctorIds.filter((id) => id !== doctorId)
-          : [...prev.doctorIds, doctorId],
-      };
-    });
-  };
-
   const handleChangeAssign = (e) => {
     const { name, value } = e.target;
     if (name === "medicineId") {
@@ -684,20 +702,15 @@ export default function JornadasPage() {
   // Crea jornada - body alineado con backend (manager + doctors)
   const handleCrearWorkday = async (e) => {
     e.preventDefault();
-    const manager = users.find(
-      (u) => String(u._id) === String(formWorkday.managerId),
-    );
-    const doctors = users
-      .filter((u) => formWorkday.doctorIds.includes(u._id))
-      .map((u) => ({
-        userId: u._id,
-        name: `${u.nombre} ${u.apellido}`.trim(),
-      }));
-
-    if (doctors.length === 0) {
-      setFormError("Debes asignar al menos un médico a la jornada");
+    const managerName = formWorkday.managerName?.trim();
+    if (!managerName) {
+      setFormError("Debes ingresar el nombre del responsable de la jornada");
       return;
     }
+
+    const companions = (formWorkday.companions ?? [])
+      .map((name) => name.trim())
+      .filter(Boolean);
 
     setSubmitting(true);
     setFormError(null);
@@ -713,12 +726,9 @@ export default function JornadasPage() {
           address: formWorkday.address,
         },
         manager: {
-          userId: manager?._id || currentUser?.id || currentUser?._id,
-          name: manager
-            ? `${manager.nombre} ${manager.apellido}`
-            : "Sin asignar",
+          name: managerName,
         },
-        doctors,
+        companions,
         estimatedPatients: Number(formWorkday.estimatedPatients),
         estimatedMedicines: Number(formWorkday.estimatedMedicines),
         status: formWorkday.status,
@@ -846,22 +856,25 @@ export default function JornadasPage() {
       render: (row) => row.manager?.name || "—",
     },
     {
-      key: "doctors",
-      label: "Médicos",
+      key: "companions",
+      label: "Acompañantes",
       render: (row) => {
+        const companions = row.companions || [];
         const doctors = row.doctors || [];
-        if (doctors.length === 0) {
-          return <span className="text-xs text-gray-400">Sin asignar</span>;
+        const items =
+          companions.length > 0 ? companions : doctors.map((d) => d.name);
+        if (items.length === 0) {
+          return (
+            <span className="text-xs text-gray-400">Sin acompañantes</span>
+          );
         }
-        if (doctors.length === 1) {
-          return doctors[0].name;
+        if (items.length === 1) {
+          return items[0];
         }
         return (
           <div>
-            <p className="text-sm text-gray-700">{doctors[0].name}</p>
-            <p className="text-xs text-gray-400">
-              +{doctors.length - 1} más
-            </p>
+            <p className="text-sm text-gray-700">{items[0]}</p>
+            <p className="text-xs text-gray-400">+{items.length - 1} más</p>
           </div>
         );
       },
@@ -925,19 +938,21 @@ export default function JornadasPage() {
       <PageHeader
         title="Gestión de Jornadas"
         subtitle="Administra las jornadas médicas y su inventario asignado"
-        action={canManageWorkdays ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setFormWorkday(workdayInicial);
-              setFormError(null);
-              setModalCrear(true);
-            }}
-          >
-            <PlusIcon className="w-4 h-4" />
-            Nueva Jornada
-          </Button>
-        ) : null}
+        action={
+          canManageWorkdays ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setFormWorkday(workdayInicial);
+                setFormError(null);
+                setModalCrear(true);
+              }}
+            >
+              <PlusIcon className="w-4 h-4" />
+              Nueva Jornada
+            </Button>
+          ) : null
+        }
       />
 
       {error && (
@@ -994,11 +1009,9 @@ export default function JornadasPage() {
         <WorkdayForm
           form={formWorkday}
           onChange={handleChangeWorkday}
-          onToggleDoctor={handleToggleDoctor}
           onSubmit={handleCrearWorkday}
           onClose={() => setModalCrear(false)}
           departamentos={departamentosGuatemala}
-          users={users}
         />
       </Modal>
 
