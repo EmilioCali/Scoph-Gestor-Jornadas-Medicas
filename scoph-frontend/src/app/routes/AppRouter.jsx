@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import ProtectedRoute, { RequireRole, HomeRedirect } from "./ProtectedRoute";
 import MovimientosPage from "../../features/inventory/pages/MovimientosPage";

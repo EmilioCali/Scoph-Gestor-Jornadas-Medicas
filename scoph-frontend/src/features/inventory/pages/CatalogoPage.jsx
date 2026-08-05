@@ -22,12 +22,6 @@ import { useCategories } from "../hooks/useCategories";
 import { useMedicines } from "../hooks/useMedicines";
 import { useAuthStore } from "../../auth/store/authStore.js";
 
-const DEFAULT_CATEGORY_OPTIONS = [
-  "ANTIBIOTICOS",
-  "ANALGESICOS",
-  "ANTIINFLAMATORIOS",
-];
-
 const FORM_INICIAL = {
   name: "",
   compound: "",
@@ -198,10 +192,9 @@ export default function CatalogoPage() {
   const { medicines, loading, error, refetch, create, update, toggleStatus } =
     useMedicines();
   const { categories } = useCategories();
-  const categoryOptions =
-    categories.length > 0
-      ? categories.map((category) => category.name)
-      : DEFAULT_CATEGORY_OPTIONS;
+  const categoryOptions = categories
+    .filter((category) => category.status === "ACTIVO")
+    .map((category) => category.name);
   const currentUser = useAuthStore((state) => state.user);
   const canManageCatalog =
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";

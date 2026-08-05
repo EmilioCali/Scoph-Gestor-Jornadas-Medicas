@@ -328,18 +328,11 @@ const agregarInicial = {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 
-const DEFAULT_CATEGORY_OPTIONS = [
-  "ANTIBIOTICOS",
-  "ANALGESICOS",
-  "ANTIINFLAMATORIOS",
-];
-
 export default function InventarioCentralPage() {
   const { categories } = useCategories();
-  const categoryOptions =
-    categories.length > 0
-      ? categories.map((category) => category.name)
-      : DEFAULT_CATEGORY_OPTIONS;
+  const categoryOptions = categories
+    .filter((category) => category.status === "ACTIVO")
+    .map((category) => category.name);
   const currentUser = useAuthStore((state) => state.user);
   const canModifyCentralInventory =
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
