@@ -6,8 +6,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "if not exist .mongodb\\data mkdir .mongodb\\data",
-    "dev": "set NODE_ENV=development&& node --env-file-if-exists=.env --watch src/index.js",
+    "predev": "node -e \"require('fs').mkdirSync('.mongodb/data', { recursive: true })\"",
+    "dev": "node --env-file-if-exists=.env --watch src/index.js",
     "start": "node src/index.js"
   },
   "dependencies": {
