@@ -487,15 +487,43 @@ function AssignMedicineForm({
           </select>
         </div>
       )}
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Cajas"
+          name="boxes"
+          type="number"
+          min="0"
+          value={form.boxes ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Blísteres"
+          name="blisters"
+          type="number"
+          min="0"
+          value={form.blisters ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Unidades"
+          name="units"
+          type="number"
+          min="0"
+          value={form.units ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+      </div>
       <Input
-        label="Cantidad a asignar"
+        label="Cantidad suelta"
         name="quantity"
         type="number"
-        min="1"
+        min="0"
         value={form.quantity}
         onChange={onChange}
         placeholder="0"
-        required
       />
       <p className="text-xs text-gray-400 bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
         Esta cantidad se descontara del inventario central (ASIGNACION_JORNADA).
@@ -547,18 +575,46 @@ function WorkdayMovementForm({
           </span>
         </p>
       </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Cajas"
+          name="boxes"
+          type="number"
+          min="0"
+          value={form.boxes ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Blísteres"
+          name="blisters"
+          type="number"
+          min="0"
+          value={form.blisters ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Unidades"
+          name="units"
+          type="number"
+          min="0"
+          value={form.units ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+      </div>
       <Input
         label={
           tipo === "CONSUMO" ? "Cantidad consumida" : "Cantidad a retornar"
         }
         name="quantity"
         type="number"
-        min="1"
+        min="0"
         max={item?.totalStock ?? 0}
         value={form.quantity}
         onChange={onChange}
         placeholder="0"
-        required
       />
       <Input
         label="Observación"
@@ -610,8 +666,8 @@ const workdayInicial = {
   estimatedMedicines: "",
   status: "PLANNED",
 };
-const assignInicial = { medicineId: "", batch: "", quantity: "" };
-const movementInicial = { quantity: "", observacion: "" };
+const assignInicial = { medicineId: "", batch: "", quantity: "", boxes: "0", blisters: "0", units: "0" };
+const movementInicial = { quantity: "", observacion: "", boxes: "0", blisters: "0", units: "0" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -756,6 +812,9 @@ export default function JornadasPage() {
         medicineId: formAssign.medicineId,
         batch: formAssign.batch,
         quantity: formAssign.quantity,
+        boxes: formAssign.boxes,
+        blisters: formAssign.blisters,
+        units: formAssign.units,
       });
       setFormAssign(assignInicial);
       setModalAsignar(false);

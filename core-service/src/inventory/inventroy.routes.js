@@ -73,7 +73,10 @@ const inventoryRoutes = async (fastify) => {
                         minimumStock: { type: 'number', minimum: 0, example: 10 },
                         batch: { type: 'string', example: 'LOTE-001' },
                         expirationDate: { type: 'string', format: 'date', example: '2027-12-31' },
-                        initialStock: { type: 'number', minimum: 0, default: 0, example: 50 }
+                        initialStock: { type: 'number', minimum: 0, default: 0, example: 50 },
+                        boxes: { type: 'number', minimum: 0, default: 0, example: 2 },
+                        blisters: { type: 'number', minimum: 0, default: 0, example: 3 },
+                        units: { type: 'number', minimum: 0, default: 0, example: 5 }
                     }
                 },
                 response: {

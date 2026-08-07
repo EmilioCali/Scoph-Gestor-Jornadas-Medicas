@@ -118,8 +118,37 @@ function AgregarForm({
           onChange={onChange}
         />
       </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Cajas"
+          name="boxes"
+          type="number"
+          min="0"
+          value={form.boxes ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Blísteres"
+          name="blisters"
+          type="number"
+          min="0"
+          value={form.blisters ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Unidades"
+          name="units"
+          type="number"
+          min="0"
+          value={form.units ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+      </div>
       <Input
-        label="Stock inicial"
+        label="Stock inicial suelto"
         name="initialStock"
         type="number"
         min="0"
@@ -203,15 +232,43 @@ function EntradaForm({
           required
         />
       </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Cajas"
+          name="boxes"
+          type="number"
+          min="0"
+          value={form.boxes ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Blísteres"
+          name="blisters"
+          type="number"
+          min="0"
+          value={form.blisters ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Unidades"
+          name="units"
+          type="number"
+          min="0"
+          value={form.units ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+      </div>
       <Input
-        label="Cantidad a ingresar"
+        label="Cantidad suelta"
         name="quantity"
         type="number"
-        min="1"
+        min="0"
         value={form.quantity}
         onChange={onChange}
         placeholder="0"
-        required
       />
       <div className="flex gap-3 justify-end pt-2">
         <Button
@@ -278,11 +335,40 @@ function SalidaForm({
             ))}
         </select>
       </div>
+      <div className="grid grid-cols-3 gap-4">
+        <Input
+          label="Cajas"
+          name="boxes"
+          type="number"
+          min="0"
+          value={form.boxes ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Blísteres"
+          name="blisters"
+          type="number"
+          min="0"
+          value={form.blisters ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+        <Input
+          label="Unidades"
+          name="units"
+          type="number"
+          min="0"
+          value={form.units ?? 0}
+          onChange={onChange}
+          placeholder="0"
+        />
+      </div>
       <Input
-        label="Cantidad a retirar"
+        label="Cantidad suelta"
         name="quantity"
         type="number"
-        min="1"
+        min="0"
         max={
           item?.lots?.find((l) => l.batch === form.batch)?.stock ??
           item?.totalStock
@@ -290,7 +376,6 @@ function SalidaForm({
         value={form.quantity}
         onChange={onChange}
         placeholder="0"
-        required
       />
       <div className="flex gap-3 justify-end pt-2">
         <Button
@@ -316,14 +401,20 @@ const entradaInicial = {
   batch: "",
   expirationDate: "",
   quantity: "",
+  boxes: "0",
+  blisters: "0",
+  units: "0",
 };
-const salidaInicial = { batch: "", quantity: "" };
+const salidaInicial = { batch: "", quantity: "", boxes: "0", blisters: "0", units: "0" };
 const agregarInicial = {
   medicineId: "",
   minimumStock: "",
   batch: "",
   expirationDate: "",
   initialStock: "0",
+  boxes: "0",
+  blisters: "0",
+  units: "0",
 };
 
 // ── Página ────────────────────────────────────────────────────────────────────

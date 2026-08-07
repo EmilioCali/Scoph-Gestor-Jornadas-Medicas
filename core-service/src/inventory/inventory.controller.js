@@ -45,7 +45,7 @@ export const getInventarioCentral = async (request, reply) => {
 // Agrega un medicamento al inventario con stock mínimo y lote inicial (si initialStock > 0)
 export const addMedicineToInventory = async (request, reply) => {
     try {
-        const { medicineId, minimumStock, batch, expirationDate, initialStock, userId } = request.body;
+        const { medicineId, minimumStock, batch, expirationDate, initialStock, userId, boxes = 0, blisters = 0, units = 0 } = request.body;
 
         const existing = await centralInventory.findOne({ medicineId });
         if (existing) {
@@ -58,15 +58,17 @@ export const addMedicineToInventory = async (request, reply) => {
 
         const lots = [];
         const stock = Number(initialStock) || 0;
+        const boxCount = Number(boxes) || 0;
+        const blisterCount = Number(blisters) || 0;
+        const unitCount = Number(units) || 0;
 
-        if (stock > 0) {
-            lots.push({ batch, expirationDate, stock });
+        if (stock > 0 || boxCount > 0 || blisterCount > 0 || unitCount > 0) {
+            lots.push({ batch, expirationDate, boxes: boxCount, blisters: blisterCount, units: unitCount, stock });
 
-            // Si hay stock inicial, registrarlo como movimiento de entrada tipo DONACION
             await registrarEntrada({
                 tipoEntrada: 'DONACION',
                 destination: { type: 'INVENTARIO_CENTRAL', id: null },
-                detalle: [{ medicineId, batch, quantity: stock, expirationDate }],
+                detalle: [{ medicineId, batch, quantity: stock, boxes: boxCount, blisters: blisterCount, units: unitCount, expirationDate }],
                 userId: userId ?? 'system',
             });
         } else {
