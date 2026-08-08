@@ -259,8 +259,10 @@ function WorkdayDetail({
   onAssign,
   onConsumption,
   onReturn,
+  onFinish,
   canAssign,
   canReturn,
+  canFinish,
 }) {
   return (
     <div className="space-y-5">
@@ -333,14 +335,23 @@ function WorkdayDetail({
               ({workdayInventory.length} medicamentos)
             </span>
           </h3>
-          {canAssign &&
-            workday.status !== "FINISHED" &&
-            workday.status !== "COMPLETED" && (
-              <Button variant="primary" size="sm" onClick={onAssign}>
-                <PlusIcon className="w-4 h-4" />
-                Asignar medicamento
-              </Button>
-            )}
+          <div className="flex gap-2">
+            {canAssign &&
+              workday.status !== "FINISHED" &&
+              workday.status !== "COMPLETED" && (
+                <Button variant="primary" size="sm" onClick={onAssign}>
+                  <PlusIcon className="w-4 h-4" />
+                  Asignar medicamento
+                </Button>
+              )}
+            {canFinish &&
+              workday.status !== "FINISHED" &&
+              workday.status !== "COMPLETED" && (
+                <Button variant="secondary" size="sm" onClick={onFinish}>
+                  Finalizar jornada
+                </Button>
+              )}
+          </div>
         </div>
 
         {loading ? (
@@ -675,7 +686,6 @@ export default function JornadasPage() {
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
-    users = [],
     centralInventory,
     workdayInventoryById,
     loading,
@@ -685,6 +695,7 @@ export default function JornadasPage() {
     fetchWorkdayInventory,
     createNewWorkday,
     removeWorkday,
+    updateWorkdayStatus,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,
@@ -837,6 +848,9 @@ export default function JornadasPage() {
       await registerWorkdayConsumption({
         item: selectedInventoryItem,
         quantity: formMovement.quantity,
+        boxes: formMovement.boxes,
+        blisters: formMovement.blisters,
+        units: formMovement.units,
       });
       setFormMovement(movementInicial);
       setModalConsumo(false);
@@ -859,12 +873,30 @@ export default function JornadasPage() {
       await registerWorkdayReturn({
         item: selectedInventoryItem,
         quantity: formMovement.quantity,
+        boxes: formMovement.boxes,
+        blisters: formMovement.blisters,
+        units: formMovement.units,
       });
       setFormMovement(movementInicial);
       setModalRetorno(false);
     } catch (err) {
       setFormError(
         err.response?.data?.message ?? "No se pudo registrar el retorno",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFinalizarJornada = async (workday) => {
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await updateWorkdayStatus(workday._id, "FINISHED");
+      setSelectedWorkday((prev) => prev?._id === workday._id ? { ...prev, status: "FINISHED" } : prev);
+    } catch (err) {
+      setFormError(
+        err.response?.data?.message ?? "No se pudo finalizar la jornada",
       );
     } finally {
       setSubmitting(false);
@@ -1102,8 +1134,13 @@ export default function JornadasPage() {
               setFormError(null);
               setModalRetorno(true);
             }}
+            onFinish={(e) => {
+              e?.preventDefault?.();
+              handleFinalizarJornada(selectedWorkday);
+            }}
             canAssign={canManageWorkdays}
             canReturn={canManageWorkdays}
+            canFinish={canManageWorkdays}
           />
         )}
       </Modal>

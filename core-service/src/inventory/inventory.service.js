@@ -23,6 +23,22 @@ function normalizeLotData(item) {
     };
 }
 
+function normalizeMovementAmount(payload = {}) {
+    const boxes = Number(payload.boxes || 0);
+    const blisters = Number(payload.blisters || 0);
+    const units = Number(payload.units || 0);
+    const quantity = Number(payload.quantity || payload.cantidad || 0);
+    const totalUnits = boxes * 100 + blisters * 10 + units + quantity;
+
+    return {
+        boxes,
+        blisters,
+        units,
+        quantity,
+        totalUnits,
+    };
+}
+
 function addLotStock(lote, { boxes, blisters, units, quantity }) {
     lote.boxes = (Number(lote.boxes) || 0) + boxes;
     lote.blisters = (Number(lote.blisters) || 0) + blisters;
@@ -247,7 +263,8 @@ async function getWorkdayInventory(productoId) {
 }
 
 
-export async function validarStockJornada(productoId, cantidad) {
+export async function validarStockJornada(productoId, payload = {}) {
+    const { totalUnits, quantity, boxes, blisters, units } = normalizeMovementAmount(payload);
     const inventory = await getWorkdayInventory(productoId);
 
     const ahora = new Date();
@@ -259,20 +276,20 @@ export async function validarStockJornada(productoId, cantidad) {
     validarNoVencido(lote.expirationDate);
 
     const disponible = getLotUnitValue(lote);
-    if (disponible < cantidad) {
-        throw new Error(`Stock insuficiente. Disponible: ${disponible}, solicitado: ${cantidad}`);
+    if (disponible < totalUnits) {
+        throw new Error(`Stock insuficiente. Disponible: ${disponible}, solicitado: ${totalUnits}`);
     }
 
     validarStockPositivo(disponible);
 
-    return { inventory, lote };
+    return { inventory, lote, boxes, blisters, units, quantity, totalUnits };
 }
 
-export async function descontarStockJornada(productoId, cantidad) {
-    const { inventory, lote } = await validarStockJornada(productoId, cantidad);
+export async function descontarStockJornada(productoId, payload = {}) {
+    const { inventory, lote, totalUnits } = await validarStockJornada(productoId, payload);
 
-    subtractLotUnits(lote, cantidad);
-    inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - cantidad);
+    subtractLotUnits(lote, totalUnits);
+    inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - totalUnits);
 
     await inventory.save();
 
@@ -284,7 +301,8 @@ export async function descontarStockJornada(productoId, cantidad) {
     return { inventory, lote, medicine };
 }
 
-export async function procesarRetornoJornada(productoId, cantidad) {
+export async function procesarRetornoJornada(productoId, payload = {}) {
+    const { boxes, blisters, units, quantity, totalUnits } = normalizeMovementAmount(payload);
     const inventory = await getWorkdayInventory(productoId);
     validarLoteExistente(inventory);
 
@@ -292,8 +310,11 @@ export async function procesarRetornoJornada(productoId, cantidad) {
     validarLoteExistente(lote);
     validarNoVencido(lote.expirationDate);
 
-    lote.stock = (Number(lote.stock) || 0) + cantidad;
-    inventory.totalStock = (Number(inventory.totalStock) || 0) + cantidad;
+    lote.boxes = (Number(lote.boxes) || 0) + boxes;
+    lote.blisters = (Number(lote.blisters) || 0) + blisters;
+    lote.units = (Number(lote.units) || 0) + units;
+    lote.stock = (Number(lote.stock) || 0) + quantity;
+    inventory.totalStock = (Number(inventory.totalStock) || 0) + totalUnits;
 
     await inventory.save();
 
@@ -303,4 +324,83 @@ export async function procesarRetornoJornada(productoId, cantidad) {
     }
 
     return { inventory, lote, medicine };
+}
+
+export async function procesarRetornoAutomaticoJornada({ workdayId, userId = 'system' }) {
+    const workdayInventories = await WorkdayInventory.find({ workdayId });
+    const movimientos = [];
+
+    for (const inventory of workdayInventories) {
+        if (!inventory) continue;
+
+        const totalStock = Number(inventory.totalStock || 0);
+        if (totalStock <= 0) continue;
+
+        const medicine = await Medicine.findById(inventory.medicineId);
+        if (!medicine) continue;
+
+        for (const lote of inventory.lots || []) {
+            const boxes = Number(lote.boxes || 0);
+            const blisters = Number(lote.blisters || 0);
+            const units = Number(lote.units || 0);
+            const stock = Number(lote.stock || 0);
+            const totalUnits = boxes * 100 + blisters * 10 + units + stock;
+
+            if (totalUnits <= 0) continue;
+
+            let invCentral = await centralInventory.findOne({ medicineId: inventory.medicineId });
+            if (!invCentral) {
+                invCentral = new centralInventory({
+                    medicineId: inventory.medicineId,
+                    lots: [],
+                    totalStock: 0,
+                });
+            }
+
+            const loteCentral = invCentral.lots.find((item) => item.batch === lote.batch);
+            if (loteCentral) {
+                addLotStock(loteCentral, { boxes, blisters, units, quantity: stock });
+            } else {
+                invCentral.lots.push({
+                    batch: lote.batch,
+                    expirationDate: lote.expirationDate,
+                    boxes,
+                    blisters,
+                    units,
+                    stock,
+                });
+            }
+
+            invCentral.totalStock = (Number(invCentral.totalStock) || 0) + totalUnits;
+            await invCentral.save();
+
+            const movimiento = await Movement.create({
+                type: 'ENTRADA',
+                subType: 'RETORNO_JORNADA',
+                origin: { type: 'INVENTARIO_JORNADA', id: workdayId },
+                destination: { type: 'INVENTARIO_CENTRAL', id: null },
+                detail: [{
+                    medicineId: inventory.medicineId,
+                    medicationSnapshot: { name: medicine.name, concentration: medicine.concentration },
+                    batch: lote.batch,
+                    quantity: stock,
+                    boxes,
+                    blisters,
+                    units,
+                    expirationDate: lote.expirationDate,
+                }],
+                status: 'APLICADO',
+                userId,
+                appliedAt: new Date(),
+            });
+
+            movimientos.push(movimiento);
+        }
+
+        inventory.lots = [];
+        inventory.totalStock = 0;
+        await inventory.save();
+    }
+
+    return movimientos;
 }

@@ -1,5 +1,5 @@
 import { createEntrada, createSalidaReceta, createTransferencia } from './movement.controller.js'
-import { createConsumoJornada, createRetornoJornada, getMovimientos } from './movement.controller.js'
+import { createConsumoJornada, createRetornoJornada, createRetornoAutomaticoJornada, getMovimientos } from './movement.controller.js'
 import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
@@ -251,6 +251,32 @@ const movementRoutes = async (fastify) => {
             }
         },
         createConsumoJornada
+    )
+
+    fastify.post(
+        '/movimientos/retorno-automatico-jornada',
+        {
+            schema: {
+                tags: ['Movimientos'],
+                summary: 'Retorno automático de inventario al cerrar una jornada',
+                description: 'Devuelve el inventario sobrante de una jornada de vuelta al inventario central.',
+                body: {
+                    type: 'object',
+                    required: ['workdayId'],
+                    properties: {
+                        workdayId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
+                        userId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' }
+                    }
+                },
+                response: {
+                    201: successWithMovementArraySchema,
+                    400: badRequestErrorSchema,
+                    401: unauthorizedErrorSchema,
+                    429: rateLimitErrorSchema
+                }
+            }
+        },
+        createRetornoAutomaticoJornada
     )
 
     fastify.post(

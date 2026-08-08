@@ -3,6 +3,7 @@ import {
   getWorkdays,
   createWorkday,
   deleteWorkday,
+  changeWorkdayStatus,
 } from "../../../shared/apis/workdayService";
 import {
   getCentralInventory,
@@ -106,7 +107,8 @@ export function useWorkdayInventory() {
   }, []);
 
   useEffect(() => {
-    fetchBaseData();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchBaseData();
   }, [fetchBaseData]);
 
   const createNewWorkday = useCallback(
@@ -121,6 +123,15 @@ export function useWorkdayInventory() {
   const removeWorkday = useCallback(
     async (workdayId) => {
       const { data } = await deleteWorkday(workdayId);
+      await fetchBaseData();
+      return data.data;
+    },
+    [fetchBaseData],
+  );
+
+  const updateWorkdayStatus = useCallback(
+    async (workdayId, status) => {
+      const { data } = await changeWorkdayStatus(workdayId, status);
       await fetchBaseData();
       return data.data;
     },
@@ -165,10 +176,14 @@ export function useWorkdayInventory() {
   );
 
   const registerWorkdayConsumption = useCallback(
-    async ({ item, quantity }) => {
+    async ({ item, quantity, boxes = 0, blisters = 0, units = 0 }) => {
       const { data } = await registerConsumption({
         productoId: String(item.medicineId),
         cantidad: Number(quantity),
+        quantity: Number(quantity),
+        boxes: Number(boxes),
+        blisters: Number(blisters),
+        units: Number(units),
       });
       await fetchWorkdayInventory(item.workdayId);
       return data.data;
@@ -177,10 +192,14 @@ export function useWorkdayInventory() {
   );
 
   const registerWorkdayReturn = useCallback(
-    async ({ item, quantity }) => {
+    async ({ item, quantity, boxes = 0, blisters = 0, units = 0 }) => {
       const { data } = await registerReturn({
         productoId: String(item.medicineId),
         cantidad: Number(quantity),
+        quantity: Number(quantity),
+        boxes: Number(boxes),
+        blisters: Number(blisters),
+        units: Number(units),
       });
       await fetchWorkdayInventory(item.workdayId);
       return data.data;
@@ -209,6 +228,7 @@ export function useWorkdayInventory() {
     fetchWorkdayInventory,
     createNewWorkday,
     removeWorkday,
+    updateWorkdayStatus,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,
