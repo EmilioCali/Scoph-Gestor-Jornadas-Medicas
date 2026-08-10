@@ -3,6 +3,8 @@ import {
   MapPinIcon,
   BellAlertIcon,
   ArrowTrendingUpIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
 import {
   BarChart,
@@ -13,6 +15,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { Link } from "react-router-dom";
 
@@ -98,6 +103,17 @@ export default function DashboardPage() {
     ? new Date(updatedAt).toLocaleString("es-GT")
     : "-";
 
+  const workdayStatusChartData = [
+    { name: "Activas", value: workdayStats.activas, color: "#F27405" },
+    { name: "Planificadas", value: workdayStats.planificadas, color: "#F2BB77" },
+    { name: "Finalizadas", value: workdayStats.finalizadas, color: "#D97236" },
+  ];
+
+  const stockByCategoryChartData = (metrics.stockPorCategoria || []).map((item, index) => ({
+    ...item,
+    color: ["#F27405", "#F2BB77", "#D97236", "#F29863", "#8B3A0F"][index % 5],
+  }));
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -160,7 +176,7 @@ export default function DashboardPage() {
       ) : null}
 
       {/*   Tarjetas de métricas  */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           title="Total Medicamentos"
           value={metrics.totalMedicamentos}
@@ -169,11 +185,35 @@ export default function DashboardPage() {
           variant="primary"
         />
         <StatCard
+          title="Médicos Registrados"
+          value={metrics.totalMedicos}
+          subtitle="Profesionales del sistema"
+          icon={UserGroupIcon}
+          variant="success"
+        />
+        <StatCard
+          title="Médicos Activos"
+          value={metrics.medicosActivos}
+          subtitle="Con acceso vigente"
+          icon={UserGroupIcon}
+          variant="warning"
+        />
+        <StatCard
+          title="Jornadas Registradas"
+          value={metrics.totalJornadas}
+          subtitle="En total del sistema"
+          icon={CalendarDaysIcon}
+          variant="danger"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
           title="Jornadas Activas"
           value={metrics.jornadasActivas}
           subtitle="En curso actualmente"
           icon={MapPinIcon}
-          variant="success"
+          variant="primary"
         />
         <StatCard
           title="Alertas Stock"
@@ -188,6 +228,13 @@ export default function DashboardPage() {
           subtitle="Próximos 60 días"
           icon={ArrowTrendingUpIcon}
           variant="danger"
+        />
+        <StatCard
+          title="Movimientos este Mes"
+          value={metrics.movimientosMes}
+          subtitle="Registros del periodo actual"
+          icon={ArrowTrendingUpIcon}
+          variant="info"
         />
       </div>
 
@@ -221,50 +268,106 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/*  Gráfica de movimientos  */}
+      {/*  Gráficas  */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-base font-extrabold text-gray-800 mb-1">
+            Movimientos por Mes
+          </h2>
+          <p className="text-gray-400 text-xs mb-5">
+            Entradas y salidas de medicamentos durante el año
+          </p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={movementsChart} barSize={18} barGap={6}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 12, fill: "#9ca3af" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 12, fill: "#9ca3af" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "12px",
+                  border: "none",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                }}
+                cursor={{ fill: "#f9fafb" }}
+              />
+              <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "16px" }} />
+              <Bar
+                dataKey="entries"
+                name="Entradas"
+                fill="#F27405"
+                radius={[6, 6, 0, 0]}
+              />
+              <Bar
+                dataKey="exits"
+                name="Salidas"
+                fill="#F2BB77"
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-base font-extrabold text-gray-800 mb-1">
+            Estado de Jornadas
+          </h2>
+          <p className="text-gray-400 text-xs mb-5">
+            Distribución operativa de los eventos programados
+          </p>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={workdayStatusChartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={55}
+                outerRadius={90}
+                paddingAngle={3}
+              >
+                {workdayStatusChartData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-base font-extrabold text-gray-800 mb-1">
-          Movimientos por Mes
+          Stock por Categoría
         </h2>
         <p className="text-gray-400 text-xs mb-5">
-          Entradas y salidas de medicamentos durante el año
+          Distribución del inventario según categoría de medicamento
         </p>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={movementsChart} barSize={18} barGap={6}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 12, fill: "#9ca3af" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: "#9ca3af" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: "12px",
-                border: "none",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-              }}
-              cursor={{ fill: "#f9fafb" }}
-            />
-            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "16px" }} />
-            <Bar
-              dataKey="entries"
-              name="Entradas"
-              fill="#F27405"
-              radius={[6, 6, 0, 0]}
-            />
-            <Bar
-              dataKey="exits"
-              name="Salidas"
-              fill="#F2BB77"
-              radius={[6, 6, 0, 0]}
-            />
-          </BarChart>
+          <PieChart>
+            <Pie
+              data={stockByCategoryChartData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={55}
+              outerRadius={90}
+              paddingAngle={3}
+            >
+              {stockByCategoryChartData.map((entry) => (
+                <Cell key={entry.name} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
         </ResponsiveContainer>
       </div>
 

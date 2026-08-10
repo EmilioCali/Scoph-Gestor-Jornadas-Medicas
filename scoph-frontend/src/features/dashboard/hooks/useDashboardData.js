@@ -7,6 +7,9 @@ import {
 
 const emptyMetrics = {
   totalMedicamentos: 0,
+  totalMedicos: 0,
+  medicosActivos: 0,
+  totalJornadas: 0,
   jornadasActivas: 0,
   stockBajo: 0,
   alertasVencimiento: 0,
