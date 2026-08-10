@@ -20,6 +20,8 @@ import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 import { useCategories } from "../hooks/useCategories";
 import { useMedicines } from "../hooks/useMedicines";
+import { useMeasureUnits } from "../hooks/useMeasureUnits";
+import { usePackagingUnits } from "../hooks/usePackagingUnits";
 import { useAuthStore } from "../../auth/store/authStore.js";
 
 const FORM_INICIAL = {
@@ -27,8 +29,12 @@ const FORM_INICIAL = {
   compound: "",
   concentration: "",
   barcode: "",
-  presentation: "",
-  unitOfMeasure: "",
+  minimumUnit: "",
+  intermediateUnit: "",
+  packageUnit: "",
+  unitsPerPackage: "",
+  unitsPerMinimumUnit: "",
+  minimumStock: "",
   category: "",
   status: "ACTIVO",
 };
@@ -41,6 +47,8 @@ function MedicineForm({
   isEdit,
   submitting,
   categoryOptions,
+  measureUnitOptions,
+  packagingUnitOptions,
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -80,57 +88,109 @@ function MedicineForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-gray-600">
-          Presentación
-        </label>
-        <select
-          name="presentation"
-          value={form.presentation}
-          onChange={onChange}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-          required
-        >
-          <option value="">Seleccionar</option>
-          {[
-            "Tableta",
-            "Cápsula",
-            "Jarabe",
-            "Ampolla",
-            "Crema",
-            "Gotas",
-            "Suspensión",
-            "Otro",
-          ].map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
-            Unidad de medida
+            Unidad mínima
           </label>
           <select
-            name="unitOfMeasure"
-            value={form.unitOfMeasure}
+            name="minimumUnit"
+            value={form.minimumUnit}
             onChange={onChange}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
             required
           >
             <option value="">Seleccionar</option>
-            {["Caja", "Frasco", "Ampolla", "Tubo", "Sobre", "Unidad"].map(
-              (u) => (
-                <option key={u} value={u}>
-                  {u}
+            {measureUnitOptions
+              .filter((unit) => unit.activo !== false)
+              .map((unit) => (
+                <option key={unit._id} value={unit.name}>
+                  {unit.name}
                 </option>
-              ),
-            )}
+              ))}
           </select>
         </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Unidad intermedia
+          </label>
+          <select
+            name="intermediateUnit"
+            value={form.intermediateUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+          >
+            <option value="">Sin unidad intermedia</option>
+            {measureUnitOptions
+              .filter((unit) => unit.activo !== false)
+              .map((unit) => (
+                <option key={unit._id} value={unit.name}>
+                  {unit.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Unidad de empaque
+          </label>
+          <select
+            name="packageUnit"
+            value={form.packageUnit}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+          >
+            <option value="">Seleccionar</option>
+            {packagingUnitOptions
+              .filter((unit) => unit.activo !== false)
+              .map((unit) => (
+                <option key={unit._id} value={unit.name}>
+                  {unit.name}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <Input
+          label="Unidad por empaque"
+          name="unitsPerPackage"
+          type="number"
+          min="1"
+          value={form.unitsPerPackage}
+          onChange={onChange}
+          placeholder="100"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Unidad por unidad intermedia"
+          name="unitsPerMinimumUnit"
+          type="number"
+          min="1"
+          value={form.intermediateUnit ? form.unitsPerMinimumUnit : ""}
+          onChange={onChange}
+          placeholder="10"
+          disabled={!form.intermediateUnit}
+        />
+        <Input
+          label="Stock mínimo"
+          name="minimumStock"
+          type="number"
+          min="0"
+          value={form.minimumStock}
+          onChange={onChange}
+          placeholder="10"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
             Categoría
@@ -192,6 +252,24 @@ export default function CatalogoPage() {
   const { medicines, loading, error, refetch, create, update, toggleStatus } =
     useMedicines();
   const { categories } = useCategories();
+  const {
+    measureUnits,
+    loading: measureUnitsLoading,
+    error: measureUnitsError,
+    refetch: refetchMeasureUnits,
+    create: createMeasureUnitRecord,
+    update: updateMeasureUnitRecord,
+    remove: removeMeasureUnitRecord,
+  } = useMeasureUnits();
+  const {
+    packagingUnits,
+    loading: packagingUnitsLoading,
+    error: packagingUnitsError,
+    refetch: refetchPackagingUnits,
+    create: createPackagingUnitRecord,
+    update: updatePackagingUnitRecord,
+    remove: removePackagingUnitRecord,
+  } = usePackagingUnits();
   const categoryOptions = categories
     .filter((category) => category.status === "ACTIVO")
     .map((category) => category.name);
@@ -205,11 +283,21 @@ export default function CatalogoPage() {
 
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
+  const [modalUnidades, setModalUnidades] = useState(false);
+  const [modalPackaging, setModalPackaging] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [form, setForm] = useState(FORM_INICIAL);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [measureUnitForm, setMeasureUnitForm] = useState({ name: "", description: "", activo: true });
+  const [measureUnitEditingId, setMeasureUnitEditingId] = useState(null);
+  const [measureUnitSubmitting, setMeasureUnitSubmitting] = useState(false);
+  const [measureUnitFormError, setMeasureUnitFormError] = useState(null);
+  const [packagingUnitForm, setPackagingUnitForm] = useState({ name: "", description: "", activo: true });
+  const [packagingUnitEditingId, setPackagingUnitEditingId] = useState(null);
+  const [packagingUnitSubmitting, setPackagingUnitSubmitting] = useState(false);
+  const [packagingUnitFormError, setPackagingUnitFormError] = useState(null);
 
   const filteredMedicines = useMemo(
     () =>
@@ -227,8 +315,88 @@ export default function CatalogoPage() {
     [medicines, busqueda, filtroCategoria, filtroEstado],
   );
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "intermediateUnit") {
+        next.unitsPerMinimumUnit = value ? prev.unitsPerMinimumUnit || "1" : "1";
+      }
+      return next;
+    });
+  };
+
+  const handleMeasureUnitChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setMeasureUnitForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handlePackagingUnitChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setPackagingUnitForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleMeasureUnitSubmit = async (e) => {
+    e.preventDefault();
+    setMeasureUnitSubmitting(true);
+    setMeasureUnitFormError(null);
+    try {
+      if (measureUnitEditingId) {
+        await updateMeasureUnitRecord(measureUnitEditingId, measureUnitForm);
+      } else {
+        await createMeasureUnitRecord(measureUnitForm);
+      }
+      setMeasureUnitForm({ name: "", description: "", activo: true });
+      setMeasureUnitEditingId(null);
+      setModalUnidades(false);
+    } catch (err) {
+      setMeasureUnitFormError(err.response?.data?.message ?? err.message ?? "No se pudo guardar la unidad");
+    } finally {
+      setMeasureUnitSubmitting(false);
+    }
+  };
+
+  const handleMeasureUnitDelete = async (id) => {
+    try {
+      await removeMeasureUnitRecord(id);
+    } catch (err) {
+      setMeasureUnitFormError(err.response?.data?.message ?? err.message ?? "No se pudo eliminar la unidad");
+    }
+  };
+
+  const handlePackagingUnitSubmit = async (e) => {
+    e.preventDefault();
+    setPackagingUnitSubmitting(true);
+    setPackagingUnitFormError(null);
+    try {
+      if (packagingUnitEditingId) {
+        await updatePackagingUnitRecord(packagingUnitEditingId, packagingUnitForm);
+      } else {
+        await createPackagingUnitRecord(packagingUnitForm);
+      }
+      setPackagingUnitForm({ name: "", description: "", activo: true });
+      setPackagingUnitEditingId(null);
+      setModalPackaging(false);
+    } catch (err) {
+      setPackagingUnitFormError(err.response?.data?.message ?? err.message ?? "No se pudo guardar la unidad de empaquetado");
+    } finally {
+      setPackagingUnitSubmitting(false);
+    }
+  };
+
+  const handlePackagingUnitDelete = async (id) => {
+    try {
+      await removePackagingUnitRecord(id);
+    } catch (err) {
+      setPackagingUnitFormError(err.response?.data?.message ?? err.message ?? "No se pudo eliminar la unidad de empaquetado");
+    }
+  };
 
   const validarDuplicado = (excludeId = null) => {
     const nombre = form.name.trim().toLowerCase();
@@ -260,7 +428,14 @@ export default function CatalogoPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      await create(form);
+      const payload = {
+        ...form,
+        intermediateUnit: form.intermediateUnit || null,
+        unitsPerPackage: Number(form.unitsPerPackage || 1),
+        unitsPerMinimumUnit: Number(form.intermediateUnit ? (form.unitsPerMinimumUnit || 1) : 1),
+        minimumStock: Number(form.minimumStock || 0),
+      };
+      await create(payload);
       setForm(FORM_INICIAL);
       setModalCrear(false);
     } catch (err) {
@@ -287,8 +462,12 @@ export default function CatalogoPage() {
         compound: form.compound,
         concentration: form.concentration,
         barcode: form.barcode,
-        presentation: form.presentation,
-        unitOfMeasure: form.unitOfMeasure,
+        minimumUnit: form.minimumUnit,
+        intermediateUnit: form.intermediateUnit || null,
+        packageUnit: form.packageUnit,
+        unitsPerPackage: Number(form.unitsPerPackage || 1),
+        unitsPerMinimumUnit: Number(form.intermediateUnit ? (form.unitsPerMinimumUnit || 1) : 1),
+        minimumStock: Number(form.minimumStock || 0),
         category: form.category,
       };
 
@@ -342,7 +521,8 @@ export default function CatalogoPage() {
           "Nombre",
           "Compuesto",
           "Concentración",
-          "Presentación",
+          "Unidad mínima",
+          "Unidad de empaque",
           "Categoría",
           "Estado",
         ],
@@ -351,7 +531,8 @@ export default function CatalogoPage() {
         m.name,
         m.compound,
         m.concentration,
-        m.presentation,
+        m.minimumUnit ?? m.presentation,
+        m.packageUnit ?? m.unitOfMeasure,
         m.category,
         m.status,
       ]),
@@ -367,8 +548,8 @@ export default function CatalogoPage() {
         Nombre: m.name,
         Compuesto: m.compound,
         Concentración: m.concentration,
-        Presentación: m.presentation,
-        "Unidad Medida": m.unitOfMeasure,
+        "Unidad mínima": m.minimumUnit ?? m.presentation,
+        "Unidad de empaque": m.packageUnit ?? m.unitOfMeasure,
         Categoría: m.category,
         "Código Barras": m.barcode || "",
         Estado: m.status,
@@ -393,8 +574,8 @@ export default function CatalogoPage() {
         </div>
       ),
     },
-    { key: "presentation", label: "Presentación" },
-    { key: "unitOfMeasure", label: "Unidad" },
+    { key: "minimumUnit", label: "Unidad mínima" },
+    { key: "packageUnit", label: "Unidad empaque" },
     {
       key: "category",
       label: "Categoría",
@@ -427,7 +608,14 @@ export default function CatalogoPage() {
             size="sm"
             onClick={() => {
               setSelectedItem(row);
-              setForm({ ...row });
+              setForm({
+                ...row,
+                minimumUnit: row.minimumUnit ?? row.presentation ?? "",
+                intermediateUnit: row.intermediateUnit ?? "",
+                packageUnit: row.packageUnit ?? row.unitOfMeasure ?? "",
+                unitsPerPackage: row.unitsPerPackage ?? "",
+                unitsPerMinimumUnit: row.intermediateUnit ? (row.unitsPerMinimumUnit ?? "1") : "1",
+              });
               setFormError(null);
               setModalEditar(true);
             }}
@@ -469,16 +657,40 @@ export default function CatalogoPage() {
               />
             </Button>
             {canManageCatalog && (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setForm(FORM_INICIAL);
-                  setFormError(null);
-                  setModalCrear(true);
-                }}
-              >
-                <PlusIcon className="w-4 h-4" /> Nuevo Medicamento
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMeasureUnitForm({ name: "", description: "", activo: true });
+                    setMeasureUnitEditingId(null);
+                    setMeasureUnitFormError(null);
+                    setModalUnidades(true);
+                  }}
+                >
+                  Unidades de medida
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPackagingUnitForm({ name: "", description: "", activo: true });
+                    setPackagingUnitEditingId(null);
+                    setPackagingUnitFormError(null);
+                    setModalPackaging(true);
+                  }}
+                >
+                  Unidades de empaquetado
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setForm(FORM_INICIAL);
+                    setFormError(null);
+                    setModalCrear(true);
+                  }}
+                >
+                  <PlusIcon className="w-4 h-4" /> Nuevo Medicamento
+                </Button>
+              </>
             )}
           </div>
         }
@@ -587,7 +799,145 @@ export default function CatalogoPage() {
           isEdit={false}
           submitting={submitting}
           categoryOptions={categoryOptions}
+          measureUnitOptions={measureUnits}
+          packagingUnitOptions={packagingUnits}
         />
+      </Modal>
+
+      <Modal
+        isOpen={modalUnidades}
+        onClose={() => setModalUnidades(false)}
+        title="Unidades de medida"
+        size="lg"
+      >
+        {measureUnitFormError && (
+          <p className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {measureUnitFormError}
+          </p>
+        )}
+        <form onSubmit={handleMeasureUnitSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600">Nombre</label>
+              <input
+                name="name"
+                value={measureUnitForm.name}
+                onChange={handleMeasureUnitChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600">Descripción</label>
+              <input
+                name="description"
+                value={measureUnitForm.description}
+                onChange={handleMeasureUnitChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" name="activo" checked={measureUnitForm.activo} onChange={handleMeasureUnitChange} />
+            Activo
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" type="button" onClick={() => setModalUnidades(false)} disabled={measureUnitSubmitting}>Cancelar</Button>
+            <Button variant="primary" type="submit" disabled={measureUnitSubmitting}>{measureUnitSubmitting ? "Guardando..." : measureUnitEditingId ? "Guardar" : "Crear"}</Button>
+          </div>
+        </form>
+
+        <div className="mt-6 border-t pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">Opciones registradas</p>
+            <Button variant="outline" size="sm" onClick={refetchMeasureUnits} disabled={measureUnitsLoading}>Recargar</Button>
+          </div>
+          {measureUnitsLoading ? <p className="text-sm text-gray-500">Cargando...</p> : measureUnitsError ? <p className="text-sm text-red-600">{measureUnitsError}</p> : (
+            <div className="space-y-2">
+                {measureUnits.map((unit) => (
+                <div key={unit._id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                  <div>
+                    <p className="font-semibold text-gray-700">{unit.name}</p>
+                    <p className="text-xs text-gray-500">{unit.description || "Sin descripción"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={unit.activo === false ? "danger" : "success"}>{unit.activo === false ? "Inactivo" : "Activo"}</Badge>
+                    <Button variant="outline" size="sm" onClick={() => { setMeasureUnitForm({ name: unit.name, description: unit.description || "", activo: unit.activo !== false }); setMeasureUnitEditingId(unit._id); setMeasureUnitFormError(null); }}>Editar</Button>
+                    <Button variant="danger" size="sm" onClick={() => handleMeasureUnitDelete(unit._id)}>Eliminar</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={modalPackaging}
+        onClose={() => setModalPackaging(false)}
+        title="Unidades de empaquetado"
+        size="lg"
+      >
+        {packagingUnitFormError && (
+          <p className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {packagingUnitFormError}
+          </p>
+        )}
+        <form onSubmit={handlePackagingUnitSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600">Nombre</label>
+              <input
+                name="name"
+                value={packagingUnitForm.name}
+                onChange={handlePackagingUnitChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-gray-600">Descripción</label>
+              <input
+                name="description"
+                value={packagingUnitForm.description}
+                onChange={handlePackagingUnitChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" name="activo" checked={packagingUnitForm.activo} onChange={handlePackagingUnitChange} />
+            Activo
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" type="button" onClick={() => setModalPackaging(false)} disabled={packagingUnitSubmitting}>Cancelar</Button>
+            <Button variant="primary" type="submit" disabled={packagingUnitSubmitting}>{packagingUnitSubmitting ? "Guardando..." : packagingUnitEditingId ? "Guardar" : "Crear"}</Button>
+          </div>
+        </form>
+
+        <div className="mt-6 border-t pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">Opciones registradas</p>
+            <Button variant="outline" size="sm" onClick={refetchPackagingUnits} disabled={packagingUnitsLoading}>Recargar</Button>
+          </div>
+          {packagingUnitsLoading ? <p className="text-sm text-gray-500">Cargando...</p> : packagingUnitsError ? <p className="text-sm text-red-600">{packagingUnitsError}</p> : (
+            <div className="space-y-2">
+              {packagingUnits.map((unit) => (
+                <div key={unit._id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                  <div>
+                    <p className="font-semibold text-gray-700">{unit.name}</p>
+                    <p className="text-xs text-gray-500">{unit.description || "Sin descripción"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={unit.activo === false ? "danger" : "success"}>{unit.activo === false ? "Inactivo" : "Activo"}</Badge>
+                    <Button variant="outline" size="sm" onClick={() => { setPackagingUnitForm({ name: unit.name, description: unit.description || "", activo: unit.activo !== false }); setPackagingUnitEditingId(unit._id); setPackagingUnitFormError(null); }}>Editar</Button>
+                    <Button variant="danger" size="sm" onClick={() => handlePackagingUnitDelete(unit._id)}>Eliminar</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
 
       <Modal
@@ -609,6 +959,8 @@ export default function CatalogoPage() {
           isEdit={true}
           submitting={submitting}
           categoryOptions={categoryOptions}
+          measureUnitOptions={measureUnits}
+          packagingUnitOptions={packagingUnits}
         />
       </Modal>
 

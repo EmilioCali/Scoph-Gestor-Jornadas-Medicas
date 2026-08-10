@@ -1,7 +1,8 @@
 import centralInventory from "./centralInventory.model.js";
 import WorkdayInventory from './workdayInventory.model.js';
-import { registrarEntrada } from './inventory.service.js';
+import { registrarEntrada, calculateBaseUnits } from './inventory.service.js';
 import { getWorkdayById } from '../workdays/workday.client.js';
+import Medicine from '../medicines/medicine.model.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { successResponse } from '../utils/response.js';
 
@@ -23,7 +24,11 @@ export const getInventarioCentral = async (request, reply) => {
                     name: '$medicine.name',
                     compound: '$medicine.compound',
                     category: '$medicine.category',
-                    unitOfMeasure: '$medicine.unitOfMeasure',
+                    minimumUnit: '$medicine.minimumUnit',
+                    intermediateUnit: '$medicine.intermediateUnit',
+                    packageUnit: '$medicine.packageUnit',
+                    unitsPerPackage: '$medicine.unitsPerPackage',
+                    unitsPerMinimumUnit: '$medicine.unitsPerMinimumUnit',
                     lots: 1,
                     totalStock: 1,
                     minimumStock: 1,
@@ -45,7 +50,32 @@ export const getInventarioCentral = async (request, reply) => {
 // Agrega un medicamento al inventario con stock mínimo y lote inicial (si initialStock > 0)
 export const addMedicineToInventory = async (request, reply) => {
     try {
-        const { medicineId, minimumStock, batch, expirationDate, initialStock, userId, boxes = 0, blisters = 0, units = 0 } = request.body;
+        const { medicineId, minimumStock, batch, expirationDate, initialStock, userId, boxes = 0, blisters = 0, units = 0, entryQuantity, entryUnit, entryUnitType, quantity } = request.body;
+
+        let normalizedBoxes = Number(boxes) || 0;
+        let normalizedBlisters = Number(blisters) || 0;
+        let normalizedUnits = Number(units) || 0;
+
+        const selectedEntryUnit = entryUnitType ?? entryUnit ?? null;
+        const amount = Number(entryQuantity ?? quantity ?? 0) || 0;
+
+        if (amount > 0 && selectedEntryUnit) {
+            const medicine = await Medicine.findById(medicineId);
+            if (medicine) {
+                if (String(selectedEntryUnit) === String(medicine.packageUnit)) {
+                    normalizedBoxes = amount;
+                } else if (medicine.intermediateUnit && String(selectedEntryUnit) === String(medicine.intermediateUnit)) {
+                    normalizedBlisters = amount;
+                } else if (String(selectedEntryUnit) === String(medicine.minimumUnit)) {
+                    normalizedUnits = amount;
+                } else {
+                    normalizedUnits = amount;
+                }
+                if (calculateBaseUnits(amount, selectedEntryUnit, medicine) <= 0) {
+                    normalizedUnits = amount;
+                }
+            }
+        }
 
         const existing = await centralInventory.findOne({ medicineId });
         if (existing) {
@@ -58,9 +88,9 @@ export const addMedicineToInventory = async (request, reply) => {
 
         const lots = [];
         const stock = Number(initialStock) || 0;
-        const boxCount = Number(boxes) || 0;
-        const blisterCount = Number(blisters) || 0;
-        const unitCount = Number(units) || 0;
+        const boxCount = normalizedBoxes;
+        const blisterCount = normalizedBlisters;
+        const unitCount = normalizedUnits;
 
         if (stock > 0 || boxCount > 0 || blisterCount > 0 || unitCount > 0) {
             lots.push({ batch, expirationDate, boxes: boxCount, blisters: blisterCount, units: unitCount, stock });
@@ -102,6 +132,66 @@ export const getInventarioJornada = async (request, reply) => {
             message: 'Inventario de jornada obtenido exitosamente',
             data: inventario,
             statusCode: 200
+        });
+    } catch (error) {
+        return handleServiceError(error, reply);
+    }
+};
+
+export const updateCentralInventoryLot = async (request, reply) => {
+    try {
+        const { medicineId, batch: currentBatch } = request.params;
+        const { batch, expirationDate, entryQuantity, entryUnit } = request.body;
+        const quantity = Number(entryQuantity) || 0;
+
+        if (!batch || !expirationDate || quantity <= 0 || !entryUnit) {
+            return reply.status(400).send({ success: false, message: 'Lote, vencimiento, cantidad y unidad son obligatorios' });
+        }
+
+        const [inventory, medicine] = await Promise.all([
+            centralInventory.findOne({ medicineId }),
+            Medicine.findById(medicineId),
+        ]);
+        if (!inventory || !medicine) {
+            return reply.status(404).send({ success: false, message: 'Inventario o medicamento no encontrado' });
+        }
+
+        const lot = inventory.lots.find((item) => item.batch === currentBatch);
+        if (!lot) {
+            return reply.status(404).send({ success: false, message: 'El lote no fue encontrado' });
+        }
+        if (batch !== currentBatch && inventory.lots.some((item) => item.batch === batch)) {
+            return reply.status(409).send({ success: false, message: 'Ya existe un lote con ese número' });
+        }
+        if (new Date(expirationDate) <= new Date()) {
+            return reply.status(400).send({ success: false, message: 'La fecha de vencimiento debe ser futura' });
+        }
+
+        lot.batch = batch;
+        lot.expirationDate = expirationDate;
+        lot.boxes = entryUnit === medicine.packageUnit ? quantity : 0;
+        lot.blisters = entryUnit === medicine.intermediateUnit ? quantity : 0;
+        lot.units = entryUnit === medicine.minimumUnit ? quantity : 0;
+        lot.stock = 0;
+
+        inventory.totalStock = inventory.lots.reduce((total, item) => {
+            const boxes = Number(item.boxes) || 0;
+            const blisters = Number(item.blisters) || 0;
+            const units = Number(item.units) || 0;
+            const hasBreakdown = boxes > 0 || blisters > 0 || units > 0;
+            if (!hasBreakdown) return total + (Number(item.stock) || 0);
+
+            return total
+                + calculateBaseUnits(boxes, medicine.packageUnit, medicine)
+                + calculateBaseUnits(blisters, medicine.intermediateUnit, medicine)
+                + units;
+        }, 0);
+        await inventory.save();
+
+        return successResponse(reply, {
+            message: 'Lote actualizado exitosamente',
+            data: inventory,
+            statusCode: 200,
         });
     } catch (error) {
         return handleServiceError(error, reply);

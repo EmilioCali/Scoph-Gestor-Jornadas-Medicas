@@ -25,6 +25,12 @@ export const getCentralInventory = () =>
 // POST /api/v1/inventario-central  (agrega medicamento con stock mínimo + lote inicial)
 export const addToCentralInventory = (data) =>
   coreAPI.post("/api/v1/inventario-central", data);
+
+export const updateCentralInventoryLot = (medicineId, batch, data) =>
+  coreAPI.patch(
+    `/api/v1/inventario-central/${medicineId}/lotes/${encodeURIComponent(batch)}`,
+    data,
+  );
 // ── CATEGORÍAS ───────────────────────────────────────────────────────────────
 
 // GET /api/v1/categories
@@ -41,6 +47,20 @@ export const updateCategory = (id, data) =>
 // DELETE /api/v1/categories/:id
 export const deleteCategory = (id) =>
   coreAPI.delete(`/api/v1/categories/${id}`);
+// ── UNIDADES DE MEDIDA ─────────────────────────────────────────────────────
+
+export const getMeasureUnits = () => coreAPI.get("/api/v1/measure-units");
+export const createMeasureUnit = (data) => coreAPI.post("/api/v1/measure-units", data);
+export const updateMeasureUnit = (id, data) => coreAPI.put(`/api/v1/measure-units/${id}`, data);
+export const deleteMeasureUnit = (id) => coreAPI.delete(`/api/v1/measure-units/${id}`);
+
+// ── UNIDADES DE EMPAQUETADO ────────────────────────────────────────────────
+
+export const getPackagingUnits = () => coreAPI.get("/api/v1/packaging-units");
+export const createPackagingUnit = (data) => coreAPI.post("/api/v1/packaging-units", data);
+export const updatePackagingUnit = (id, data) => coreAPI.put(`/api/v1/packaging-units/${id}`, data);
+export const deletePackagingUnit = (id) => coreAPI.delete(`/api/v1/packaging-units/${id}`);
+
 // ── INVENTARIO JORNADA ───────────────────────────────────────────────────────
 
 // GET /api/v1/inventario-jornada/:jornadaId

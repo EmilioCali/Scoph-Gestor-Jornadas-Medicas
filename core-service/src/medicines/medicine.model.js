@@ -24,13 +24,43 @@ const medicineSchema = new Schema(
         },
         presentation: {
             type: String,
-            required: [true, 'La presentación es requerida'],
             trim: true,
+            default: null,
         },
         unitOfMeasure: {
             type: String,
-            required: [true, 'La unidad de medida es requerida'],
             trim: true,
+            default: null,
+        },
+        minimumUnit: {
+            type: String,
+            required: [true, 'La unidad mínima es requerida'],
+            trim: true,
+        },
+        intermediateUnit: {
+            type: String,
+            trim: true,
+            default: null,
+        },
+        packageUnit: {
+            type: String,
+            required: [true, 'La unidad de empaque es requerida'],
+            trim: true,
+        },
+        unitsPerPackage: {
+            type: Number,
+            min: [1, 'La unidad por empaque debe ser mayor a 0'],
+            default: 1,
+        },
+        unitsPerMinimumUnit: {
+            type: Number,
+            min: [1, 'La unidad por unidad mínima debe ser mayor a 0'],
+            default: 1,
+        },
+        minimumStock: {
+            type: Number,
+            min: [0, 'El stock mínimo debe ser mayor o igual a 0'],
+            default: 0,
         },
         category: {
             type: String,

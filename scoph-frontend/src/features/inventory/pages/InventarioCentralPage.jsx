@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   PlusIcon,
   ArrowUpIcon,
@@ -52,6 +52,153 @@ function getExpirationBadge(lots) {
   );
 }
 
+function createConversionSummary(medicine, amount, entryUnit, suffix = "a sumar") {
+  if (!medicine || !amount || !entryUnit) return null;
+
+  const qty = Math.max(0, Number(amount) || 0);
+  const normalizedEntryUnit = String(entryUnit).trim();
+  const packageUnit = String(medicine.packageUnit || "");
+  const intermediateUnit = String(medicine.intermediateUnit || "");
+  const minimumUnit = String(medicine.minimumUnit || "unidad");
+  const unitsPerPackage = Math.max(1, Number(medicine.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(medicine.unitsPerMinimumUnit ?? 1) || 1);
+  const hasIntermediate = Boolean(intermediateUnit && unitsPerMinimumUnit > 1);
+
+  if (normalizedEntryUnit === packageUnit) {
+    if (hasIntermediate) {
+      const baseUnits = qty * unitsPerPackage * unitsPerMinimumUnit;
+      const explanation = `${qty} ${packageUnit} = ${qty * unitsPerPackage} ${intermediateUnit} = ${baseUnits} ${minimumUnit} (${unitsPerPackage} ${intermediateUnit} de ${unitsPerMinimumUnit} ${minimumUnit})`;
+      return {
+        result: `${baseUnits} ${minimumUnit} ${suffix}`,
+        breakdown: explanation,
+      };
+    }
+
+    const baseUnits = qty * unitsPerPackage;
+    const explanation = `${qty} ${packageUnit} = ${baseUnits} ${minimumUnit} (${qty} ${packageUnit} de ${unitsPerPackage} ${minimumUnit})`;
+    return {
+      result: `${baseUnits} ${minimumUnit} ${suffix}`,
+      breakdown: explanation,
+    };
+  }
+
+  if (hasIntermediate && normalizedEntryUnit === intermediateUnit) {
+    const baseUnits = qty * unitsPerMinimumUnit;
+    const explanation = `${qty} ${intermediateUnit} = ${baseUnits} ${minimumUnit} (${qty} ${intermediateUnit} de ${unitsPerMinimumUnit} ${minimumUnit})`;
+    return {
+      result: `${baseUnits} ${minimumUnit} ${suffix}`,
+      breakdown: explanation,
+    };
+  }
+
+  const baseUnits = qty;
+  const explanation = `${qty} ${minimumUnit} (Unidades sueltas)`;
+  return {
+    result: `${baseUnits} ${minimumUnit} ${suffix}`,
+    breakdown: explanation,
+  };
+}
+
+function createLotDetailSummary(item, lot) {
+  if (!item || !lot) return null;
+
+  const packageUnit = String(item.packageUnit || "");
+  const intermediateUnit = String(item.intermediateUnit || "");
+  const minimumUnit = String(item.minimumUnit || "unidad");
+  const unitsPerPackage = Math.max(1, Number(item.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(item.unitsPerMinimumUnit ?? 1) || 1);
+  const hasIntermediate = Boolean(intermediateUnit && unitsPerMinimumUnit > 1);
+
+  const boxes = Math.max(0, Number(lot.boxes ?? 0) || 0);
+  const blisters = Math.max(0, Number(lot.blisters ?? 0) || 0);
+  const units = Math.max(0, Number(lot.units ?? 0) || 0);
+  const stock = Math.max(0, Number(lot.stock ?? 0) || 0);
+
+  const hasBreakdown = boxes > 0 || blisters > 0 || units > 0;
+  const baseUnits = hasBreakdown
+    ? boxes * unitsPerPackage * (hasIntermediate ? unitsPerMinimumUnit : 1)
+      + blisters * unitsPerMinimumUnit
+      + units
+    : stock;
+
+  if (hasIntermediate) {
+    return {
+      result: `${baseUnits} ${minimumUnit}`,
+      breakdown: `${boxes} ${packageUnit} = ${boxes * unitsPerPackage} ${intermediateUnit} = ${boxes * unitsPerPackage * unitsPerMinimumUnit} ${minimumUnit}; ${blisters} ${intermediateUnit} = ${blisters * unitsPerMinimumUnit} ${minimumUnit}; ${units} ${minimumUnit} sueltas`,
+    };
+  }
+
+  return {
+    result: `${baseUnits} ${minimumUnit}`,
+    breakdown: `${boxes} ${packageUnit} = ${boxes * unitsPerPackage} ${minimumUnit}; ${units} ${minimumUnit} sueltas`,
+  };
+}
+
+function getLotDisplayQuantities(item, lot) {
+  const boxes = Math.max(0, Number(lot.boxes ?? 0) || 0);
+  const blisters = Math.max(0, Number(lot.blisters ?? 0) || 0);
+  const units = Math.max(0, Number(lot.units ?? 0) || 0);
+  const stock = Math.max(0, Number(lot.stock ?? 0) || 0);
+  const unitsPerPackage = Math.max(1, Number(item?.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(item?.unitsPerMinimumUnit ?? 1) || 1);
+  const hasIntermediate = Boolean(item?.intermediateUnit && unitsPerMinimumUnit > 1);
+  const hasBreakdown = boxes > 0 || blisters > 0 || units > 0;
+  const equivalentBlisters = hasIntermediate ? boxes * unitsPerPackage + blisters : 0;
+  const totalUnits = hasBreakdown
+    ? boxes * unitsPerPackage * (hasIntermediate ? unitsPerMinimumUnit : 1)
+      + blisters * unitsPerMinimumUnit
+      + units
+    : stock;
+
+  return { boxes, equivalentBlisters, totalUnits };
+}
+
+function getEntryUnits(item) {
+  const entryUnits = new Set();
+
+  for (const lot of item?.lots ?? []) {
+    if (Number(lot.boxes) > 0 && item.packageUnit) {
+      entryUnits.add(item.packageUnit);
+    }
+    if (Number(lot.blisters) > 0 && item.intermediateUnit) {
+      entryUnits.add(item.intermediateUnit);
+    }
+    if (Number(lot.units) > 0 && item.minimumUnit) {
+      entryUnits.add(item.minimumUnit);
+    }
+    // Compatibilidad con lotes creados antes del desglose por empaque.
+    if (
+      Number(lot.stock) > 0 &&
+      Number(lot.boxes) === 0 &&
+      Number(lot.blisters) === 0 &&
+      Number(lot.units) === 0 &&
+      item.minimumUnit
+    ) {
+      entryUnits.add(item.minimumUnit);
+    }
+  }
+
+  return [...entryUnits].join(", ") || "-";
+}
+
+function getLotFormValues(item, lot) {
+  const boxes = Number(lot.boxes) || 0;
+  const blisters = Number(lot.blisters) || 0;
+  const units = Number(lot.units) || 0;
+  const expirationDate = lot.expirationDate
+    ? new Date(lot.expirationDate).toISOString().slice(0, 10)
+    : "";
+
+  if (boxes > 0) return { batch: lot.batch, expirationDate, entryQuantity: String(boxes), entryUnit: item.packageUnit };
+  if (blisters > 0) return { batch: lot.batch, expirationDate, entryQuantity: String(blisters), entryUnit: item.intermediateUnit };
+  return {
+    batch: lot.batch,
+    expirationDate,
+    entryQuantity: String(units || Number(lot.stock) || ""),
+    entryUnit: item.minimumUnit,
+  };
+}
+
 // ── Formularios ───────────────────────────────────────────────────────────────
 
 function AgregarForm({
@@ -60,9 +207,28 @@ function AgregarForm({
   onSubmit,
   onClose,
   availableMedicines,
+  medicine,
+  submitLabel = "Agregar al inventario",
   submitting,
   formError,
 }) {
+  const selectedMedicine = medicine ?? availableMedicines.find(
+    (med) => String(med._id) === String(form.medicineId),
+  );
+  const availableEntryUnits = useMemo(() => {
+    if (!selectedMedicine) return [];
+    const units = [selectedMedicine.packageUnit, selectedMedicine.minimumUnit];
+    if (selectedMedicine.intermediateUnit) {
+      units.splice(1, 0, selectedMedicine.intermediateUnit);
+    }
+    return units.filter(Boolean).filter((value, index, arr) => arr.indexOf(value) === index);
+  }, [selectedMedicine]);
+
+  const conversionSummary = useMemo(() => {
+    if (!selectedMedicine || !form.entryQuantity || !form.entryUnit) return null;
+    return createConversionSummary(selectedMedicine, Number(form.entryQuantity || 0), form.entryUnit, "a sumar");
+  }, [form.entryQuantity, form.entryUnit, selectedMedicine]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -70,6 +236,12 @@ function AgregarForm({
           {formError}
         </p>
       )}
+      {medicine ? (
+        <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+          <p className="text-xs text-gray-400">Medicamento</p>
+          <p className="text-sm font-semibold text-gray-700">{medicine.name}</p>
+        </div>
+      ) : (
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">
           Medicamento del catálogo
@@ -89,6 +261,7 @@ function AgregarForm({
           ))}
         </select>
       </div>
+      )}
       <Input
         label="Stock mínimo"
         name="minimumStock"
@@ -97,11 +270,9 @@ function AgregarForm({
         value={form.minimumStock}
         onChange={onChange}
         placeholder="10"
-        required
+        disabled
+        readOnly
       />
-      <p className="text-xs text-gray-400">
-        Lote inicial (opcional — si no hay stock dejar en 0)
-      </p>
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Número de lote"
@@ -109,6 +280,7 @@ function AgregarForm({
           value={form.batch}
           onChange={onChange}
           placeholder="LOTE-001"
+          required
         />
         <Input
           label="Fecha de vencimiento"
@@ -116,46 +288,48 @@ function AgregarForm({
           type="date"
           value={form.expirationDate}
           onChange={onChange}
+          required
         />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cajas"
-          name="boxes"
+          label="Cantidad a ingresar"
+          name="entryQuantity"
           type="number"
           min="0"
-          value={form.boxes ?? 0}
+          value={form.entryQuantity ?? ""}
           onChange={onChange}
-          placeholder="0"
+          placeholder="5"
+          required
         />
-        <Input
-          label="Blísteres"
-          name="blisters"
-          type="number"
-          min="0"
-          value={form.blisters ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
-        <Input
-          label="Unidades"
-          name="units"
-          type="number"
-          min="0"
-          value={form.units ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Unidad de ingreso
+          </label>
+          <select
+            name="entryUnit"
+            value={form.entryUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+            disabled={!availableEntryUnits.length}
+          >
+            <option value="">Seleccionar unidad</option>
+            {availableEntryUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <Input
-        label="Stock inicial suelto"
-        name="initialStock"
-        type="number"
-        min="0"
-        value={form.initialStock}
-        onChange={onChange}
-        placeholder="0"
-      />
+      {conversionSummary && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="text-sm font-semibold text-primary">Resumen de conversión</p>
+          <p className="text-sm font-semibold text-gray-800">{conversionSummary.result}</p>
+          <p className="text-xs text-gray-600 mt-1">{conversionSummary.breakdown}</p>
+        </div>
+      )}
       <div className="flex gap-3 justify-end pt-2">
         <Button
           variant="ghost"
@@ -166,7 +340,7 @@ function AgregarForm({
           Cancelar
         </Button>
         <Button variant="primary" type="submit" disabled={submitting}>
-          {submitting ? "Guardando..." : "Agregar al inventario"}
+          {submitting ? "Guardando..." : submitLabel}
         </Button>
       </div>
     </form>
@@ -182,6 +356,20 @@ function EntradaForm({
   submitting,
   formError,
 }) {
+  const availableEntryUnits = useMemo(() => {
+    if (!item) return [];
+    const units = [item.packageUnit, item.minimumUnit];
+    if (item.intermediateUnit) {
+      units.splice(1, 0, item.intermediateUnit);
+    }
+    return units.filter(Boolean).filter((value, index, arr) => arr.indexOf(value) === index);
+  }, [item]);
+
+  const conversionSummary = useMemo(() => {
+    if (!item || !form.entryQuantity || !form.entryUnit) return null;
+    return createConversionSummary(item, Number(form.entryQuantity || 0), form.entryUnit, "a sumar");
+  }, [form.entryQuantity, form.entryUnit, item]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -195,13 +383,13 @@ function EntradaForm({
         <p className="text-xs text-gray-400 mt-0.5">
           Stock actual:{" "}
           <span className="font-semibold text-gray-600">
-            {item?.totalStock} {item?.unitOfMeasure}
+            {item?.totalStock} {item?.packageUnit ?? item?.unitOfMeasure}
           </span>
         </p>
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">
-          Tipo de entrada
+          Origen del ingreso
         </label>
         <select
           name="tipoEntrada"
@@ -232,44 +420,45 @@ function EntradaForm({
           required
         />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cajas"
-          name="boxes"
+          label="Cantidad a ingresar"
+          name="entryQuantity"
           type="number"
           min="0"
-          value={form.boxes ?? 0}
+          value={form.entryQuantity ?? ""}
           onChange={onChange}
-          placeholder="0"
+          placeholder="5"
+          required
         />
-        <Input
-          label="Blísteres"
-          name="blisters"
-          type="number"
-          min="0"
-          value={form.blisters ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
-        <Input
-          label="Unidades"
-          name="units"
-          type="number"
-          min="0"
-          value={form.units ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Unidad de ingreso
+          </label>
+          <select
+            name="entryUnit"
+            value={form.entryUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+            disabled={!availableEntryUnits.length}
+          >
+            <option value="">Seleccionar unidad</option>
+            {availableEntryUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <Input
-        label="Cantidad suelta"
-        name="quantity"
-        type="number"
-        min="0"
-        value={form.quantity}
-        onChange={onChange}
-        placeholder="0"
-      />
+      {conversionSummary && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="text-sm font-semibold text-primary">Resumen de conversión</p>
+          <p className="text-sm font-semibold text-gray-800">{conversionSummary.result}</p>
+          <p className="text-xs text-gray-600 mt-1">{conversionSummary.breakdown}</p>
+        </div>
+      )}
       <div className="flex gap-3 justify-end pt-2">
         <Button
           variant="ghost"
@@ -296,6 +485,20 @@ function SalidaForm({
   submitting,
   formError,
 }) {
+  const availableEntryUnits = useMemo(() => {
+    if (!item) return [];
+    const units = [item.packageUnit, item.minimumUnit];
+    if (item.intermediateUnit) {
+      units.splice(1, 0, item.intermediateUnit);
+    }
+    return units.filter(Boolean).filter((value, index, arr) => arr.indexOf(value) === index);
+  }, [item]);
+
+  const conversionSummary = useMemo(() => {
+    if (!item || !form.entryQuantity || !form.entryUnit) return null;
+    return createConversionSummary(item, Number(form.entryQuantity || 0), form.entryUnit, "a restar");
+  }, [form.entryQuantity, form.entryUnit, item]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -309,7 +512,7 @@ function SalidaForm({
         <p className="text-xs text-gray-400 mt-0.5">
           Stock actual:{" "}
           <span className="font-semibold text-gray-600">
-            {item?.totalStock} {item?.unitOfMeasure}
+            {item?.totalStock} {item?.packageUnit ?? item?.unitOfMeasure}
           </span>
         </p>
       </div>
@@ -335,48 +538,49 @@ function SalidaForm({
             ))}
         </select>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cajas"
-          name="boxes"
+          label="Cantidad a retirar"
+          name="entryQuantity"
           type="number"
           min="0"
-          value={form.boxes ?? 0}
+          max={
+            item?.lots?.find((l) => l.batch === form.batch)?.stock ??
+            item?.totalStock
+          }
+          value={form.entryQuantity ?? ""}
           onChange={onChange}
-          placeholder="0"
+          placeholder="5"
+          required
         />
-        <Input
-          label="Blísteres"
-          name="blisters"
-          type="number"
-          min="0"
-          value={form.blisters ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
-        <Input
-          label="Unidades"
-          name="units"
-          type="number"
-          min="0"
-          value={form.units ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Tipo de salida
+          </label>
+          <select
+            name="entryUnit"
+            value={form.entryUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+            disabled={!availableEntryUnits.length}
+          >
+            <option value="">Seleccionar unidad</option>
+            {availableEntryUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <Input
-        label="Cantidad suelta"
-        name="quantity"
-        type="number"
-        min="0"
-        max={
-          item?.lots?.find((l) => l.batch === form.batch)?.stock ??
-          item?.totalStock
-        }
-        value={form.quantity}
-        onChange={onChange}
-        placeholder="0"
-      />
+      {conversionSummary && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="text-sm font-semibold text-primary">Resumen de conversión</p>
+          <p className="text-sm font-semibold text-gray-800">{conversionSummary.result}</p>
+          <p className="text-xs text-gray-600 mt-1">{conversionSummary.breakdown}</p>
+        </div>
+      )}
       <div className="flex gap-3 justify-end pt-2">
         <Button
           variant="ghost"
@@ -400,21 +604,17 @@ const entradaInicial = {
   tipoEntrada: "DONACION",
   batch: "",
   expirationDate: "",
-  quantity: "",
-  boxes: "0",
-  blisters: "0",
-  units: "0",
+  entryQuantity: "",
+  entryUnit: "",
 };
-const salidaInicial = { batch: "", quantity: "", boxes: "0", blisters: "0", units: "0" };
+const salidaInicial = { batch: "", entryQuantity: "", entryUnit: "" };
 const agregarInicial = {
   medicineId: "",
   minimumStock: "",
   batch: "",
   expirationDate: "",
-  initialStock: "0",
-  boxes: "0",
-  blisters: "0",
-  units: "0",
+  entryQuantity: "",
+  entryUnit: "",
 };
 
 // ── Página ────────────────────────────────────────────────────────────────────
@@ -436,6 +636,7 @@ export default function InventarioCentralPage() {
     addToInventory,
     registrarEntrada,
     registrarSalida,
+    editarLote,
   } = useInventarioCentral();
 
   const [busqueda, setBusqueda] = useState("");
@@ -446,11 +647,37 @@ export default function InventarioCentralPage() {
   const [modalEntrada, setModalEntrada] = useState(false);
   const [modalSalida, setModalSalida] = useState(false);
   const [modalLotes, setModalLotes] = useState(false);
+  const [modalEditarLote, setModalEditarLote] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [formEntrada, setFormEntrada] = useState(entradaInicial);
   const [formSalida, setFormSalida] = useState(salidaInicial);
   const [formAgregar, setFormAgregar] = useState(agregarInicial);
+  const [formEditarLote, setFormEditarLote] = useState(agregarInicial);
+  const [editingBatch, setEditingBatch] = useState("");
+
+  useEffect(() => {
+    const selectedMedicine = availableMedicines.find(
+      (medicine) => String(medicine._id) === String(formAgregar.medicineId),
+    );
+
+    if (!selectedMedicine) return;
+
+    const validSelectionUnits = [
+      selectedMedicine.packageUnit,
+      selectedMedicine.intermediateUnit,
+      selectedMedicine.minimumUnit,
+    ].filter(Boolean);
+
+    setFormAgregar((prev) => ({
+      ...prev,
+      minimumStock: String(selectedMedicine.minimumStock ?? ""),
+      entryUnit:
+        prev.entryUnit && validSelectionUnits.includes(prev.entryUnit)
+          ? prev.entryUnit
+          : selectedMedicine.packageUnit || selectedMedicine.intermediateUnit || selectedMedicine.minimumUnit || "",
+    }));
+  }, [availableMedicines, formAgregar.medicineId]);
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -492,12 +719,24 @@ export default function InventarioCentralPage() {
     setFormSalida((p) => ({ ...p, [e.target.name]: e.target.value }));
   const handleChangeAgregar = (e) =>
     setFormAgregar((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const handleChangeEditarLote = (e) =>
+    setFormEditarLote((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   // ── Agregar al inventario ─────────────────────────────────────────────────
   const handleAgregarAlInventario = async (e) => {
     e.preventDefault();
     if (!canModifyCentralInventory) {
       setFormError("No tienes permisos para modificar inventario central");
+      return;
+    }
+
+    if (!formAgregar.batch || !formAgregar.expirationDate) {
+      setFormError("El lote y la fecha de vencimiento son obligatorios");
+      return;
+    }
+
+    if (!formAgregar.entryQuantity || !formAgregar.entryUnit) {
+      setFormError("Debes indicar la cantidad y la unidad de ingreso");
       return;
     }
 
@@ -524,10 +763,16 @@ export default function InventarioCentralPage() {
       return;
     }
 
+    if (!formEntrada.batch || !formEntrada.expirationDate || !formEntrada.entryQuantity || !formEntrada.entryUnit) {
+      setFormError("Debes completar lote, vencimiento, cantidad y unidad");
+      return;
+    }
+
     setSubmitting(true);
     setFormError(null);
     try {
       await registrarEntrada({ item: selectedItem, ...formEntrada });
+      setFormEntrada(entradaInicial);
       setModalEntrada(false);
     } catch (err) {
       setFormError(
@@ -546,15 +791,44 @@ export default function InventarioCentralPage() {
       return;
     }
 
+    if (!formSalida.batch || !formSalida.entryQuantity || !formSalida.entryUnit) {
+      setFormError("Debes completar lote, cantidad y unidad");
+      return;
+    }
+
     setSubmitting(true);
     setFormError(null);
     try {
       await registrarSalida({ item: selectedItem, ...formSalida });
+      setFormSalida(salidaInicial);
       setModalSalida(false);
     } catch (err) {
       setFormError(
         err.response?.data?.message ?? "No se pudo registrar la salida",
       );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditarLote = async (e) => {
+    e.preventDefault();
+    if (!selectedItem || !editingBatch) return;
+    if (!formEditarLote.batch || !formEditarLote.expirationDate || !formEditarLote.entryQuantity || !formEditarLote.entryUnit) {
+      setFormError("Debes completar lote, vencimiento, cantidad y unidad");
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await editarLote({ item: selectedItem, currentBatch: editingBatch, ...formEditarLote });
+      setModalEditarLote(false);
+      setModalLotes(false);
+      setFormEditarLote(agregarInicial);
+      setEditingBatch("");
+    } catch (err) {
+      setFormError(err.response?.data?.message ?? "No se pudo actualizar el lote");
     } finally {
       setSubmitting(false);
     }
@@ -575,7 +849,7 @@ export default function InventarioCentralPage() {
       body: filteredInventory.map((item) => [
         item.name,
         item.category,
-        `${item.totalStock} ${item.unitOfMeasure}`,
+        `${item.totalStock} ${item.packageUnit ?? item.unitOfMeasure ?? 'uds.'}`,
         item.minimumStock,
         item.totalStock <= 0
           ? "Agotado"
@@ -595,7 +869,7 @@ export default function InventarioCentralPage() {
         Medicamento: item.name,
         Compuesto: item.compound,
         Categoría: item.category,
-        "Unidad Medida": item.unitOfMeasure,
+        "Unidad de empaque": item.packageUnit ?? item.unitOfMeasure,
         Lote: lot.batch,
         "Stock Lote": lot.stock,
         "Fecha Vencimiento": new Date(lot.expirationDate).toLocaleDateString(
@@ -631,7 +905,11 @@ export default function InventarioCentralPage() {
         </div>
       ),
     },
-    { key: "unitOfMeasure", label: "Unidad" },
+    {
+      key: "entryUnit",
+      label: "Unidad de ingreso",
+      render: (row) => getEntryUnits(row),
+    },
     {
       key: "totalStock",
       label: "Stock Total",
@@ -927,33 +1205,80 @@ export default function InventarioCentralPage() {
               (new Date(lot.expirationDate) - new Date()) /
                 (1000 * 60 * 60 * 24),
             );
+            const lotSummary = createLotDetailSummary(selectedItem, lot);
+            const lotQuantities = getLotDisplayQuantities(selectedItem, lot);
             return (
               <div
                 key={lot.batch}
-                className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100"
+                className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100"
               >
-                <div>
-                  <p className="text-sm font-semibold text-gray-700">
-                    Lote {lot.batch}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Vence:{" "}
-                    {new Date(lot.expirationDate).toLocaleDateString("es-GT")}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">
+                      Lote {lot.batch}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Vence:{" "}
+                      {new Date(lot.expirationDate).toLocaleDateString("es-GT")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {days <= 0 ? (
+                      <Badge variant="danger">Vencido</Badge>
+                    ) : days <= 30 ? (
+                      <Badge variant="danger">Vence en {days}d</Badge>
+                    ) : days <= 60 ? (
+                      <Badge variant="warning">Vence en {days}d</Badge>
+                    ) : (
+                      <Badge variant="success">Vigente</Badge>
+                    )}
+                    {canModifyCentralInventory && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingBatch(lot.batch);
+                          setFormEditarLote({
+                            medicineId: String(selectedItem.medicineId),
+                            minimumStock: String(selectedItem.minimumStock ?? ""),
+                            ...getLotFormValues(selectedItem, lot),
+                          });
+                          setFormError(null);
+                          setModalEditarLote(true);
+                        }}
+                      >
+                        Editar lote
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-extrabold text-gray-700">
-                    {lot.stock} uds.
+
+                <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+                  <p className="text-xs font-semibold text-primary">Detalle del lote</p>
+                  <p className="text-sm font-bold text-gray-800">
+                    {lotSummary?.result ?? `${lot.stock ?? 0} ${selectedItem?.minimumUnit ?? "uds."}`}
                   </p>
-                  {days <= 0 ? (
-                    <Badge variant="danger">Vencido</Badge>
-                  ) : days <= 30 ? (
-                    <Badge variant="danger">Vence en {days}d</Badge>
-                  ) : days <= 60 ? (
-                    <Badge variant="warning">Vence en {days}d</Badge>
-                  ) : (
-                    <Badge variant="success">Vigente</Badge>
-                  )}
+                  <p className="text-xs text-gray-600 mt-1">
+                    {lotSummary?.breakdown ?? `${lot.stock ?? 0} ${selectedItem?.minimumUnit ?? "uds."} en este lote`}
+                  </p>
+                  <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
+                    <div className="rounded-lg bg-white px-2 py-1 border border-gray-100">
+                      <span className="font-semibold text-gray-500">Caja:</span>{" "}
+                      <span className="text-gray-700">{lotQuantities.boxes}</span>
+                    </div>
+                    <div className="rounded-lg bg-white px-2 py-1 border border-gray-100">
+                      <span className="font-semibold text-gray-500">{selectedItem?.intermediateUnit ?? "Blíster"}:</span>{" "}
+                      <span className="text-gray-700">{lotQuantities.equivalentBlisters}</span>
+                    </div>
+                    <div className="rounded-lg bg-white px-2 py-1 border border-gray-100">
+                      <span className="font-semibold text-gray-500">{selectedItem?.minimumUnit ?? "Unidad"}:</span>{" "}
+                      <span className="text-gray-700">{lotQuantities.totalUnits}</span>
+                    </div>
+                    <div className="rounded-lg bg-white px-2 py-1 border border-gray-100">
+                      <span className="font-semibold text-gray-500">Stock:</span>{" "}
+                      <span className="text-gray-700">{lotQuantities.totalUnits}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -964,6 +1289,25 @@ export default function InventarioCentralPage() {
             </p>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={modalEditarLote}
+        onClose={() => setModalEditarLote(false)}
+        title={`Editar lote — ${selectedItem?.name ?? ""}`}
+        size="md"
+      >
+        <AgregarForm
+          form={formEditarLote}
+          onChange={handleChangeEditarLote}
+          onSubmit={handleEditarLote}
+          onClose={() => setModalEditarLote(false)}
+          availableMedicines={[]}
+          medicine={selectedItem}
+          submitLabel="Guardar cambios"
+          submitting={submitting}
+          formError={formError}
+        />
       </Modal>
     </div>
   );

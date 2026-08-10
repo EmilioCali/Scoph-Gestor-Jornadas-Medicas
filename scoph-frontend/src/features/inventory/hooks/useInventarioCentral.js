@@ -5,6 +5,7 @@ import {
     addToCentralInventory,
     registerEntry,
     registerSalidaReceta,
+    updateCentralInventoryLot,
 } from "../../../shared/apis/coreService";
 
 export function useInventarioCentral() {
@@ -41,33 +42,42 @@ export function useInventarioCentral() {
         (m) => m.status === "ACTIVO" && !inventory.some((i) => String(i.medicineId) === String(m._id))
     );
 
-    // Agrega medicamento al inventario (con o sin stock inicial)
+    // Agrega medicamento al inventario usando la cantidad y unidad seleccionadas
     const addToInventory = useCallback(async (formData) => {
+        const selectedMedicine = medicines.find(
+            (medicine) => String(medicine._id) === String(formData?.medicineId),
+        );
+        const amount = Number(formData?.entryQuantity || 0);
+        const entryUnit = formData?.entryUnit;
+
         const payload = {
             ...formData,
-            boxes: Number(formData?.boxes || 0),
-            blisters: Number(formData?.blisters || 0),
-            units: Number(formData?.units || 0),
-            initialStock: Number(formData?.initialStock || 0),
+            boxes: entryUnit && String(entryUnit) === String(selectedMedicine?.packageUnit) ? amount : 0,
+            blisters: entryUnit && String(entryUnit) === String(selectedMedicine?.intermediateUnit) ? amount : 0,
+            units: entryUnit && String(entryUnit) === String(selectedMedicine?.minimumUnit) ? amount : 0,
+            entryUnitType: entryUnit || null,
+            initialStock: 0,
             minimumStock: Number(formData?.minimumStock || 0),
         };
+
         const { data } = await addToCentralInventory(payload);
         await fetchAll();
         return data.data;
-    }, [fetchAll]);
+    }, [fetchAll, medicines]);
 
     // Entrada de stock (COMPRA o DONACION)
-    const registrarEntrada = useCallback(async ({ item, tipoEntrada, batch, expirationDate, quantity, boxes = 0, blisters = 0, units = 0 }) => {
+    const registrarEntrada = useCallback(async ({ item, tipoEntrada, batch, expirationDate, entryQuantity, entryUnit }) => {
         const body = {
             tipoEntrada,
             destination: { type: "INVENTARIO_CENTRAL", id: null },
             detalle: [{
                 medicineId: String(item.medicineId),
                 batch,
-                quantity: Number(quantity),
-                boxes: Number(boxes),
-                blisters: Number(blisters),
-                units: Number(units),
+                quantity: Number(entryQuantity || 0),
+                boxes: entryUnit && String(entryUnit) === String(item.packageUnit) ? Number(entryQuantity || 0) : 0,
+                blisters: entryUnit && String(entryUnit) === String(item.intermediateUnit) ? Number(entryQuantity || 0) : 0,
+                units: entryUnit && String(entryUnit) === String(item.minimumUnit) ? Number(entryQuantity || 0) : 0,
+                entryUnitType: entryUnit || null,
                 expirationDate,
             }],
         };
@@ -78,18 +88,30 @@ export function useInventarioCentral() {
     }, [fetchAll]);
 
     // Salida por receta
-    const registrarSalida = useCallback(async ({ item, batch, quantity, boxes = 0, blisters = 0, units = 0 }) => {
+    const registrarSalida = useCallback(async ({ item, batch, entryQuantity, entryUnit }) => {
         const body = {
             detalle: [{
                 medicineId: String(item.medicineId),
                 batch,
-                quantity: Number(quantity),
-                boxes: Number(boxes),
-                blisters: Number(blisters),
-                units: Number(units),
+                quantity: Number(entryQuantity || 0),
+                boxes: entryUnit && String(entryUnit) === String(item.packageUnit) ? Number(entryQuantity || 0) : 0,
+                blisters: entryUnit && String(entryUnit) === String(item.intermediateUnit) ? Number(entryQuantity || 0) : 0,
+                units: entryUnit && String(entryUnit) === String(item.minimumUnit) ? Number(entryQuantity || 0) : 0,
+                entryUnitType: entryUnit || null,
             }],
         };
         const { data } = await registerSalidaReceta(body);
+        await fetchAll();
+        return data.data;
+    }, [fetchAll]);
+
+    const editarLote = useCallback(async ({ item, currentBatch, ...formData }) => {
+        const { data } = await updateCentralInventoryLot(item.medicineId, currentBatch, {
+            batch: formData.batch,
+            expirationDate: formData.expirationDate,
+            entryQuantity: Number(formData.entryQuantity || 0),
+            entryUnit: formData.entryUnit,
+        });
         await fetchAll();
         return data.data;
     }, [fetchAll]);
@@ -103,5 +125,6 @@ export function useInventarioCentral() {
         addToInventory,
         registrarEntrada,
         registrarSalida,
+        editarLote,
     };
 }

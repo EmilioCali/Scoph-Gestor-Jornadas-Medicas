@@ -6,13 +6,65 @@ import WorkdayInventory from './workdayInventory.model.js';
 import { getWorkdayById } from '../workdays/workday.client.js';
 import { validarLoteExistente, validarNoVencido, validarStockPositivo } from "../utils/validator.js";
 
-function normalizeLotData(item) {
-    const boxes = Number(item.boxes || 0);
-    const blisters = Number(item.blisters || 0);
-    const units = Number(item.units || 0);
-    const quantity = Number(item.quantity || 0);
+function getConversionFactors(medicine = {}) {
+    const unitsPerPackage = Math.max(1, Number(medicine?.unitsPerPackage ?? 1) || 1);
+    const unitsPerMinimumUnit = Math.max(1, Number(medicine?.unitsPerMinimumUnit ?? 1) || 1);
+    const hasIntermediate = Boolean(medicine?.intermediateUnit && String(medicine.intermediateUnit).trim() && unitsPerMinimumUnit > 1);
 
-    const totalUnits = boxes * 100 + blisters * 10 + units + quantity;
+    return { unitsPerPackage, unitsPerMinimumUnit, hasIntermediate };
+}
+
+export function calculateBaseUnits(quantity, entryUnitType, medicine = {}) {
+    const qty = Math.max(0, Number(quantity) || 0);
+    const normalizedEntryUnitType = typeof entryUnitType === 'string' ? entryUnitType.trim() : '';
+    const unitsPerPackage = Math.max(1, Number(medicine?.unitsPerPackage ?? 1) || 1);
+    const unitsPerMinimumUnit = Math.max(1, Number(medicine?.unitsPerMinimumUnit ?? 1) || 1);
+    const hasIntermediate = Boolean(medicine?.intermediateUnit && String(medicine.intermediateUnit).trim() && unitsPerMinimumUnit > 1);
+
+    if (normalizedEntryUnitType === medicine?.packageUnit) {
+        return hasIntermediate
+            ? qty * unitsPerPackage * unitsPerMinimumUnit
+            : qty * unitsPerPackage;
+    }
+
+    if (hasIntermediate && normalizedEntryUnitType === medicine?.intermediateUnit) {
+        return qty * unitsPerMinimumUnit;
+    }
+
+    return qty;
+}
+
+function normalizeLotData(item, medicine = {}) {
+    const quantity = Math.max(0, Number(item.quantity ?? item.cantidad ?? 0) || 0);
+    const entryUnitType = item.entryUnitType ?? item.entryUnit ?? item.unitType ?? item.unit ?? null;
+    const normalizedEntryUnitType = typeof entryUnitType === 'string' ? entryUnitType.trim() : '';
+    const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
+
+    let boxes = Number(item.boxes || 0);
+    let blisters = Number(item.blisters || 0);
+    let units = Number(item.units || 0);
+
+    if (normalizedEntryUnitType) {
+        if (normalizedEntryUnitType === medicine?.packageUnit) {
+            boxes = quantity;
+            blisters = 0;
+            units = 0;
+        } else if (normalizedEntryUnitType === medicine?.intermediateUnit) {
+            boxes = 0;
+            blisters = quantity;
+            units = 0;
+        } else if (normalizedEntryUnitType === medicine?.minimumUnit) {
+            boxes = 0;
+            blisters = 0;
+            units = quantity;
+        }
+    } else if (quantity > 0 && boxes === 0 && blisters === 0 && units === 0) {
+        units = quantity;
+    }
+
+    const totalUnits = normalizedEntryUnitType
+        ? calculateBaseUnits(quantity, normalizedEntryUnitType, medicine)
+        : ((boxes * unitsPerPackage) + (blisters * unitsPerMinimumUnit) + units + quantity);
 
     return {
         boxes,
@@ -23,12 +75,37 @@ function normalizeLotData(item) {
     };
 }
 
-function normalizeMovementAmount(payload = {}) {
-    const boxes = Number(payload.boxes || 0);
-    const blisters = Number(payload.blisters || 0);
-    const units = Number(payload.units || 0);
-    const quantity = Number(payload.quantity || payload.cantidad || 0);
-    const totalUnits = boxes * 100 + blisters * 10 + units + quantity;
+function normalizeMovementAmount(payload = {}, medicine = {}) {
+    const quantity = Math.max(0, Number(payload.quantity ?? payload.cantidad ?? 0) || 0);
+    const entryUnitType = payload.entryUnitType ?? payload.entryUnit ?? payload.unitType ?? payload.unit ?? null;
+    const normalizedEntryUnitType = typeof entryUnitType === 'string' ? entryUnitType.trim() : '';
+    const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
+
+    let boxes = Number(payload.boxes || 0);
+    let blisters = Number(payload.blisters || 0);
+    let units = Number(payload.units || 0);
+
+    if (normalizedEntryUnitType) {
+        if (normalizedEntryUnitType === medicine?.packageUnit) {
+            boxes = quantity;
+            blisters = 0;
+            units = 0;
+        } else if (normalizedEntryUnitType === medicine?.intermediateUnit) {
+            boxes = 0;
+            blisters = quantity;
+            units = 0;
+        } else if (normalizedEntryUnitType === medicine?.minimumUnit) {
+            boxes = 0;
+            blisters = 0;
+            units = quantity;
+        }
+    } else if (quantity > 0 && boxes === 0 && blisters === 0 && units === 0) {
+        units = quantity;
+    }
+
+    const totalUnits = normalizedEntryUnitType
+        ? calculateBaseUnits(quantity, normalizedEntryUnitType, medicine)
+        : ((boxes * unitsPerPackage) + (blisters * unitsPerMinimumUnit) + units + quantity);
 
     return {
         boxes,
@@ -46,19 +123,21 @@ function addLotStock(lote, { boxes, blisters, units, quantity }) {
     lote.stock = (Number(lote.stock) || 0) + quantity;
 }
 
-function getLotUnitValue(lote) {
-    return ((Number(lote.boxes) || 0) * 100) + ((Number(lote.blisters) || 0) * 10) + (Number(lote.units) || 0) + (Number(lote.stock) || 0);
+function getLotUnitValue(lote, medicine = {}) {
+    const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
+    return ((Number(lote.boxes) || 0) * unitsPerPackage) + ((Number(lote.blisters) || 0) * unitsPerMinimumUnit) + (Number(lote.units) || 0) + (Number(lote.stock) || 0);
 }
 
-function subtractLotUnits(lote, amount) {
+function subtractLotUnits(lote, amount, medicine = {}) {
     let remaining = Math.max(0, Number(amount) || 0);
+    const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
 
-    const boxesToRemove = Math.min(Math.floor(remaining / 100), Number(lote.boxes) || 0);
-    remaining -= boxesToRemove * 100;
+    const boxesToRemove = Math.min(Math.floor(remaining / unitsPerPackage), Number(lote.boxes) || 0);
+    remaining -= boxesToRemove * unitsPerPackage;
     lote.boxes = Math.max(0, (Number(lote.boxes) || 0) - boxesToRemove);
 
-    const blistersToRemove = Math.min(Math.floor(remaining / 10), Number(lote.blisters) || 0);
-    remaining -= blistersToRemove * 10;
+    const blistersToRemove = Math.min(Math.floor(remaining / unitsPerMinimumUnit), Number(lote.blisters) || 0);
+    remaining -= blistersToRemove * unitsPerMinimumUnit;
     lote.blisters = Math.max(0, (Number(lote.blisters) || 0) - blistersToRemove);
 
     const unitsToRemove = Math.min(remaining, Number(lote.units) || 0);
@@ -75,13 +154,12 @@ export async function registrarEntrada({ tipoEntrada, detalle, userId, destinati
 
     for (const item of detalle) {
         const { medicineId, batch, expirationDate } = item;
-        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
+        const med = await Medicine.findById(medicineId);
+        if (!med) throw new Error("Medicamento no encontrado");
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item, med);
 
         if (totalUnits <= 0) throw new Error("La cantidad debe de ser positiva");
         if (new Date(expirationDate) <= new Date()) throw new Error("La fecha de vencimiento debe de ser una futura");
-
-        const med = await Medicine.findById(medicineId);
-        if (!med) throw new Error("Medicamento no encontrado");
 
         const movimiento = new Movement({
             type: 'ENTRADA',
@@ -130,10 +208,9 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
 
     for (const item of detalle) {
         const { medicineId, batch } = item;
-        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
-
         const med = await Medicine.findById(medicineId);
         if (!med) throw new Error("Medicamento no encontrado, lo siento");
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item, med);
 
         const inv = await centralInventory.findOne({ medicineId });
         if (!inv) throw new Error("No existe inventario para este medicamento");
@@ -186,10 +263,9 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
 
     for (const item of detalle) {
         const { medicineId, batch } = item;
-        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
-
         const med = await Medicine.findById(medicineId);
         if (!med) throw new Error('Medicamento no encontrado');
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item, med);
 
         const inv = await centralInventory.findOne({ medicineId });
         if (!inv) throw new Error('No existe inventario para este medicamento');
@@ -264,18 +340,23 @@ async function getWorkdayInventory(productoId) {
 
 
 export async function validarStockJornada(productoId, payload = {}) {
-    const { totalUnits, quantity, boxes, blisters, units } = normalizeMovementAmount(payload);
     const inventory = await getWorkdayInventory(productoId);
+    const medicine = await Medicine.findById(inventory.medicineId);
+    if (!medicine) {
+        throw new Error('Medicamento no encontrado');
+    }
+
+    const { totalUnits, quantity, boxes, blisters, units } = normalizeMovementAmount(payload, medicine);
 
     const ahora = new Date();
     const lote = inventory.lots.find(
-        (l) => ((Number(l.boxes) || 0) * 100 + (Number(l.blisters) || 0) * 10 + (Number(l.units) || 0) + (Number(l.stock) || 0)) > 0 && new Date(l.expirationDate) >= ahora
+        (l) => getLotUnitValue(l, medicine) > 0 && new Date(l.expirationDate) >= ahora
     );
 
     validarLoteExistente(lote);
     validarNoVencido(lote.expirationDate);
 
-    const disponible = getLotUnitValue(lote);
+    const disponible = getLotUnitValue(lote, medicine);
     if (disponible < totalUnits) {
         throw new Error(`Stock insuficiente. Disponible: ${disponible}, solicitado: ${totalUnits}`);
     }
@@ -287,23 +368,27 @@ export async function validarStockJornada(productoId, payload = {}) {
 
 export async function descontarStockJornada(productoId, payload = {}) {
     const { inventory, lote, totalUnits } = await validarStockJornada(productoId, payload);
-
-    subtractLotUnits(lote, totalUnits);
-    inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - totalUnits);
-
-    await inventory.save();
-
     const medicine = await Medicine.findById(inventory.medicineId);
     if (!medicine) {
         throw new Error('Medicamento no encontrado');
     }
 
+    subtractLotUnits(lote, totalUnits, medicine);
+    inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - totalUnits);
+
+    await inventory.save();
+
     return { inventory, lote, medicine };
 }
 
 export async function procesarRetornoJornada(productoId, payload = {}) {
-    const { boxes, blisters, units, quantity, totalUnits } = normalizeMovementAmount(payload);
     const inventory = await getWorkdayInventory(productoId);
+    const medicine = await Medicine.findById(inventory.medicineId);
+    if (!medicine) {
+        throw new Error('Medicamento no encontrado');
+    }
+
+    const { boxes, blisters, units, quantity, totalUnits } = normalizeMovementAmount(payload, medicine);
     validarLoteExistente(inventory);
 
     const lote = inventory.lots[0];
@@ -317,11 +402,6 @@ export async function procesarRetornoJornada(productoId, payload = {}) {
     inventory.totalStock = (Number(inventory.totalStock) || 0) + totalUnits;
 
     await inventory.save();
-
-    const medicine = await Medicine.findById(inventory.medicineId);
-    if (!medicine) {
-        throw new Error('Medicamento no encontrado');
-    }
 
     return { inventory, lote, medicine };
 }
@@ -344,7 +424,8 @@ export async function procesarRetornoAutomaticoJornada({ workdayId, userId = 'sy
             const blisters = Number(lote.blisters || 0);
             const units = Number(lote.units || 0);
             const stock = Number(lote.stock || 0);
-            const totalUnits = boxes * 100 + blisters * 10 + units + stock;
+            const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
+            const totalUnits = (boxes * unitsPerPackage) + (blisters * unitsPerMinimumUnit) + units + stock;
 
             if (totalUnits <= 0) continue;
 

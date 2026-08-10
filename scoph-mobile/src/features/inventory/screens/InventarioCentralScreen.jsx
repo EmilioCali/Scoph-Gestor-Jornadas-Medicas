@@ -383,7 +383,7 @@ export function InventarioCentralScreen() {
                   <View style={styles.cardDetails}>
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Unidad</Text>
-                      <Text style={styles.detailValue}>{item.unitOfMeasure}</Text>
+                      <Text style={styles.detailValue}>{item.packageUnit ?? item.unitOfMeasure}</Text>
                     </View>
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Stock Total</Text>
@@ -495,7 +495,7 @@ export function InventarioCentralScreen() {
                     <View style={styles.selectedInfo}>
                       <Text style={styles.selectedLabel}>Medicamento</Text>
                       <Text style={styles.selectedName}>{selectedItem?.name}</Text>
-                      <Text style={styles.selectedLabel}>Stock actual: {selectedItem?.totalStock} {selectedItem?.unitOfMeasure}</Text>
+                      <Text style={styles.selectedLabel}>Stock actual: {selectedItem?.totalStock} {selectedItem?.packageUnit ?? selectedItem?.unitOfMeasure}</Text>
                     </View>
 
                     <SelectorGroup
@@ -538,7 +538,7 @@ export function InventarioCentralScreen() {
                     <View style={styles.selectedInfo}>
                       <Text style={styles.selectedLabel}>Medicamento</Text>
                       <Text style={styles.selectedName}>{selectedItem?.name}</Text>
-                      <Text style={styles.selectedLabel}>Stock actual: {selectedItem?.totalStock} {selectedItem?.unitOfMeasure}</Text>
+                      <Text style={styles.selectedLabel}>Stock actual: {selectedItem?.totalStock} {selectedItem?.packageUnit ?? selectedItem?.unitOfMeasure}</Text>
                     </View>
 
                     <SelectorGroup

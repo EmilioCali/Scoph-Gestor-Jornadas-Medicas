@@ -31,8 +31,10 @@ const INITIAL_FORM = {
   compound: '',
   concentration: '',
   barcode: '',
-  presentation: '',
-  unitOfMeasure: '',
+  minimumUnit: '',
+  packageUnit: '',
+  unitsPerPackage: '',
+  unitsPerMinimumUnit: '',
   category: '',
   status: 'ACTIVO'
 };
@@ -116,8 +118,10 @@ export function CatalogScreen() {
       compound: item.compound ?? '',
       concentration: item.concentration ?? '',
       barcode: item.barcode ?? '',
-      presentation: item.presentation ?? '',
-      unitOfMeasure: item.unitOfMeasure ?? '',
+      minimumUnit: item.minimumUnit ?? item.presentation ?? '',
+      packageUnit: item.packageUnit ?? item.unitOfMeasure ?? '',
+      unitsPerPackage: item.unitsPerPackage ?? '',
+      unitsPerMinimumUnit: item.unitsPerMinimumUnit ?? '',
       category: item.category ?? '',
       status: item.status ?? 'ACTIVO'
     });
@@ -127,7 +131,7 @@ export function CatalogScreen() {
   };
 
   const validateForm = () => {
-    if (!form.name || !form.compound || !form.concentration || !form.presentation || !form.unitOfMeasure || !form.category) {
+    if (!form.name || !form.compound || !form.concentration || !form.minimumUnit || !form.packageUnit || !form.unitsPerPackage || !form.unitsPerMinimumUnit || !form.category) {
       setFormError('Completa todos los campos obligatorios.');
       return false;
     }
@@ -163,8 +167,10 @@ export function CatalogScreen() {
         compound: form.compound.trim(),
         concentration: form.concentration.trim(),
         barcode: form.barcode.trim(),
-        presentation: form.presentation,
-        unitOfMeasure: form.unitOfMeasure,
+        minimumUnit: form.minimumUnit,
+        packageUnit: form.packageUnit,
+        unitsPerPackage: Number(form.unitsPerPackage || 1),
+        unitsPerMinimumUnit: Number(form.unitsPerMinimumUnit || 1),
         category: form.category
       };
 
@@ -337,12 +343,12 @@ export function CatalogScreen() {
 
                 <View style={styles.cardDetails}>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Presentacion</Text>
-                    <Text style={styles.detailValue}>{item.presentation}</Text>
+                    <Text style={styles.detailLabel}>Unidad mínima</Text>
+                    <Text style={styles.detailValue}>{item.minimumUnit || item.presentation}</Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Unidad</Text>
-                    <Text style={styles.detailValue}>{item.unitOfMeasure}</Text>
+                    <Text style={styles.detailLabel}>Unidad empaque</Text>
+                    <Text style={styles.detailValue}>{item.packageUnit || item.unitOfMeasure}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Categoria</Text>
@@ -422,16 +428,30 @@ export function CatalogScreen() {
                 />
 
                 <OptionGroup
-                  label="Presentacion"
-                  value={form.presentation}
+                  label="Unidad mínima"
+                  value={form.minimumUnit}
                   options={medicinePresentations}
-                  onChange={(value) => handleChange('presentation', value)}
+                  onChange={(value) => handleChange('minimumUnit', value)}
                 />
                 <OptionGroup
-                  label="Unidad de medida"
-                  value={form.unitOfMeasure}
+                  label="Unidad de empaque"
+                  value={form.packageUnit}
                   options={medicineUnits}
-                  onChange={(value) => handleChange('unitOfMeasure', value)}
+                  onChange={(value) => handleChange('packageUnit', value)}
+                />
+                <TextInput
+                  placeholder="Unidad por unidad mínima"
+                  value={String(form.unitsPerMinimumUnit)}
+                  onChangeText={(value) => handleChange('unitsPerMinimumUnit', value.replace(/[^0-9]/g, ''))}
+                  style={styles.input}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  placeholder="Unidad por empaque"
+                  value={String(form.unitsPerPackage)}
+                  onChangeText={(value) => handleChange('unitsPerPackage', value.replace(/[^0-9]/g, ''))}
+                  style={styles.input}
+                  keyboardType="numeric"
                 />
                 <OptionGroup
                   label="Categoria"

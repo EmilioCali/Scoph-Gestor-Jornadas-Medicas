@@ -80,7 +80,8 @@ function normalizeStockItem(item) {
         _id: item.medicineId || `${item.nombre}-${item.batch}`,
         name: item.nombre || "Medicamento desconocido",
         compound: item.concentracion || "",
-        unitOfMeasure: item.unitOfMeasure || "",
+        packageUnit: item.packageUnit ?? item.unitOfMeasure ?? "",
+        unitOfMeasure: item.packageUnit ?? item.unitOfMeasure ?? "",
         totalStock: item.stockTotal ?? 0,
         minimumStock: item.stockMinimo ?? 0,
         lots: item.lotes ?? [],
@@ -327,7 +328,7 @@ export default function ReportesPage() {
                 </div>
             ),
         },
-        { key: "unitOfMeasure", label: "Unidad" },
+        { key: "packageUnit", label: "Unidad de empaque", render: (row) => row.packageUnit || row.unitOfMeasure || "-" },
         { key: "totalStock", label: "Stock Total" },
         { key: "minimumStock", label: "Stock Mínimo" },
         {
