@@ -3,6 +3,22 @@ import Workday from "./workday.model.js";
 import { badRequest, handleServiceError } from "../utils/errorHandler.js";
 import { successResponse } from "../utils/response.js";
 
+async function registerAuditEvent(payload, request) {
+  const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3001";
+  try {
+    await fetch(`${coreServiceUrl}/api/v1/auditoria`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: request.headers.authorization || "",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("No se pudo registrar auditoría para workday-service", error);
+  }
+}
+
 function assertValidDateRange(startDate, endDate) {
   if (!startDate || !endDate) return;
 
@@ -102,6 +118,16 @@ export const createWorkday = async (request, reply) => {
     };
 
     const workday = await Workday.create(workdayData);
+    await registerAuditEvent(
+      {
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+        action: "CREAR",
+        module: "WORKDAYS",
+        reference: workday._id?.toString() || "",
+        description: "Jornada creada",
+      },
+      request,
+    );
 
     return successResponse(reply, {
       message: "Jornada creada exitosamente",
@@ -210,6 +236,17 @@ export const updateWorkday = async (request, reply) => {
       });
     }
 
+    await registerAuditEvent(
+      {
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+        action: "ACTUALIZAR",
+        module: "WORKDAYS",
+        reference: workday._id?.toString() || request.params.id,
+        description: "Jornada actualizada",
+      },
+      request,
+    );
+
     return successResponse(reply, {
       message: "Jornada actualizada exitosamente",
       data: workday,
@@ -257,6 +294,17 @@ export const updateWorkdayStatus = async (request, reply) => {
       });
     }
 
+    await registerAuditEvent(
+      {
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+        action: "ACTUALIZAR",
+        module: "WORKDAYS",
+        reference: workday._id?.toString() || request.params.id,
+        description: `Estado de jornada actualizado a ${status}`,
+      },
+      request,
+    );
+
     return successResponse(reply, {
       message: `Estado de jornada actualizado a ${status}`,
       data: workday,
@@ -278,6 +326,17 @@ export const deleteWorkday = async (request, reply) => {
         error: "NOT_FOUND",
       });
     }
+
+    await registerAuditEvent(
+      {
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+        action: "ELIMINAR",
+        module: "WORKDAYS",
+        reference: workday._id?.toString() || request.params.id,
+        description: "Jornada eliminada",
+      },
+      request,
+    );
 
     return successResponse(reply, {
       message: "Jornada eliminada exitosamente",

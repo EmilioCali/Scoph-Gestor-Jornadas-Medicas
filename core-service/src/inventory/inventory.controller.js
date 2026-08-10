@@ -5,6 +5,9 @@ import { getWorkdayById } from '../workdays/workday.client.js';
 import Medicine from '../medicines/medicine.model.js';
 import { handleServiceError } from '../utils/errorHandler.js';
 import { successResponse } from '../utils/response.js';
+import { registerAudit } from '../modules/audit/audit.service.js';
+import { AUDIT_ACTIONS, AUDIT_MODULES } from '../modules/audit/audit.constants.js';
+import { AUDIT_MESSAGES } from '../modules/audit/audit.messages.js';
 
 export const getInventarioCentral = async (request, reply) => {
     try {
@@ -101,6 +104,13 @@ export const addMedicineToInventory = async (request, reply) => {
                 detalle: [{ medicineId, batch, quantity: stock, boxes: boxCount, blisters: blisterCount, units: unitCount, expirationDate }],
                 userId: userId ?? 'system',
             });
+            await registerAudit({
+                userId: userId ?? request.user?.id ?? 'system',
+                action: AUDIT_ACTIONS.CREAR,
+                module: AUDIT_MODULES.INVENTORY,
+                reference: medicineId,
+                description: AUDIT_MESSAGES.INVENTARIO_AGREGADO,
+            });
         } else {
             // Sin stock inicial — crear el registro vacío directamente
             const inv = new centralInventory({ medicineId, lots: [], totalStock: 0, minimumStock: Number(minimumStock) });
@@ -187,6 +197,13 @@ export const updateCentralInventoryLot = async (request, reply) => {
                 + units;
         }, 0);
         await inventory.save();
+        await registerAudit({
+            userId: request.user?.id || 'system',
+            action: AUDIT_ACTIONS.ACTUALIZAR,
+            module: AUDIT_MODULES.INVENTORY,
+            reference: medicineId,
+            description: AUDIT_MESSAGES.INVENTARIO_LOTE_ACTUALIZADO,
+        });
 
         return successResponse(reply, {
             message: 'Lote actualizado exitosamente',

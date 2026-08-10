@@ -7,7 +7,16 @@ import { connectDB } from './config/database.js'
 import authPlugin from './modules/auth/auth.routes.js'
 
 export async function buildApp() {
-    const app = Fastify({
+    const corsOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+].filter(Boolean);
+
+const app = Fastify({
         ajv: {
             customOptions: {
                 strict: false,
@@ -66,8 +75,18 @@ export async function buildApp() {
 
     // --- Plugins ---
     await app.register(cors, {
-        origin: true,
-        credentials: true
+        origin: (origin, callback) => {
+            if (!origin || corsOrigins.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(null, false);
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        exposedHeaders: ['Authorization'],
+        maxAge: 86400,
     })
 
     await app.register(jwt, {

@@ -4,6 +4,13 @@ const resolveServiceUrl = (internalHostPort, publicUrl, localUrl) => {
 };
 
 export const SERVICES = {
+    auth: {
+        baseUrl: resolveServiceUrl(
+            process.env.AUTH_SERVICE_HOSTPORT,
+            process.env.AUTH_SERVICE_URL,
+            'http://localhost:3020'
+        ),
+    },
     workday: {
         baseUrl: resolveServiceUrl(
             process.env.WORKDAY_SERVICE_HOSTPORT,
