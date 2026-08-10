@@ -43,11 +43,56 @@ function getStatusBadge(status) {
 
 // ── Detalle de movimiento ─────────────────────────────────────────────────────
 
-function DetalleModal({ movimiento, onClose }) {
+function getResponsibleName(movimiento, users = []) {
+    const responsable = users.find((u) => {
+        const userId = String(u._id ?? u.id ?? "");
+        return userId && String(movimiento.userId) === userId;
+    }) ?? null;
+
+    if (!responsable) {
+        return {
+            nombre: "—",
+            apellido: "—",
+            fullName: movimiento.userId ?? "Sistema",
+        };
+    }
+
+    return {
+        nombre: responsable.nombre ?? "",
+        apellido: responsable.apellido ?? "",
+        fullName: `${responsable.nombre ?? ""} ${responsable.apellido ?? ""}`.trim() || "Sin nombre",
+    };
+}
+
+function DetalleModal({ movimiento, onClose, users = [] }) {
     if (!movimiento) return null;
+
+    const responsable = getResponsibleName(movimiento, users);
+    const fecha = movimiento.appliedAt ? new Date(movimiento.appliedAt) : new Date(movimiento.createdAt ?? Date.now());
+
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Nombre</p>
+                    <p className="text-sm font-semibold text-gray-700 mt-1">{responsable.nombre}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Apellido</p>
+                    <p className="text-sm font-semibold text-gray-700 mt-1">{responsable.apellido}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Fecha</p>
+                    <p className="text-sm font-semibold text-gray-700 mt-1">
+                        {fecha.toLocaleDateString("es-GT")}
+                    </p>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Hora</p>
+                    <p className="text-sm font-semibold text-gray-700 mt-1">
+                        {fecha.toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                </div>
                 <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                     <p className="text-xs text-gray-400">Tipo</p>
                     <div className="mt-1">{getTypeBadge(movimiento.type)}</div>
@@ -57,14 +102,6 @@ function DetalleModal({ movimiento, onClose }) {
                     <div className="mt-1">{getSubTypeBadge(movimiento.subType)}</div>
                 </div>
                 <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                    <p className="text-xs text-gray-400">Estado</p>
-                    <div className="mt-1">{getStatusBadge(movimiento.status)}</div>
-                </div>
-                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                    <p className="text-xs text-gray-400">Usuario</p>
-                    <p className="text-sm font-semibold text-gray-700 mt-1">{movimiento.userId}</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
                     <p className="text-xs text-gray-400">Origen</p>
                     <p className="text-sm font-semibold text-gray-700 mt-1">{movimiento.origin?.type}</p>
                 </div>
@@ -72,13 +109,13 @@ function DetalleModal({ movimiento, onClose }) {
                     <p className="text-xs text-gray-400">Destino</p>
                     <p className="text-sm font-semibold text-gray-700 mt-1">{movimiento.destination?.type}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 col-span-2">
-                    <p className="text-xs text-gray-400">Fecha aplicación</p>
-                    <p className="text-sm font-semibold text-gray-700 mt-1">
-                        {movimiento.appliedAt
-                            ? new Date(movimiento.appliedAt).toLocaleString("es-GT")
-                            : "—"}
-                    </p>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Estado</p>
+                    <div className="mt-1">{getStatusBadge(movimiento.status)}</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                    <p className="text-xs text-gray-400">Usuario</p>
+                    <p className="text-sm font-semibold text-gray-700 mt-1">{movimiento.userId}</p>
                 </div>
             </div>
 
@@ -119,7 +156,7 @@ function DetalleModal({ movimiento, onClose }) {
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function MovimientosPage() {
-    const { movimientos, total, loading, error, filtros, refetch, aplicarFiltros, cambiarPagina } = useMovimientos();
+    const { movimientos, total, loading, error, filtros, users, refetch, aplicarFiltros, cambiarPagina } = useMovimientos();
 
     const [modalDetalle, setModalDetalle] = useState(false);
     const [selectedMovimiento, setSelectedMovimiento] = useState(null);
@@ -147,19 +184,50 @@ export default function MovimientosPage() {
 
     const columnas = [
         {
-            key: "createdAt", label: "Fecha",
-            render: (row) => (
-                <div>
-                    <p className="text-sm font-semibold text-gray-700">
-                        {new Date(row.createdAt).toLocaleDateString("es-GT")}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                        {new Date(row.createdAt).toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                </div>
-            ),
+            key: "createdAt", label: "Fecha y hora",
+            render: (row) => {
+                const fecha = new Date(row.appliedAt ?? row.createdAt ?? Date.now());
+                return (
+                    <div>
+                        <p className="text-sm font-semibold text-gray-700">
+                            {fecha.toLocaleDateString("es-GT")}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                            {fecha.toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                    </div>
+                );
+            },
+        },
+        {
+            key: "responsable", label: "Responsable",
+            render: (row) => {
+                const responsable = getResponsibleName(row, users);
+                return (
+                    <div>
+                        <p className="text-sm font-semibold text-gray-700">
+                            {responsable.fullName}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                            {responsable.nombre !== "—" ? `${responsable.nombre} ${responsable.apellido}` : "Sin responsable"}
+                        </p>
+                    </div>
+                );
+            },
         },
         { key: "type", label: "Tipo", render: (row) => getTypeBadge(row.type) },
+        {
+            key: "origin", label: "Origen",
+            render: (row) => (
+                <span className="text-xs font-semibold text-gray-600">{row.origin?.type ?? "—"}</span>
+            ),
+        },
+        {
+            key: "destination", label: "Destino",
+            render: (row) => (
+                <span className="text-xs font-semibold text-gray-600">{row.destination?.type ?? "—"}</span>
+            ),
+        },
         { key: "subType", label: "Subtipo", render: (row) => getSubTypeBadge(row.subType) },
         {
             key: "detail", label: "Medicamento",
@@ -320,7 +388,7 @@ export default function MovimientosPage() {
             {/* Modal detalle */}
             <Modal isOpen={modalDetalle} onClose={() => setModalDetalle(false)}
                 title={`Movimiento — ${selectedMovimiento?.subType}`} size="md">
-                <DetalleModal movimiento={selectedMovimiento} onClose={() => setModalDetalle(false)} />
+                <DetalleModal movimiento={selectedMovimiento} users={users} onClose={() => setModalDetalle(false)} />
             </Modal>
         </div>
     );
