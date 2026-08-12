@@ -575,6 +575,23 @@ export async function exportarConsumoPDF(authHeader) {
     });
 }
 
+export function enrichAuditEntriesWithUserNames(entries = [], users = []) {
+    const userById = new Map(users.map((user) => [String(user._id), user]));
+
+    return (entries || []).map((entry) => {
+        const user = userById.get(String(entry.userId));
+        const displayName = user
+            ? [user.nombre, user.apellido].filter(Boolean).join(' ').trim() || user.username || user.correo || String(user._id)
+            : entry.userId || 'Sistema';
+
+        return {
+            ...entry,
+            userName: displayName,
+            userDisplayName: displayName,
+        };
+    });
+}
+
 export async function obtenerAuditorias({ userId, action, module, fecha }, authHeader) {
     let url = `${SERVICES.core.baseUrl}/api/v1/auditoria?`;
     if (userId) url += `userId=${userId}&`;
@@ -582,8 +599,18 @@ export async function obtenerAuditorias({ userId, action, module, fecha }, authH
     if (module) url += `module=${module}&`;
     if (fecha) url += `fecha=${fecha}&`;
 
-    const data = await fetchJson(url, authHeader, 'Error al consultar auditorias');
-    return data.data;
+    const [data, usersResponse] = await Promise.all([
+        fetchJson(url, authHeader, 'Error al consultar auditorias'),
+        fetch(`${SERVICES.auth.baseUrl || 'http://localhost:3020'}/api/auth/users`, getAuthOptions(authHeader))
+    ]);
+
+    if (!usersResponse.ok) {
+        return data.data;
+    }
+
+    const usersData = await usersResponse.json();
+    const users = usersData.users || [];
+    return enrichAuditEntriesWithUserNames(data.data || [], users);
 }
 
 export async function validarConsistenciaDatos(authHeader) {

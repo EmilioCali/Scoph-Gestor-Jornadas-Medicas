@@ -23,6 +23,22 @@ import {
   resetPasswordSchema,
 } from "./auth.schemas.js";
 
+async function registerAuditEvent(payload, request) {
+  const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3001";
+  try {
+    await fetch(`${coreServiceUrl}/api/v1/auditoria`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: request.headers.authorization || "",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("No se pudo registrar auditoría para auth-service", error);
+  }
+}
+
 /**
  * Plugin de Fastify para el módulo de autenticación.
  * Prefix: /api/auth
@@ -106,6 +122,16 @@ async function authPlugin(fastify) {
         const user = await register(
           { ...request.body, creadoPor: request.user.id },
           request.user.rol,
+        );
+        await registerAuditEvent(
+          {
+            userId: request.user.id,
+            action: "CREAR",
+            module: "USERS",
+            reference: user._id?.toString() || "",
+            description: "Usuario creado",
+          },
+          request,
         );
         return reply.status(201).send({ ok: true, user: user.toSafeJSON() });
       } catch (err) {
@@ -219,6 +245,16 @@ async function authPlugin(fastify) {
           request.user.id,
           request.user.rol,
         );
+        await registerAuditEvent(
+          {
+            userId: request.user.id,
+            action: "ACTUALIZAR",
+            module: "USERS",
+            reference: user._id?.toString() || request.params.id,
+            description: "Usuario actualizado",
+          },
+          request,
+        );
         return reply.send({ ok: true, user: user.toSafeJSON() });
       } catch (err) {
         return reply.status(400).send({ ok: false, message: err.message });
@@ -251,6 +287,16 @@ async function authPlugin(fastify) {
     async (request, reply) => {
       try {
         await deleteUser(request.params.id);
+        await registerAuditEvent(
+          {
+            userId: request.user.id,
+            action: "ELIMINAR",
+            module: "USERS",
+            reference: request.params.id,
+            description: "Usuario eliminado",
+          },
+          request,
+        );
         return reply.send({
           ok: true,
           message: "Usuario eliminado correctamente",
@@ -302,6 +348,16 @@ async function authPlugin(fastify) {
             .send({ ok: false, message: "isActive debe ser booleano" });
         }
         const user = await toggleUserStatus(request.params.id, isActive);
+        await registerAuditEvent(
+          {
+            userId: request.user.id,
+            action: isActive ? "ACTIVAR" : "DESACTIVAR",
+            module: "USERS",
+            reference: user._id?.toString() || request.params.id,
+            description: isActive ? "Estado de usuario actualizado a activo" : "Estado de usuario actualizado a inactivo",
+          },
+          request,
+        );
         return reply.send({ ok: true, user: user.toSafeJSON() });
       } catch (err) {
         return reply.status(404).send({ ok: false, message: err.message });

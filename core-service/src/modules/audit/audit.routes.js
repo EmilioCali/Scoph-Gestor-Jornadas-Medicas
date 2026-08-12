@@ -1,5 +1,5 @@
-import { getAuditorias } from './audit.controller.js';
-import { requireRole } from '../../middlewares/authenticate.js';
+import { createAudit, getAuditorias } from './audit.controller.js';
+import { authenticate, requireRole } from '../../middlewares/authenticate.js';
 
 const auditSchema = {
     type: 'object',
@@ -37,6 +37,40 @@ const rateLimitErrorSchema = {
 };
 
 const auditRoutes = async (fastify) => {
+    fastify.post(
+        '/auditoria',
+        {
+            preHandler: [authenticate],
+            schema: {
+                tags: ['Auditoria'],
+                summary: 'Registrar auditoría',
+                description: 'Registra un evento de auditoría del sistema.',
+                body: {
+                    type: 'object',
+                    required: ['action', 'module', 'description'],
+                    properties: {
+                        userId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
+                        action: { type: 'string', example: 'CREAR' },
+                        module: { type: 'string', example: 'CATEGORIES' },
+                        reference: { type: 'string', example: '664f1a2b3c4d5e6f78905678' },
+                        description: { type: 'string', example: 'Categoría creada' }
+                    }
+                },
+                response: {
+                    201: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean', example: true },
+                            message: { type: 'string', example: 'Auditoría registrada correctamente' },
+                            data: { type: 'object' }
+                        }
+                    }
+                }
+            }
+        },
+        createAudit
+    );
+
     fastify.get(
         '/auditoria',
         {

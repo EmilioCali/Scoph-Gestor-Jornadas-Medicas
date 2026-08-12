@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
     DocumentArrowDownIcon, TableCellsIcon, FunnelIcon,
-    ArrowsRightLeftIcon, BeakerIcon, CalendarDaysIcon, ExclamationTriangleIcon,
+    ArrowsRightLeftIcon, BeakerIcon, CalendarDaysIcon, ExclamationTriangleIcon, ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import jsPDF from "jspdf";
@@ -16,6 +16,8 @@ import {
     getMovementsReport,
     getStockReport,
     getExpirationAlerts,
+    getAuditReport,
+    getConsistencyReport,
     exportMovementsPDF,
     exportMovementsExcel,
     exportStockPDF,
@@ -127,6 +129,8 @@ export default function ReportesPage() {
     const [inventory, setInventory] = useState([]);
     const [workdays, setWorkdays] = useState([]);
     const [alerts, setAlerts] = useState([]);
+    const [auditEntries, setAuditEntries] = useState([]);
+    const [consistencyReport, setConsistencyReport] = useState(null);
     const [globalLoading, setGlobalLoading] = useState(true);
     const [movementsLoading, setMovementsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -136,6 +140,7 @@ export default function ReportesPage() {
         { key: "inventory", label: "Inventario", icon: BeakerIcon },
         { key: "workdays", label: "Jornadas", icon: CalendarDaysIcon },
         { key: "alerts", label: "Alertas", icon: ExclamationTriangleIcon },
+        { key: "audit", label: "Auditoría", icon: ShieldCheckIcon },
     ];
 
     // Filtra movimientos según tipo y rango de fechas
@@ -181,23 +186,48 @@ export default function ReportesPage() {
         setGlobalLoading(true);
         setError(null);
         try {
-            const [dashboardRes, stockRes, expirationRes] = await Promise.all([
+            const [dashboardRes, stockRes, expirationRes, auditRes, consistencyRes] = await Promise.allSettled([
                 getDashboardMetrics(),
                 getStockReport(),
                 getExpirationAlerts(60),
+                getAuditReport({}),
+                getConsistencyReport(),
             ]);
 
-            const dashboard = dashboardRes.data.data || {};
-            setMetrics({
-                totalMovements: dashboard.totalMovimientos || 0,
-                totalInventory: stockRes.data.data?.length || 0,
-                totalWorkdays: dashboard.totalJornadas || 0,
-                expirationAlerts: dashboard.alertasVencimiento || 0,
-                movimientosPorMes: dashboard.movimientosPorMes || [],
-            });
-            setInventory((stockRes.data.data || []).map(normalizeStockItem));
-            setAlerts((expirationRes.data.data || dashboard.vencimientosProximos || []).map(normalizeExpirationAlert));
-            setWorkdays((dashboard.jornadasRecientes || []).map(normalizeWorkdayItem));
+            if (dashboardRes.status === "fulfilled") {
+                const dashboard = dashboardRes.value.data.data || {};
+                setMetrics({
+                    totalMovements: dashboard.totalMovimientos || 0,
+                    totalInventory: dashboard.totalMedicamentos || 0,
+                    totalWorkdays: dashboard.totalJornadas || 0,
+                    expirationAlerts: dashboard.alertasVencimiento || 0,
+                    movimientosPorMes: dashboard.movimientosPorMes || [],
+                });
+                setWorkdays((dashboard.jornadasRecientes || []).map(normalizeWorkdayItem));
+            }
+
+            if (stockRes.status === "fulfilled") {
+                setInventory((stockRes.value.data.data || []).map(normalizeStockItem));
+            }
+
+            if (expirationRes.status === "fulfilled") {
+                setAlerts((expirationRes.value.data.data || []).map(normalizeExpirationAlert));
+            }
+
+            if (auditRes.status === "fulfilled") {
+                setAuditEntries((auditRes.value.data.data || []).map((entry) => ({
+                    ...entry,
+                    _id: entry._id || `${entry.userId}-${entry.date}-${entry.module}`,
+                })));
+            }
+
+            if (consistencyRes.status === "fulfilled") {
+                setConsistencyReport(consistencyRes.value.data.data || null);
+            }
+
+            if (dashboardRes.status === "rejected" || stockRes.status === "rejected" || expirationRes.status === "rejected") {
+                throw new Error("No fue posible cargar los datos principales de reportes");
+            }
         } catch (err) {
             setError(err.response?.data?.message || err.message || "Error al cargar datos de reportes");
         } finally {
@@ -381,6 +411,27 @@ export default function ReportesPage() {
         },
     ];
 
+    const auditColumns = [
+        {
+            key: "date", label: "Fecha",
+            render: (row) => <span className="text-sm text-gray-600">{new Date(row.date).toLocaleString("es-GT")}</span>,
+        },
+        {
+            key: "userDisplayName", label: "Usuario",
+            render: (row) => <span className="text-sm text-gray-700">{row.userDisplayName || row.userName || row.userId || "Sistema"}</span>,
+        },
+        {
+            key: "action", label: "Acción",
+            render: (row) => <Badge variant="info">{row.action}</Badge>,
+        },
+        {
+            key: "module", label: "Módulo",
+            render: (row) => <Badge variant="gray">{row.module}</Badge>,
+        },
+        { key: "description", label: "Descripción" },
+        { key: "reference", label: "Referencia" },
+    ];
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -499,6 +550,31 @@ export default function ReportesPage() {
                                 <Button variant="outline" size="md" onClick={handleExportAlertasPDF}><DocumentArrowDownIcon className="w-4 h-4" />PDF</Button>
                             </div>
                             <Table columns={alertColumns} data={alerts} emptyMessage="No hay alertas de vencimiento" />
+                        </div>
+                    )}
+
+                    {/* Tab Auditoría */}
+                    {activeTab === "audit" && (
+                        <div className="space-y-4">
+                            {consistencyReport && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                        <p className="text-xs font-semibold uppercase text-gray-400">Consistencia</p>
+                                        <p className={`text-2xl font-bold ${consistencyReport.consistente ? "text-green-600" : "text-red-600"}`}>
+                                            {consistencyReport.consistente ? "Correcta" : "Inconsistente"}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                        <p className="text-xs font-semibold uppercase text-gray-400">Inconsistencias</p>
+                                        <p className="text-2xl font-bold text-gray-700">{consistencyReport.totalInconsistencias ?? 0}</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                        <p className="text-xs font-semibold uppercase text-gray-400">Eventos</p>
+                                        <p className="text-2xl font-bold text-gray-700">{auditEntries.length}</p>
+                                    </div>
+                                </div>
+                            )}
+                            <Table columns={auditColumns} data={auditEntries} emptyMessage="No hay eventos de auditoría registrados" />
                         </div>
                     )}
 
