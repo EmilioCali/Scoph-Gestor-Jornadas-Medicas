@@ -5,7 +5,8 @@ import {
     registrarTransferencia,
     validarStockJornada,
     descontarStockJornada,
-    procesarRetornoJornada
+    procesarRetornoJornada,
+    procesarRetornoAutomaticoJornada,
 } from '../inventory/inventory.service.js';
 import { getWorkdayById } from '../workdays/workday.client.js';
 import { handleServiceError } from '../utils/errorHandler.js';
@@ -96,15 +97,16 @@ export const createTransferencia = async (request, reply) => {
 
 export const createConsumoJornada = async (request, reply) => {
     try {
-        const { productoId, cantidad } = request.body;
+        const { productoId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
+        const payload = { boxes, blisters, units, quantity };
 
         // Autorizar antes de mutar stock (TKT-80)
         if (request.user?.rol === 'MEDICO') {
-            const { inventory: preview } = await validarStockJornada(productoId, cantidad);
+            const { inventory: preview } = await validarStockJornada(productoId, payload);
             await getWorkdayById(preview.workdayId, request.headers.authorization);
         }
 
-        const { inventory, lote, medicine } = await descontarStockJornada(productoId, cantidad);
+        const { inventory, lote, medicine } = await descontarStockJornada(productoId, payload);
 
         const movimiento = await Movement.create({
         type: 'SALIDA',
@@ -115,7 +117,10 @@ export const createConsumoJornada = async (request, reply) => {
             medicineId: medicine._id,
             medicationSnapshot: { name: medicine.name, concentration: medicine.concentration },
             batch: lote.batch,
-            quantity: cantidad,
+            quantity,
+            boxes,
+            blisters,
+            units,
             expirationDate: lote.expirationDate
         }],
         status: 'APLICADO',
@@ -143,9 +148,10 @@ export const createConsumoJornada = async (request, reply) => {
 
 export const createRetornoJornada = async (request, reply) => {
     try {
-        const { productoId, cantidad } = request.body;
+        const { productoId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
+        const payload = { boxes, blisters, units, quantity };
 
-        const { inventory, lote, medicine } = await procesarRetornoJornada(productoId, cantidad);
+        const { inventory, lote, medicine } = await procesarRetornoJornada(productoId, payload);
 
         const movimiento = await Movement.create({
         type: 'ENTRADA',
@@ -156,7 +162,10 @@ export const createRetornoJornada = async (request, reply) => {
             medicineId: medicine._id,
             medicationSnapshot: { name: medicine.name, concentration: medicine.concentration },
             batch: lote.batch,
-            quantity: cantidad,
+            quantity,
+            boxes,
+            blisters,
+            units,
             expirationDate: lote.expirationDate
         }],
         status: 'APLICADO',
@@ -176,6 +185,40 @@ export const createRetornoJornada = async (request, reply) => {
         message: 'Retorno registrado',
         data: movimiento,
         statusCode: 201
+        });
+    } catch (error) {
+        return handleServiceError(error, reply);
+    }
+};
+
+export const createRetornoAutomaticoJornada = async (request, reply) => {
+    try {
+        const { workdayId, userId = request.user?.id || 'system' } = request.body;
+
+        if (!workdayId) {
+            return reply.status(400).send({
+                success: false,
+                message: 'El ID de la jornada es requerido',
+                error: 'BAD_REQUEST',
+            });
+        }
+
+        const movimientos = await procesarRetornoAutomaticoJornada({ workdayId, userId });
+
+        if (movimientos.length > 0) {
+            await registerAudit({
+                userId,
+                action: AUDIT_ACTIONS.RETORNO,
+                module: AUDIT_MODULES.MOVEMENTS,
+                reference: workdayId,
+                description: AUDIT_MESSAGES.RETORNO_JORNADA,
+            });
+        }
+
+        return successResponse(reply, {
+            message: 'Retorno automático de jornada registrado correctamente',
+            data: movimientos,
+            statusCode: 201,
         });
     } catch (error) {
         return handleServiceError(error, reply);

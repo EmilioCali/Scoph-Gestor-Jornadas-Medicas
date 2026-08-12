@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PlusIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
 import PageHeader from "../../../shared/components/ui/PageHeader";
 import Table from "../../../shared/components/ui/Table";
@@ -259,8 +259,10 @@ function WorkdayDetail({
   onAssign,
   onConsumption,
   onReturn,
+  onFinish,
   canAssign,
   canReturn,
+  canFinish,
 }) {
   return (
     <div className="space-y-5">
@@ -333,14 +335,23 @@ function WorkdayDetail({
               ({workdayInventory.length} medicamentos)
             </span>
           </h3>
-          {canAssign &&
-            workday.status !== "FINISHED" &&
-            workday.status !== "COMPLETED" && (
-              <Button variant="primary" size="sm" onClick={onAssign}>
-                <PlusIcon className="w-4 h-4" />
-                Asignar medicamento
-              </Button>
-            )}
+          <div className="flex gap-2">
+            {canAssign &&
+              workday.status !== "FINISHED" &&
+              workday.status !== "COMPLETED" && (
+                <Button variant="primary" size="sm" onClick={onAssign}>
+                  <PlusIcon className="w-4 h-4" />
+                  Asignar medicamento
+                </Button>
+              )}
+            {canFinish &&
+              workday.status !== "FINISHED" &&
+              workday.status !== "COMPLETED" && (
+                <Button variant="secondary" size="sm" onClick={onFinish}>
+                  Finalizar jornada
+                </Button>
+              )}
+          </div>
         </div>
 
         {loading ? (
@@ -367,7 +378,7 @@ function WorkdayDetail({
                       {item.compound || item.category || "Medicamento asignado"}{" "}
                       · Stock disponible:{" "}
                       <span className="font-semibold text-gray-600">
-                        {item.totalStock} {item.unitOfMeasure}
+                        {item.totalStock} {item.packageUnit ?? item.unitOfMeasure}
                       </span>
                     </p>
                   </div>
@@ -410,7 +421,7 @@ function WorkdayDetail({
                         </p>
                       </div>
                       <p className="text-sm font-extrabold text-gray-700">
-                        {lot.stock} {item.unitOfMeasure}
+                        {lot.stock} {item.packageUnit ?? item.unitOfMeasure}
                       </p>
                     </div>
                   ))}
@@ -438,6 +449,52 @@ function AssignMedicineForm({
   submitting,
   formError,
 }) {
+  const selectedMedicine = centralInventory.find(
+    (med) => String(med.medicineId) === String(form.medicineId),
+  );
+  const availableEntryUnits = useMemo(() => {
+    if (!selectedMedicine) return [];
+    const units = [selectedMedicine.packageUnit, selectedMedicine.minimumUnit];
+    if (selectedMedicine.intermediateUnit) {
+      units.splice(1, 0, selectedMedicine.intermediateUnit);
+    }
+    return units.filter(Boolean).filter((value, index, arr) => arr.indexOf(value) === index);
+  }, [selectedMedicine]);
+
+  const conversionSummary = useMemo(() => {
+    if (!selectedMedicine || !form.entryQuantity || !form.entryUnit) return null;
+    const amount = Number(form.entryQuantity || 0);
+    const isPackageUnit = String(form.entryUnit) === String(selectedMedicine.packageUnit);
+    const isIntermediateUnit = selectedMedicine.intermediateUnit && String(form.entryUnit) === String(selectedMedicine.intermediateUnit);
+    const isMinimumUnit = String(form.entryUnit) === String(selectedMedicine.minimumUnit);
+
+    if (isPackageUnit) {
+      const unitsPerPackage = Number(selectedMedicine.unitsPerPackage || 1);
+      const unitsPerMinimumUnit = Number(selectedMedicine.unitsPerMinimumUnit || 1);
+      const hasIntermediate = Boolean(selectedMedicine.intermediateUnit && unitsPerMinimumUnit > 1);
+
+      if (hasIntermediate) {
+        const baseUnits = amount * unitsPerPackage * unitsPerMinimumUnit;
+        return `${amount} ${form.entryUnit} = ${amount * unitsPerPackage} ${selectedMedicine.intermediateUnit} = ${baseUnits} ${selectedMedicine.minimumUnit || "unidad"} a asignar`;
+      }
+
+      const baseUnits = amount * unitsPerPackage;
+      return `${amount} ${form.entryUnit} = ${baseUnits} ${selectedMedicine.minimumUnit || "unidad"} a asignar`;
+    }
+
+    if (isIntermediateUnit) {
+      const unitsPerMinimumUnit = Number(selectedMedicine.unitsPerMinimumUnit || 1);
+      const baseUnits = amount * unitsPerMinimumUnit;
+      return `${amount} ${form.entryUnit} = ${baseUnits} ${selectedMedicine.minimumUnit || "unidad"} a asignar`;
+    }
+
+    if (isMinimumUnit) {
+      return `${amount} ${form.entryUnit} = ${amount} ${selectedMedicine.minimumUnit || "unidad"} a asignar`;
+    }
+
+    return null;
+  }, [form.entryQuantity, form.entryUnit, selectedMedicine]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -459,7 +516,7 @@ function AssignMedicineForm({
           <option value="">Seleccionar medicamento</option>
           {centralInventory.map((med) => (
             <option key={med._id} value={med.medicineId}>
-              {med.name} (Stock: {med.totalStock} {med.unitOfMeasure})
+              {med.name} (Stock: {med.totalStock} {med.packageUnit ?? med.unitOfMeasure})
             </option>
           ))}
         </select>
@@ -487,44 +544,44 @@ function AssignMedicineForm({
           </select>
         </div>
       )}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cajas"
-          name="boxes"
+          label="Cantidad a asignar"
+          name="entryQuantity"
           type="number"
           min="0"
-          value={form.boxes ?? 0}
+          value={form.entryQuantity ?? ""}
           onChange={onChange}
-          placeholder="0"
+          placeholder="5"
+          required
         />
-        <Input
-          label="Blísteres"
-          name="blisters"
-          type="number"
-          min="0"
-          value={form.blisters ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
-        <Input
-          label="Unidades"
-          name="units"
-          type="number"
-          min="0"
-          value={form.units ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            Unidad de asignación
+          </label>
+          <select
+            name="entryUnit"
+            value={form.entryUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+            disabled={!availableEntryUnits.length}
+          >
+            <option value="">Seleccionar unidad</option>
+            {availableEntryUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <Input
-        label="Cantidad suelta"
-        name="quantity"
-        type="number"
-        min="0"
-        value={form.quantity}
-        onChange={onChange}
-        placeholder="0"
-      />
+      {conversionSummary && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="text-sm font-semibold text-primary">Resumen de conversión</p>
+          <p className="text-sm text-gray-700">{conversionSummary}</p>
+        </div>
+      )}
       <p className="text-xs text-gray-400 bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
         Esta cantidad se descontara del inventario central (ASIGNACION_JORNADA).
       </p>
@@ -558,6 +615,49 @@ function WorkdayMovementForm({
   submitting,
   formError,
 }) {
+  const availableEntryUnits = useMemo(() => {
+    if (!item) return [];
+    const units = [item.packageUnit, item.minimumUnit];
+    if (item.intermediateUnit) {
+      units.splice(1, 0, item.intermediateUnit);
+    }
+    return units.filter(Boolean).filter((value, index, arr) => arr.indexOf(value) === index);
+  }, [item]);
+
+  const conversionSummary = useMemo(() => {
+    if (!item || !form.entryQuantity || !form.entryUnit) return null;
+    const amount = Number(form.entryQuantity || 0);
+    const isPackageUnit = String(form.entryUnit) === String(item.packageUnit);
+    const isIntermediateUnit = item.intermediateUnit && String(form.entryUnit) === String(item.intermediateUnit);
+    const isMinimumUnit = String(form.entryUnit) === String(item.minimumUnit);
+
+    if (isPackageUnit) {
+      const unitsPerPackage = Number(item.unitsPerPackage || 1);
+      const unitsPerMinimumUnit = Number(item.unitsPerMinimumUnit || 1);
+      const hasIntermediate = Boolean(item.intermediateUnit && unitsPerMinimumUnit > 1);
+
+      if (hasIntermediate) {
+        const baseUnits = amount * unitsPerPackage * unitsPerMinimumUnit;
+        return `${amount} ${form.entryUnit} = ${amount * unitsPerPackage} ${item.intermediateUnit} = ${baseUnits} ${item.minimumUnit || "unidad"} a ${tipo === "CONSUMO" ? "consumir" : "retornar"}`;
+      }
+
+      const baseUnits = amount * unitsPerPackage;
+      return `${amount} ${form.entryUnit} = ${baseUnits} ${item.minimumUnit || "unidad"} a ${tipo === "CONSUMO" ? "consumir" : "retornar"}`;
+    }
+
+    if (isIntermediateUnit) {
+      const unitsPerMinimumUnit = Number(item.unitsPerMinimumUnit || 1);
+      const baseUnits = amount * unitsPerMinimumUnit;
+      return `${amount} ${form.entryUnit} = ${baseUnits} ${item.minimumUnit || "unidad"} a ${tipo === "CONSUMO" ? "consumir" : "retornar"}`;
+    }
+
+    if (isMinimumUnit) {
+      return `${amount} ${form.entryUnit} = ${amount} ${item.minimumUnit || "unidad"} a ${tipo === "CONSUMO" ? "consumir" : "retornar"}`;
+    }
+
+    return null;
+  }, [form.entryQuantity, form.entryUnit, item, tipo]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -571,51 +671,51 @@ function WorkdayMovementForm({
         <p className="text-xs text-gray-400 mt-0.5">
           Disponible:{" "}
           <span className="font-semibold text-gray-600">
-            {item?.totalStock ?? 0} {item?.unitOfMeasure}
+            {item?.totalStock ?? 0} {item?.packageUnit ?? item?.unitOfMeasure}
           </span>
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cajas"
-          name="boxes"
+          label={
+            tipo === "CONSUMO" ? "Cantidad consumida" : "Cantidad a retornar"
+          }
+          name="entryQuantity"
           type="number"
           min="0"
-          value={form.boxes ?? 0}
+          max={item?.totalStock ?? 0}
+          value={form.entryQuantity ?? ""}
           onChange={onChange}
-          placeholder="0"
+          placeholder="5"
+          required
         />
-        <Input
-          label="Blísteres"
-          name="blisters"
-          type="number"
-          min="0"
-          value={form.blisters ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
-        <Input
-          label="Unidades"
-          name="units"
-          type="number"
-          min="0"
-          value={form.units ?? 0}
-          onChange={onChange}
-          placeholder="0"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            {tipo === "CONSUMO" ? "Unidad de consumo" : "Unidad de retorno"}
+          </label>
+          <select
+            name="entryUnit"
+            value={form.entryUnit || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+            disabled={!availableEntryUnits.length}
+          >
+            <option value="">Seleccionar unidad</option>
+            {availableEntryUnits.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <Input
-        label={
-          tipo === "CONSUMO" ? "Cantidad consumida" : "Cantidad a retornar"
-        }
-        name="quantity"
-        type="number"
-        min="0"
-        max={item?.totalStock ?? 0}
-        value={form.quantity}
-        onChange={onChange}
-        placeholder="0"
-      />
+      {conversionSummary && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="text-sm font-semibold text-primary">Resumen de conversión</p>
+          <p className="text-sm text-gray-700">{conversionSummary}</p>
+        </div>
+      )}
       <Input
         label="Observación"
         name="observacion"
@@ -666,8 +766,8 @@ const workdayInicial = {
   estimatedMedicines: "",
   status: "PLANNED",
 };
-const assignInicial = { medicineId: "", batch: "", quantity: "", boxes: "0", blisters: "0", units: "0" };
-const movementInicial = { quantity: "", observacion: "", boxes: "0", blisters: "0", units: "0" };
+const assignInicial = { medicineId: "", batch: "", entryQuantity: "", entryUnit: "" };
+const movementInicial = { entryQuantity: "", observacion: "", entryUnit: "" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -675,7 +775,6 @@ export default function JornadasPage() {
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
-    users = [],
     centralInventory,
     workdayInventoryById,
     loading,
@@ -685,6 +784,7 @@ export default function JornadasPage() {
     fetchWorkdayInventory,
     createNewWorkday,
     removeWorkday,
+    updateWorkdayStatus,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,
@@ -721,7 +821,7 @@ export default function JornadasPage() {
   const handleChangeAssign = (e) => {
     const { name, value } = e.target;
     if (name === "medicineId") {
-      setFormAssign((prev) => ({ ...prev, medicineId: value, batch: "" }));
+      setFormAssign((prev) => ({ ...prev, medicineId: value, batch: "", entryUnit: "" }));
     } else {
       setFormAssign((prev) => ({ ...prev, [name]: value }));
     }
@@ -811,10 +911,8 @@ export default function JornadasPage() {
         workday: selectedWorkday,
         medicineId: formAssign.medicineId,
         batch: formAssign.batch,
-        quantity: formAssign.quantity,
-        boxes: formAssign.boxes,
-        blisters: formAssign.blisters,
-        units: formAssign.units,
+        entryQuantity: formAssign.entryQuantity,
+        entryUnit: formAssign.entryUnit,
       });
       setFormAssign(assignInicial);
       setModalAsignar(false);
@@ -836,7 +934,8 @@ export default function JornadasPage() {
     try {
       await registerWorkdayConsumption({
         item: selectedInventoryItem,
-        quantity: formMovement.quantity,
+        entryQuantity: formMovement.entryQuantity,
+        entryUnit: formMovement.entryUnit,
       });
       setFormMovement(movementInicial);
       setModalConsumo(false);
@@ -858,13 +957,29 @@ export default function JornadasPage() {
     try {
       await registerWorkdayReturn({
         item: selectedInventoryItem,
-        quantity: formMovement.quantity,
+        entryQuantity: formMovement.entryQuantity,
+        entryUnit: formMovement.entryUnit,
       });
       setFormMovement(movementInicial);
       setModalRetorno(false);
     } catch (err) {
       setFormError(
         err.response?.data?.message ?? "No se pudo registrar el retorno",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFinalizarJornada = async (workday) => {
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await updateWorkdayStatus(workday._id, "FINISHED");
+      setSelectedWorkday((prev) => prev?._id === workday._id ? { ...prev, status: "FINISHED" } : prev);
+    } catch (err) {
+      setFormError(
+        err.response?.data?.message ?? "No se pudo finalizar la jornada",
       );
     } finally {
       setSubmitting(false);
@@ -1102,8 +1217,13 @@ export default function JornadasPage() {
               setFormError(null);
               setModalRetorno(true);
             }}
+            onFinish={(e) => {
+              e?.preventDefault?.();
+              handleFinalizarJornada(selectedWorkday);
+            }}
             canAssign={canManageWorkdays}
             canReturn={canManageWorkdays}
+            canFinish={canManageWorkdays}
           />
         )}
       </Modal>

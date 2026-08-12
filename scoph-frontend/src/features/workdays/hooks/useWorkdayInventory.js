@@ -3,6 +3,7 @@ import {
   getWorkdays,
   createWorkday,
   deleteWorkday,
+  changeWorkdayStatus,
 } from "../../../shared/apis/workdayService";
 import {
   getCentralInventory,
@@ -28,7 +29,12 @@ function normalizeWorkdayInventoryItem(item) {
     name: medicine.name ?? item.name ?? "Medicamento sin nombre",
     compound: medicine.compound ?? "",
     category: medicine.category ?? "",
-    unitOfMeasure: medicine.unitOfMeasure ?? "uds.",
+    minimumUnit: medicine.minimumUnit ?? medicine.presentation ?? "",
+    intermediateUnit: medicine.intermediateUnit ?? "",
+    packageUnit: medicine.packageUnit ?? medicine.unitOfMeasure ?? "uds.",
+    unitOfMeasure: medicine.packageUnit ?? medicine.unitOfMeasure ?? "uds.",
+    unitsPerPackage: Number(medicine.unitsPerPackage ?? 1),
+    unitsPerMinimumUnit: Number(medicine.unitsPerMinimumUnit ?? 1),
     totalStock: Number(item.totalStock ?? 0),
     lots: (item.lots ?? []).map((lot) => ({
       ...lot,
@@ -106,7 +112,8 @@ export function useWorkdayInventory() {
   }, []);
 
   useEffect(() => {
-    fetchBaseData();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchBaseData();
   }, [fetchBaseData]);
 
   const createNewWorkday = useCallback(
@@ -127,8 +134,17 @@ export function useWorkdayInventory() {
     [fetchBaseData],
   );
 
+  const updateWorkdayStatus = useCallback(
+    async (workdayId, status) => {
+      const { data } = await changeWorkdayStatus(workdayId, status);
+      await fetchBaseData();
+      return data.data;
+    },
+    [fetchBaseData],
+  );
+
   const assignMedicine = useCallback(
-    async ({ workday, medicineId, batch, quantity, boxes = 0, blisters = 0, units = 0 }) => {
+    async ({ workday, medicineId, batch, entryQuantity, entryUnit }) => {
       const selected = centralInventory.find(
         (item) => String(item.medicineId) === String(medicineId),
       );
@@ -141,6 +157,7 @@ export function useWorkdayInventory() {
           .split("T")[0];
       }
 
+      const amount = Number(entryQuantity || 0);
       const body = {
         jornadaId: workday._id,
         jornadaNombre: workday.name,
@@ -148,10 +165,11 @@ export function useWorkdayInventory() {
           {
             medicineId,
             batch,
-            quantity: Number(quantity),
-            boxes: Number(boxes),
-            blisters: Number(blisters),
-            units: Number(units),
+            quantity: amount,
+            entryUnitType: entryUnit || null,
+            boxes: entryUnit && String(entryUnit) === String(selected?.packageUnit) ? amount : 0,
+            blisters: entryUnit && selected?.intermediateUnit && String(entryUnit) === String(selected.intermediateUnit) ? amount : 0,
+            units: entryUnit && String(entryUnit) === String(selected?.minimumUnit) ? amount : 0,
             expirationDate: formattedExpirationDate,
           },
         ],
@@ -165,10 +183,16 @@ export function useWorkdayInventory() {
   );
 
   const registerWorkdayConsumption = useCallback(
-    async ({ item, quantity }) => {
+    async ({ item, entryQuantity, entryUnit }) => {
+      const amount = Number(entryQuantity || 0);
       const { data } = await registerConsumption({
         productoId: String(item.medicineId),
-        cantidad: Number(quantity),
+        cantidad: amount,
+        quantity: amount,
+        entryUnitType: entryUnit || null,
+        boxes: entryUnit && String(entryUnit) === String(item.packageUnit) ? amount : 0,
+        blisters: entryUnit && item.intermediateUnit && String(entryUnit) === String(item.intermediateUnit) ? amount : 0,
+        units: entryUnit && String(entryUnit) === String(item.minimumUnit) ? amount : 0,
       });
       await fetchWorkdayInventory(item.workdayId);
       return data.data;
@@ -177,10 +201,16 @@ export function useWorkdayInventory() {
   );
 
   const registerWorkdayReturn = useCallback(
-    async ({ item, quantity }) => {
+    async ({ item, entryQuantity, entryUnit }) => {
+      const amount = Number(entryQuantity || 0);
       const { data } = await registerReturn({
         productoId: String(item.medicineId),
-        cantidad: Number(quantity),
+        cantidad: amount,
+        quantity: amount,
+        entryUnitType: entryUnit || null,
+        boxes: entryUnit && String(entryUnit) === String(item.packageUnit) ? amount : 0,
+        blisters: entryUnit && item.intermediateUnit && String(entryUnit) === String(item.intermediateUnit) ? amount : 0,
+        units: entryUnit && String(entryUnit) === String(item.minimumUnit) ? amount : 0,
       });
       await fetchWorkdayInventory(item.workdayId);
       return data.data;
@@ -209,6 +239,7 @@ export function useWorkdayInventory() {
     fetchWorkdayInventory,
     createNewWorkday,
     removeWorkday,
+    updateWorkdayStatus,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,

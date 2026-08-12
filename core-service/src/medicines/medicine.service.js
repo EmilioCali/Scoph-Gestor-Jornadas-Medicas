@@ -28,6 +28,20 @@ async function assertCategoryExists(categoryName) {
 function normalizeMedicineData(data) {
   const normalized = { ...data };
 
+  if (normalized.minimumUnit === undefined && normalized.presentation !== undefined) {
+    normalized.minimumUnit = normalized.presentation;
+  }
+  if (normalized.packageUnit === undefined && normalized.unitOfMeasure !== undefined) {
+    normalized.packageUnit = normalized.unitOfMeasure;
+  }
+
+  if (normalized.presentation === undefined && normalized.minimumUnit !== undefined) {
+    normalized.presentation = normalized.minimumUnit;
+  }
+  if (normalized.unitOfMeasure === undefined && normalized.packageUnit !== undefined) {
+    normalized.unitOfMeasure = normalized.packageUnit;
+  }
+
   for (const field of [
     "barcode",
     "name",
@@ -35,6 +49,8 @@ function normalizeMedicineData(data) {
     "concentration",
     "presentation",
     "unitOfMeasure",
+    "minimumUnit",
+    "packageUnit",
     "category",
   ]) {
     if (typeof normalized[field] === "string") {
@@ -44,6 +60,20 @@ function normalizeMedicineData(data) {
 
   if (normalized.barcode === "") {
     normalized.barcode = null;
+  }
+
+  if (normalized.intermediateUnit === "") {
+    normalized.intermediateUnit = null;
+  }
+
+  if (normalized.unitsPerPackage !== undefined && normalized.unitsPerPackage !== "") {
+    normalized.unitsPerPackage = Number(normalized.unitsPerPackage);
+  }
+  if (normalized.unitsPerMinimumUnit !== undefined && normalized.unitsPerMinimumUnit !== "") {
+    normalized.unitsPerMinimumUnit = Number(normalized.unitsPerMinimumUnit);
+  }
+  if (normalized.minimumStock !== undefined && normalized.minimumStock !== "") {
+    normalized.minimumStock = Number(normalized.minimumStock);
   }
 
   return normalized;

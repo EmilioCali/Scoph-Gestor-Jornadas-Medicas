@@ -1,3 +1,4 @@
+import axios from "axios";
 import Workday from "./workday.model.js";
 import { badRequest, handleServiceError } from "../utils/errorHandler.js";
 import { successResponse } from "../utils/response.js";
@@ -222,6 +223,25 @@ export const updateWorkday = async (request, reply) => {
 export const updateWorkdayStatus = async (request, reply) => {
   try {
     const { status } = request.body;
+    const currentWorkday = await Workday.findById(request.params.id);
+
+    if (!currentWorkday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
+    }
+
+    const shouldAutoReturn = currentWorkday.status !== "FINISHED" && status === "FINISHED";
+
+    if (shouldAutoReturn) {
+      const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3022";
+      await axios.post(`${coreServiceUrl}/api/v1/movimientos/retorno-automatico-jornada`, {
+        workdayId: request.params.id,
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+      });
+    }
 
     const workday = await Workday.findByIdAndUpdate(
       request.params.id,

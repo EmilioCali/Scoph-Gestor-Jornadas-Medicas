@@ -1,4 +1,4 @@
-import { getInventarioCentral, addMedicineToInventory, getInventarioJornada } from './inventory.controller.js';
+import { getInventarioCentral, addMedicineToInventory, getInventarioJornada, updateCentralInventoryLot } from './inventory.controller.js';
 import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
@@ -31,6 +31,12 @@ const inventoryRoutes = async (fastify) => {
                                         name: { type: 'string' },
                                         compound: { type: 'string' },
                                         category: { type: 'string' },
+                                        minimumUnit: { type: 'string' },
+                                        intermediateUnit: { type: ['string', 'null'] },
+                                        packageUnit: { type: 'string' },
+                                        unitsPerPackage: { type: 'number' },
+                                        unitsPerMinimumUnit: { type: 'number' },
+                                        // Se conserva por compatibilidad con clientes anteriores.
                                         unitOfMeasure: { type: 'string' },
                                         totalStock: { type: 'number' },
                                         minimumStock: { type: 'number' },
@@ -41,6 +47,9 @@ const inventoryRoutes = async (fastify) => {
                                                 properties: {
                                                     batch: { type: 'string' },
                                                     expirationDate: { type: 'string', format: 'date-time' },
+                                                    boxes: { type: 'number' },
+                                                    blisters: { type: 'number' },
+                                                    units: { type: 'number' },
                                                     stock: { type: 'number' }
                                                 }
                                             }
@@ -100,6 +109,37 @@ const inventoryRoutes = async (fastify) => {
             }
         },
         addMedicineToInventory
+    );
+
+    fastify.patch(
+        '/inventario-central/:medicineId/lotes/:batch',
+        {
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            schema: {
+                tags: ['Inventario'],
+                summary: 'Editar lote del inventario central',
+                security: [{ bearerAuth: [] }],
+                params: {
+                    type: 'object',
+                    required: ['medicineId', 'batch'],
+                    properties: {
+                        medicineId: { type: 'string' },
+                        batch: { type: 'string' },
+                    },
+                },
+                body: {
+                    type: 'object',
+                    required: ['batch', 'expirationDate', 'entryQuantity', 'entryUnit'],
+                    properties: {
+                        batch: { type: 'string' },
+                        expirationDate: { type: 'string', format: 'date' },
+                        entryQuantity: { type: 'number', minimum: 1 },
+                        entryUnit: { type: 'string' },
+                    },
+                },
+            },
+        },
+        updateCentralInventoryLot,
     );
 
     fastify.get(
