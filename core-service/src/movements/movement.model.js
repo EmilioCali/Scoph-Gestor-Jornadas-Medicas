@@ -34,8 +34,23 @@ const detailSchema = new Schema(
         },
         quantity: {
             type: Number,
-            required: [true, 'La cantidad es requerida'],
-            min: [1, 'La cantidad debe ser al menos 1'],
+            min: [0, 'La cantidad no puede ser negativa'],
+            default: 0,
+        },
+        boxes: {
+            type: Number,
+            min: [0, 'Las cajas no pueden ser negativas'],
+            default: 0,
+        },
+        blisters: {
+            type: Number,
+            min: [0, 'Los blísteres no pueden ser negativos'],
+            default: 0,
+        },
+        units: {
+            type: Number,
+            min: [0, 'Las unidades no pueden ser negativas'],
+            default: 0,
         },
         expirationDate: {
             type: Date,

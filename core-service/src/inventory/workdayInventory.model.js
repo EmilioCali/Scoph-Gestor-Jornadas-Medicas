@@ -11,6 +11,21 @@ const lotSchema = new Schema(
       type: Date,
       required: [true, 'La fecha de vencimiento es requerida'],
     },
+    boxes: {
+      type: Number,
+      min: [0, 'Las cajas no pueden ser negativas'],
+      default: 0,
+    },
+    blisters: {
+      type: Number,
+      min: [0, 'Los blísteres no pueden ser negativos'],
+      default: 0,
+    },
+    units: {
+      type: Number,
+      min: [0, 'Las unidades no pueden ser negativas'],
+      default: 0,
+    },
     stock: {
       type: Number,
       required: [true, 'El stock es requerido'],

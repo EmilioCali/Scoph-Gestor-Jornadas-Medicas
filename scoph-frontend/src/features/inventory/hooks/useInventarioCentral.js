@@ -43,13 +43,21 @@ export function useInventarioCentral() {
 
     // Agrega medicamento al inventario (con o sin stock inicial)
     const addToInventory = useCallback(async (formData) => {
-        const { data } = await addToCentralInventory(formData);
-        await fetchAll(); // Recargar para obtener el registro completo con populate
+        const payload = {
+            ...formData,
+            boxes: Number(formData?.boxes || 0),
+            blisters: Number(formData?.blisters || 0),
+            units: Number(formData?.units || 0),
+            initialStock: Number(formData?.initialStock || 0),
+            minimumStock: Number(formData?.minimumStock || 0),
+        };
+        const { data } = await addToCentralInventory(payload);
+        await fetchAll();
         return data.data;
     }, [fetchAll]);
 
     // Entrada de stock (COMPRA o DONACION)
-    const registrarEntrada = useCallback(async ({ item, tipoEntrada, batch, expirationDate, quantity }) => {
+    const registrarEntrada = useCallback(async ({ item, tipoEntrada, batch, expirationDate, quantity, boxes = 0, blisters = 0, units = 0 }) => {
         const body = {
             tipoEntrada,
             destination: { type: "INVENTARIO_CENTRAL", id: null },
@@ -57,6 +65,9 @@ export function useInventarioCentral() {
                 medicineId: String(item.medicineId),
                 batch,
                 quantity: Number(quantity),
+                boxes: Number(boxes),
+                blisters: Number(blisters),
+                units: Number(units),
                 expirationDate,
             }],
         };
@@ -67,12 +78,15 @@ export function useInventarioCentral() {
     }, [fetchAll]);
 
     // Salida por receta
-    const registrarSalida = useCallback(async ({ item, batch, quantity }) => {
+    const registrarSalida = useCallback(async ({ item, batch, quantity, boxes = 0, blisters = 0, units = 0 }) => {
         const body = {
             detalle: [{
                 medicineId: String(item.medicineId),
                 batch,
                 quantity: Number(quantity),
+                boxes: Number(boxes),
+                blisters: Number(blisters),
+                units: Number(units),
             }],
         };
         const { data } = await registerSalidaReceta(body);

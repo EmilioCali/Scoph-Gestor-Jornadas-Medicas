@@ -6,30 +6,80 @@ import WorkdayInventory from './workdayInventory.model.js';
 import { getWorkdayById } from '../workdays/workday.client.js';
 import { validarLoteExistente, validarNoVencido, validarStockPositivo } from "../utils/validator.js";
 
+function normalizeLotData(item) {
+    const boxes = Number(item.boxes || 0);
+    const blisters = Number(item.blisters || 0);
+    const units = Number(item.units || 0);
+    const quantity = Number(item.quantity || 0);
+
+    const totalUnits = boxes * 100 + blisters * 10 + units + quantity;
+
+    return {
+        boxes,
+        blisters,
+        units,
+        quantity,
+        totalUnits
+    };
+}
+
+function addLotStock(lote, { boxes, blisters, units, quantity }) {
+    lote.boxes = (Number(lote.boxes) || 0) + boxes;
+    lote.blisters = (Number(lote.blisters) || 0) + blisters;
+    lote.units = (Number(lote.units) || 0) + units;
+    lote.stock = (Number(lote.stock) || 0) + quantity;
+}
+
+function getLotUnitValue(lote) {
+    return ((Number(lote.boxes) || 0) * 100) + ((Number(lote.blisters) || 0) * 10) + (Number(lote.units) || 0) + (Number(lote.stock) || 0);
+}
+
+function subtractLotUnits(lote, amount) {
+    let remaining = Math.max(0, Number(amount) || 0);
+
+    const boxesToRemove = Math.min(Math.floor(remaining / 100), Number(lote.boxes) || 0);
+    remaining -= boxesToRemove * 100;
+    lote.boxes = Math.max(0, (Number(lote.boxes) || 0) - boxesToRemove);
+
+    const blistersToRemove = Math.min(Math.floor(remaining / 10), Number(lote.blisters) || 0);
+    remaining -= blistersToRemove * 10;
+    lote.blisters = Math.max(0, (Number(lote.blisters) || 0) - blistersToRemove);
+
+    const unitsToRemove = Math.min(remaining, Number(lote.units) || 0);
+    remaining -= unitsToRemove;
+    lote.units = Math.max(0, (Number(lote.units) || 0) - unitsToRemove);
+
+    if (remaining > 0) {
+        lote.stock = Math.max(0, (Number(lote.stock) || 0) - remaining);
+    }
+}
+
 export async function registrarEntrada({ tipoEntrada, detalle, userId, destination, metadata }) {
     const movimientos = [];
 
     for (const item of detalle) {
-        const { medicineId, batch, quantity, expirationDate } = item;
+        const { medicineId, batch, expirationDate } = item;
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
 
-        //validaciones de integridad de lote - TKT-018
-        if (quantity <= 0) throw new Error("La cantidad debe de ser positiva");
+        if (totalUnits <= 0) throw new Error("La cantidad debe de ser positiva");
         if (new Date(expirationDate) <= new Date()) throw new Error("La fecha de vencimiento debe de ser una futura");
 
         const med = await Medicine.findById(medicineId);
         if (!med) throw new Error("Medicamento no encontrado");
 
-        //crear movimienti - TKT-016
         const movimiento = new Movement({
             type: 'ENTRADA',
             subType: tipoEntrada,
-            origin: { type: 'EXTERNO' }, //ya que es de afuera donde se obtiene ya sea compra o donación
+            origin: { type: 'EXTERNO' },
             destination,
             detail: [{
                 medicineId,
                 medicationSnapshot: { name: med.name, concentration: med.concentration },
                 batch,
                 quantity,
+                boxes,
+                blisters,
+                units,
                 expirationDate
             }],
             status: 'APLICADO',
@@ -39,7 +89,6 @@ export async function registrarEntrada({ tipoEntrada, detalle, userId, destinati
         await movimiento.save();
         movimientos.push(movimiento)
 
-        //actualizar inventario centraal TKT-017
         let inv = await centralInventory.findOne({ medicineId })
         if (!inv) {
             inv = new centralInventory({ medicineId, lots: [], totalStock: 0 })
@@ -47,12 +96,12 @@ export async function registrarEntrada({ tipoEntrada, detalle, userId, destinati
 
         const loteExistente = inv.lots.find(l => l.batch === batch)
         if (loteExistente) {
-            loteExistente.stock += quantity
+            addLotStock(loteExistente, { boxes, blisters, units, quantity })
         } else {
-            inv.lots.push({ batch, expirationDate, stock: quantity })
+            inv.lots.push({ batch, expirationDate, boxes, blisters, units, stock: quantity })
         }
 
-        inv.totalStock += quantity
+        inv.totalStock += totalUnits
         await inv.save()
 
     }
@@ -64,36 +113,28 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
     const movimientos = [];
 
     for (const item of detalle) {
-        const { medicineId, batch, quantity } = item;
+        const { medicineId, batch } = item;
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
 
-        //validar que exista dicho medicamento
         const med = await Medicine.findById(medicineId);
         if (!med) throw new Error("Medicamento no encontrado, lo siento");
 
-        //TKT-020 validación de stock disponible
         const inv = await centralInventory.findOne({ medicineId });
         if (!inv) throw new Error("No existe inventario para este medicamento");
 
-        const lote = inv.lots.find(l => l.batch === batch); //batch = lotes
+        const lote = inv.lots.find(l => l.batch === batch);
         if (!lote) throw new Error("El lote no se ha encontrado");
 
-        if (lote.stock < quantity) {
-            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${lote.stock}, solicitado: ${quantity}`);
-
+        const availableUnits = getLotUnitValue(lote);
+        if (availableUnits < totalUnits) {
+            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits}, solicitado: ${totalUnits}`);
         }
 
-        //descuento de stock
-        lote.stock -= quantity;
-        inv.totalStock -= quantity;
-
-        //eviatar valores negativos
-        if (lote.stock < 0) lote.stock = 0;
-        if (inv.totalStock < 0) inv.totalStock = 0;
+        subtractLotUnits(lote, totalUnits);
+        inv.totalStock = Math.max(0, (Number(inv.totalStock) || 0) - totalUnits);
 
         await inv.save();
 
-
-        //crear movimiento TKT-019
         const movimiento = new Movement({
             type: "SALIDA",
             subType: "RECETA",
@@ -104,11 +145,14 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
                 medicationSnapshot: { name: med.name, concentration: med.concentration },
                 batch,
                 quantity,
+                boxes,
+                blisters,
+                units,
                 expirationDate: lote.expirationDate
             }],
             status: "APLICADO",
             userId,
-            metadata, //preescription y razon
+            metadata,
             appliedAt: new Date()
         });
 
@@ -125,30 +169,27 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
     await getWorkdayById(jornadaId, authHeader);
 
     for (const item of detalle) {
-        const { medicineId, batch, quantity } = item;
+        const { medicineId, batch } = item;
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item);
 
         const med = await Medicine.findById(medicineId);
         if (!med) throw new Error('Medicamento no encontrado');
 
-        // Validar inventario central
         const inv = await centralInventory.findOne({ medicineId });
         if (!inv) throw new Error('No existe inventario para este medicamento');
 
         const lote = inv.lots.find(l => l.batch === batch);
         if (!lote) throw new Error('El lote no se ha encontrado');
 
-        if (lote.stock < quantity) {
-            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${lote.stock}, solicitado: ${quantity}`);
+        const availableUnits = getLotUnitValue(lote);
+        if (availableUnits < totalUnits) {
+            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits}, solicitado: ${totalUnits}`);
         }
 
-        // Descontar del inventario central
-        lote.stock -= quantity;
-        inv.totalStock -= quantity;
-        if (lote.stock < 0) lote.stock = 0;
-        if (inv.totalStock < 0) inv.totalStock = 0;
+        subtractLotUnits(lote, totalUnits);
+        inv.totalStock = Math.max(0, (Number(inv.totalStock) || 0) - totalUnits);
         await inv.save();
 
-        // Sumar al inventario de jornada
         let invJornada = await WorkdayInventory.findOne({ workdayId: jornadaId, medicineId });
         if (!invJornada) {
             invJornada = new WorkdayInventory({
@@ -162,11 +203,11 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
 
         const loteJornada = invJornada.lots.find(l => l.batch === batch);
         if (loteJornada) {
-            loteJornada.stock += quantity;
+            addLotStock(loteJornada, { boxes, blisters, units, quantity });
         } else {
-            invJornada.lots.push({ batch, expirationDate: lote.expirationDate, stock: quantity });
+            invJornada.lots.push({ batch, expirationDate: lote.expirationDate, boxes, blisters, units, stock: quantity });
         }
-        invJornada.totalStock += quantity;
+        invJornada.totalStock += totalUnits;
         await invJornada.save();
 
         const movimiento = new Movement({
@@ -179,6 +220,9 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
                 medicationSnapshot: { name: med.name, concentration: med.concentration },
                 batch,
                 quantity,
+                boxes,
+                blisters,
+                units,
                 expirationDate: lote.expirationDate
             }],
             status: 'APLICADO',
@@ -208,17 +252,18 @@ export async function validarStockJornada(productoId, cantidad) {
 
     const ahora = new Date();
     const lote = inventory.lots.find(
-        (l) => l.stock > 0 && new Date(l.expirationDate) >= ahora
+        (l) => ((Number(l.boxes) || 0) * 100 + (Number(l.blisters) || 0) * 10 + (Number(l.units) || 0) + (Number(l.stock) || 0)) > 0 && new Date(l.expirationDate) >= ahora
     );
 
     validarLoteExistente(lote);
     validarNoVencido(lote.expirationDate);
 
-    if (lote.stock < cantidad) {
-        throw new Error(`Stock insuficiente. Disponible: ${lote.stock}, solicitado: ${cantidad}`);
+    const disponible = getLotUnitValue(lote);
+    if (disponible < cantidad) {
+        throw new Error(`Stock insuficiente. Disponible: ${disponible}, solicitado: ${cantidad}`);
     }
 
-    validarStockPositivo(lote.stock);
+    validarStockPositivo(disponible);
 
     return { inventory, lote };
 }
@@ -226,11 +271,8 @@ export async function validarStockJornada(productoId, cantidad) {
 export async function descontarStockJornada(productoId, cantidad) {
     const { inventory, lote } = await validarStockJornada(productoId, cantidad);
 
-    lote.stock -= cantidad;
-    inventory.totalStock -= cantidad;
-    if (inventory.totalStock < 0) {
-        inventory.totalStock = 0;
-    }
+    subtractLotUnits(lote, cantidad);
+    inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - cantidad);
 
     await inventory.save();
 
@@ -250,8 +292,8 @@ export async function procesarRetornoJornada(productoId, cantidad) {
     validarLoteExistente(lote);
     validarNoVencido(lote.expirationDate);
 
-    lote.stock += cantidad;
-    inventory.totalStock += cantidad;
+    lote.stock = (Number(lote.stock) || 0) + cantidad;
+    inventory.totalStock = (Number(inventory.totalStock) || 0) + cantidad;
 
     await inventory.save();
 

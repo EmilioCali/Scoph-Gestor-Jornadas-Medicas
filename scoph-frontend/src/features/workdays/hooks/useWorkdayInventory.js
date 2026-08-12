@@ -128,7 +128,7 @@ export function useWorkdayInventory() {
   );
 
   const assignMedicine = useCallback(
-    async ({ workday, medicineId, batch, quantity }) => {
+    async ({ workday, medicineId, batch, quantity, boxes = 0, blisters = 0, units = 0 }) => {
       const selected = centralInventory.find(
         (item) => String(item.medicineId) === String(medicineId),
       );
@@ -149,6 +149,9 @@ export function useWorkdayInventory() {
             medicineId,
             batch,
             quantity: Number(quantity),
+            boxes: Number(boxes),
+            blisters: Number(blisters),
+            units: Number(units),
             expirationDate: formattedExpirationDate,
           },
         ],

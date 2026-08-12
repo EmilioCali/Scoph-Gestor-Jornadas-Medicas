@@ -8,11 +8,14 @@ const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const movementDetailInputSchema = {
     type: 'object',
-    required: ['medicineId', 'batch', 'quantity'],
+    required: ['medicineId', 'batch'],
     properties: {
         medicineId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
         batch: { type: 'string', example: 'LOTE-001' },
-        quantity: { type: 'number', minimum: 1, example: 20 },
+        quantity: { type: 'number', minimum: 0, default: 0, example: 20 },
+        boxes: { type: 'number', minimum: 0, default: 0, example: 2 },
+        blisters: { type: 'number', minimum: 0, default: 0, example: 3 },
+        units: { type: 'number', minimum: 0, default: 0, example: 5 },
         expirationDate: { type: 'string', format: 'date', example: '2027-12-31' }
     }
 };
