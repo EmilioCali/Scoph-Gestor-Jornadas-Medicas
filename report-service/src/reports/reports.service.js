@@ -203,34 +203,88 @@ export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page
     return fetchJson(url, authHeader, 'Error al consultar los movimientos');
 }
 
+export function buildDashboardMetrics({ medicines = [], workdays = [], movements = [], inventory = [], users = [] } = {}) {
+    const stockAlerts = getLowStockAlerts(inventory);
+    const expirationAlerts = getExpirationAlerts(inventory, 60);
+    const activeWorkdays = workdays.filter(jornada => jornada.status === 'IN_PROGRESS').length;
+    const plannedWorkdays = workdays.filter(jornada => jornada.status === 'PLANNED').length;
+    const finishedWorkdays = workdays.filter(jornada => ['FINISHED', 'COMPLETED'].includes(jornada.status)).length;
+    const doctors = (users || []).filter(user => user.rol === 'MEDICO');
+    const activeDoctors = doctors.filter(user => user.isActive !== false).length;
+
+    const stockPorCategoria = inventory.reduce((acc, item) => {
+        const categoryName = item.medicineId?.category || item.category || 'Sin categoría';
+        const existing = acc.find(entry => entry.name === categoryName);
+        if (existing) {
+            existing.value += Number(item.totalStock || 0);
+            return acc;
+        }
+
+        acc.push({ name: categoryName, value: Number(item.totalStock || 0) });
+        return acc;
+    }, []);
+
+    const currentMonth = new Date().getMonth();
+    const monthlyMovements = movements.filter((movement) => {
+        const date = new Date(movement.createdAt || movement.appliedAt);
+        return !Number.isNaN(date.getTime()) && date.getMonth() === currentMonth;
+    }).length;
+
+    return {
+        totalMedicamentos: medicines.length,
+        totalMedicos: doctors.length,
+        medicosActivos: activeDoctors,
+        totalJornadas: workdays.length,
+        jornadasActivas: activeWorkdays,
+        jornadasPlanificadas: plannedWorkdays,
+        jornadasFinalizadas: finishedWorkdays,
+        totalMovimientos: movements.length,
+        movimientosMes: monthlyMovements,
+        stockBajo: stockAlerts.length,
+        alertasVencimiento: expirationAlerts.length,
+        medicamentosVencidos: expirationAlerts.filter(alerta => alerta.diasRestantes < 0).length,
+        movimientosPorMes: getMonthlyMovements(movements),
+        alertasStock: stockAlerts,
+        vencimientosProximos: expirationAlerts,
+        stockPorCategoria,
+        estadisticasJornadas: {
+            total: workdays.length,
+            activas: activeWorkdays,
+            planificadas: plannedWorkdays,
+            finalizadas: finishedWorkdays
+        },
+        actualizadoEn: new Date().toISOString()
+    };
+}
+
 export async function obtenerMetricasGenerales(authHeader) {
-    const [medicamentos, jornadas, movimientos, inventario] = await Promise.all([
+    const [medicamentos, jornadas, movimientos, inventario, usuarios] = await Promise.all([
         fetch(`${SERVICES.core.baseUrl}/api/v1/medicines`, getAuthOptions(authHeader)),
         fetch(`${SERVICES.workday.baseUrl}/api/v1/workdays`, getAuthOptions(authHeader)),
         fetch(`${SERVICES.core.baseUrl}/api/v1/movimientos?limit=1000`, getAuthOptions(authHeader)),
-        fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`, getAuthOptions(authHeader))
+        fetch(`${SERVICES.core.baseUrl}/api/v1/inventario-central`, getAuthOptions(authHeader)),
+        fetch(`${SERVICES.auth.baseUrl || 'http://localhost:3020'}/api/auth/users`, getAuthOptions(authHeader))
     ]);
 
     if (!medicamentos.ok) throw new Error('Error al consultar medicamentos');
     if (!jornadas.ok) throw new Error('Error al consultar jornadas');
     if (!movimientos.ok) throw new Error('Error al consultar movimientos');
     if (!inventario.ok) throw new Error('Error al consultar inventario');
+    if (!usuarios.ok) throw new Error('Error al consultar usuarios');
 
-    const [dataMed, dataJor, dataMov, dataInv] = await Promise.all([
+    const [dataMed, dataJor, dataMov, dataInv, dataUsers] = await Promise.all([
         medicamentos.json(),
         jornadas.json(),
         movimientos.json(),
-        inventario.json()
+        inventario.json(),
+        usuarios.json()
     ]);
 
     const workdays = dataJor.data || [];
     const movements = dataMov.data || [];
     const inventory = dataInv.data || [];
-    const stockAlerts = getLowStockAlerts(inventory);
-    const expirationAlerts = getExpirationAlerts(inventory, 60);
-    const activeWorkdays = workdays.filter(jornada => jornada.status === 'IN_PROGRESS').length;
-    const plannedWorkdays = workdays.filter(jornada => jornada.status === 'PLANNED').length;
-    const finishedWorkdays = workdays.filter(jornada => ['FINISHED', 'COMPLETED'].includes(jornada.status)).length;
+    const medicines = dataMed.data || [];
+    const users = dataUsers.users || [];
     const recentWorkdays = [...workdays]
         .sort((a, b) => new Date(b.createdAt || b.startDate) - new Date(a.createdAt || a.startDate))
         .slice(0, 5)
@@ -243,34 +297,14 @@ export async function obtenerMetricasGenerales(authHeader) {
             status: jornada.status
         }));
 
-    const currentMonth = new Date().getMonth();
-    const monthlyMovements = movements.filter((movement) => {
-        const date = new Date(movement.createdAt || movement.appliedAt);
-        return !Number.isNaN(date.getTime()) && date.getMonth() === currentMonth;
-    }).length;
+    const metrics = buildDashboardMetrics({ medicines, workdays, movements, inventory, users });
 
     return {
-        totalMedicamentos: dataMed.data?.length || 0,
-        totalJornadas: workdays.length,
-        jornadasActivas: activeWorkdays,
-        jornadasPlanificadas: plannedWorkdays,
-        jornadasFinalizadas: finishedWorkdays,
-        totalMovimientos: dataMov.total || movements.length,
-        movimientosMes: monthlyMovements,
-        stockBajo: stockAlerts.length,
-        alertasVencimiento: expirationAlerts.length,
-        medicamentosVencidos: expirationAlerts.filter(alerta => alerta.diasRestantes < 0).length,
-        movimientosPorMes: getMonthlyMovements(movements),
-        alertasStock: stockAlerts,
-        vencimientosProximos: expirationAlerts,
+        ...metrics,
+        alertasStock: metrics.alertasStock,
+        vencimientosProximos: metrics.vencimientosProximos,
         jornadasRecientes: recentWorkdays,
-        estadisticasJornadas: {
-            total: workdays.length,
-            activas: activeWorkdays,
-            planificadas: plannedWorkdays,
-            finalizadas: finishedWorkdays
-        },
-        actualizadoEn: new Date().toISOString()
+        actualizadoEn: metrics.actualizadoEn
     };
 }
 
