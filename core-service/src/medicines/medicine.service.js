@@ -79,6 +79,21 @@ function normalizeMedicineData(data) {
   return normalized;
 }
 
+function assertValidUnitHierarchy(medicine) {
+  const minimumUnit = String(medicine.minimumUnit ?? "").trim().toLocaleLowerCase();
+  const intermediateUnit = String(medicine.intermediateUnit ?? "").trim().toLocaleLowerCase();
+
+  if (intermediateUnit && intermediateUnit === minimumUnit) {
+    throw new ValidationError(
+      "La unidad intermedia debe ser distinta de la unidad mínima. Usa 'Sin unidad intermedia' si el empaque contiene directamente unidades mínimas.",
+    );
+  }
+
+  if (!intermediateUnit) {
+    medicine.unitsPerMinimumUnit = 1;
+  }
+}
+
 async function assertUniqueMedicine({ name, barcode, excludeId = null }) {
   const conditions = [];
 
@@ -115,6 +130,7 @@ async function assertUniqueMedicine({ name, barcode, excludeId = null }) {
 
 export const createMedicineRecord = async (medicineData) => {
   const normalizedData = normalizeMedicineData(medicineData);
+  assertValidUnitHierarchy(normalizedData);
   const category = await assertCategoryExists(normalizedData.category);
   normalizedData.category = category.name;
   await assertUniqueMedicine(normalizedData);
@@ -130,6 +146,15 @@ export const getAllMedicines = async () => {
 export const updateMedicineRecord = async (id, updateData) => {
   const { status, ...safeData } = updateData;
   const normalizedData = normalizeMedicineData(safeData);
+  const currentMedicine = await Medicine.findById(id);
+  if (!currentMedicine)
+    throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
+
+  const completeMedicine = { ...currentMedicine.toObject(), ...normalizedData };
+  assertValidUnitHierarchy(completeMedicine);
+  if (!completeMedicine.intermediateUnit) {
+    normalizedData.unitsPerMinimumUnit = 1;
+  }
 
   if (normalizedData.category) {
     const category = await assertCategoryExists(normalizedData.category);
@@ -148,8 +173,6 @@ export const updateMedicineRecord = async (id, updateData) => {
     { new: true, runValidators: true },
   );
 
-  if (!medicine)
-    throw new NotFoundError(`Medicamento con id ${id} no encontrado`);
   return medicine;
 };
 

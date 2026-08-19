@@ -23,11 +23,38 @@ function getStatusBadge(status) {
   return map[status] || <Badge>{status}</Badge>;
 }
 
+function formatWorkdayDate(date) {
+  return new Intl.DateTimeFormat("es-GT", { timeZone: "UTC" }).format(
+    new Date(date),
+  );
+}
+
+function getLotAvailableUnits(medicine, lot) {
+  const boxes = Number(lot?.boxes ?? 0) || 0;
+  const blisters = Number(lot?.blisters ?? 0) || 0;
+  const units = Number(lot?.units ?? 0) || 0;
+
+  if (boxes === 0 && blisters === 0 && units === 0) {
+    return Number(lot?.stock ?? 0) || 0;
+  }
+
+  const unitsPerPackage = Math.max(1, Number(medicine?.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(medicine?.unitsPerMinimumUnit ?? 1) || 1);
+  return boxes * unitsPerPackage * unitsPerMinimumUnit + blisters * unitsPerMinimumUnit + units;
+}
+
 // Formulario para crear jornada
 // Body alineado con backend: name, description, startDate, endDate,
 // location{department, municipality, address}, manager{userId,name},
 // doctors[{userId,name}], estimatedPatients, estimatedMedicines, status
-function WorkdayForm({ form, onChange, onSubmit, onClose, departamentos }) {
+function WorkdayForm({
+  form,
+  onChange,
+  onSubmit,
+  onClose,
+  departamentos,
+  medicalUsers,
+}) {
   const [companionName, setCompanionName] = useState("");
 
   const municipios =
@@ -143,26 +170,45 @@ function WorkdayForm({ form, onChange, onSubmit, onClose, departamentos }) {
         placeholder="Centro comunitario, Salón municipal..."
         required
       />
-      <Input
-        label="Responsable"
-        name="managerName"
-        value={form.managerName}
-        onChange={onChange}
-        placeholder="Nombre del responsable"
-        required
-      />
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-semibold text-gray-600">
+          Responsable de la jornada
+        </label>
+        <select
+          name="managerUserId"
+          value={form.managerUserId}
+          onChange={onChange}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+          required
+        >
+          <option value="">Seleccionar médico responsable</option>
+          {medicalUsers.map((user) => (
+            <option key={user._id} value={user._id}>
+              {`${user.nombre ?? ""} ${user.apellido ?? ""}`.trim()}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">
           Acompañantes
         </label>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <Input
-            label="Nombre del acompañante"
             name="companionName"
             value={companionName}
             onChange={(e) => setCompanionName(e.target.value)}
-            placeholder="Ej. María Pérez"
+            placeholder="Selecciona o escribe el nombre del acompañante"
+            list="registered-medical-users"
           />
+          <datalist id="registered-medical-users">
+            {medicalUsers.map((user) => (
+              <option
+                key={user._id}
+                value={`${user.nombre ?? ""} ${user.apellido ?? ""}`.trim()}
+              />
+            ))}
+          </datalist>
           <Button
             variant="secondary"
             type="button"
@@ -199,8 +245,8 @@ function WorkdayForm({ form, onChange, onSubmit, onClose, departamentos }) {
           )}
         </div>
         <p className="text-xs text-gray-400">
-          Escribe un nombre y haz clic en Agregar. Usa la x para quitar un
-          acompañante del listado.
+          Selecciona un médico registrado o escribe un nombre manualmente.
+          Usa la x para quitar un acompañante del listado.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -260,23 +306,31 @@ function WorkdayDetail({
   onConsumption,
   onReturn,
   onFinish,
+  onManageDoctors,
   canAssign,
   canReturn,
   canFinish,
+  canManageDoctors,
+  formError,
 }) {
   return (
     <div className="space-y-5">
+      {formError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {formError}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
           <p className="text-xs text-gray-400">Fecha inicio</p>
           <p className="text-sm font-semibold text-gray-700">
-            {new Date(workday.startDate).toLocaleDateString("es-GT")}
+            {formatWorkdayDate(workday.startDate)}
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
           <p className="text-xs text-gray-400">Fecha fin</p>
           <p className="text-sm font-semibold text-gray-700">
-            {new Date(workday.endDate).toLocaleDateString("es-GT")}
+            {formatWorkdayDate(workday.endDate)}
           </p>
         </div>
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -323,6 +377,14 @@ function WorkdayDetail({
         <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
           <p className="text-xs text-gray-400">Descripción</p>
           <p className="text-sm text-gray-700 mt-0.5">{workday.description}</p>
+        </div>
+      )}
+
+      {canManageDoctors && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onManageDoctors}>
+            Gestionar médicos asignados
+          </Button>
         </div>
       )}
 
@@ -421,7 +483,7 @@ function WorkdayDetail({
                         </p>
                       </div>
                       <p className="text-sm font-extrabold text-gray-700">
-                        {lot.stock} {item.packageUnit ?? item.unitOfMeasure}
+                        {getLotAvailableUnits(item, lot)} {item.minimumUnit ?? item.unitOfMeasure}
                       </p>
                     </div>
                   ))}
@@ -449,9 +511,17 @@ function AssignMedicineForm({
   submitting,
   formError,
 }) {
+  const hasAvailableLotStock = (lot) =>
+    [lot?.stock, lot?.boxes, lot?.blisters, lot?.units].some(
+      (quantity) => Number(quantity ?? 0) > 0,
+    );
   const selectedMedicine = centralInventory.find(
     (med) => String(med.medicineId) === String(form.medicineId),
   );
+  const hasInvalidUnitHierarchy =
+    Boolean(selectedMedicine?.intermediateUnit) &&
+    String(selectedMedicine.intermediateUnit).trim().toLocaleLowerCase() ===
+      String(selectedMedicine.minimumUnit ?? "").trim().toLocaleLowerCase();
   const availableEntryUnits = useMemo(() => {
     if (!selectedMedicine) return [];
     const units = [selectedMedicine.packageUnit, selectedMedicine.minimumUnit];
@@ -515,8 +585,8 @@ function AssignMedicineForm({
         >
           <option value="">Seleccionar medicamento</option>
           {centralInventory.map((med) => (
-            <option key={med._id} value={med.medicineId}>
-              {med.name} (Stock: {med.totalStock} {med.packageUnit ?? med.unitOfMeasure})
+            <option key={med.medicineId} value={med.medicineId}>
+              {med.name} (Stock: {med.totalStock} {med.minimumUnit ?? med.unitOfMeasure})
             </option>
           ))}
         </select>
@@ -534,10 +604,10 @@ function AssignMedicineForm({
             <option value="">Seleccionar lote</option>
             {centralInventory
               .find((m) => String(m.medicineId) === String(form.medicineId))
-              ?.lots.filter((l) => l.stock > 0)
+              ?.lots.filter(hasAvailableLotStock)
               .map((l) => (
                 <option key={l.batch} value={l.batch}>
-                  {l.batch} — Stock: {l.stock} — Vence:{" "}
+                  {l.batch} — Stock: {getLotAvailableUnits(selectedMedicine, l)} {selectedMedicine.minimumUnit ?? selectedMedicine.unitOfMeasure} — Vence:{" "}
                   {new Date(l.expirationDate).toLocaleDateString("es-GT")}
                 </option>
               ))}
@@ -546,10 +616,10 @@ function AssignMedicineForm({
       )}
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Cantidad a asignar"
+          label="Cantidad a asignar (en la unidad elegida)"
           name="entryQuantity"
           type="number"
-          min="0"
+          min="1"
           value={form.entryQuantity ?? ""}
           onChange={onChange}
           placeholder="5"
@@ -582,6 +652,16 @@ function AssignMedicineForm({
           <p className="text-sm text-gray-700">{conversionSummary}</p>
         </div>
       )}
+      {hasInvalidUnitHierarchy && (
+        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          Este medicamento tiene una configuración de unidades inválida. Edita el catálogo: la unidad intermedia debe ser distinta de la unidad mínima.
+        </p>
+      )}
+      {selectedMedicine && form.batch && (
+        <p className="text-xs text-gray-500 rounded-xl bg-gray-50 px-4 py-3 border border-gray-100">
+          El sistema valida el stock en {selectedMedicine.minimumUnit}. Revisa el resumen antes de asignar.
+        </p>
+      )}
       <p className="text-xs text-gray-400 bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
         Esta cantidad se descontara del inventario central (ASIGNACION_JORNADA).
       </p>
@@ -594,7 +674,7 @@ function AssignMedicineForm({
         >
           Cancelar
         </Button>
-        <Button variant="primary" type="submit" disabled={submitting}>
+        <Button variant="primary" type="submit" disabled={submitting || hasInvalidUnitHierarchy}>
           {submitting ? "Asignando..." : "Asignar"}
         </Button>
       </div>
@@ -760,7 +840,7 @@ const workdayInicial = {
   department: "",
   municipality: "",
   address: "",
-  managerName: "",
+  managerUserId: "",
   companions: [],
   estimatedPatients: "",
   estimatedMedicines: "",
@@ -771,10 +851,12 @@ const movementInicial = { entryQuantity: "", observacion: "", entryUnit: "" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
-  const canManageWorkdays =
+  const canManageWorkdays = currentUser?.rol === "SUPER_ADMIN";
+  const canTransferMedication =
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
+    users,
     centralInventory,
     workdayInventoryById,
     loading,
@@ -785,6 +867,7 @@ export default function JornadasPage() {
     createNewWorkday,
     removeWorkday,
     updateWorkdayStatus,
+    assignDoctors,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,
@@ -795,6 +878,7 @@ export default function JornadasPage() {
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalConsumo, setModalConsumo] = useState(false);
   const [modalRetorno, setModalRetorno] = useState(false);
+  const [modalMedicos, setModalMedicos] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState(false);
 
   const [selectedWorkday, setSelectedWorkday] = useState(null);
@@ -802,6 +886,7 @@ export default function JornadasPage() {
   const [formWorkday, setFormWorkday] = useState(workdayInicial);
   const [formAssign, setFormAssign] = useState(assignInicial);
   const [formMovement, setFormMovement] = useState(movementInicial);
+  const [selectedDoctorIds, setSelectedDoctorIds] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -858,9 +943,12 @@ export default function JornadasPage() {
   // Crea jornada - body alineado con backend (manager + doctors)
   const handleCrearWorkday = async (e) => {
     e.preventDefault();
-    const managerName = formWorkday.managerName?.trim();
-    if (!managerName) {
-      setFormError("Debes ingresar el nombre del responsable de la jornada");
+    const manager = users.find(
+      (user) =>
+        user.rol === "MEDICO" && user._id === formWorkday.managerUserId,
+    );
+    if (!manager) {
+      setFormError("Debes seleccionar un médico responsable de la jornada");
       return;
     }
 
@@ -874,15 +962,18 @@ export default function JornadasPage() {
       await createNewWorkday({
         name: formWorkday.name,
         description: formWorkday.description,
-        startDate: new Date(formWorkday.startDate).toISOString(),
-        endDate: new Date(formWorkday.endDate).toISOString(),
+        // Mediodía local evita que un campo date se desplace al día anterior
+        // cuando el navegador lo serializa a UTC.
+        startDate: new Date(`${formWorkday.startDate}T12:00:00`).toISOString(),
+        endDate: new Date(`${formWorkday.endDate}T12:00:00`).toISOString(),
         location: {
           department: formWorkday.department,
           municipality: formWorkday.municipality,
           address: formWorkday.address,
         },
         manager: {
-          name: managerName,
+          userId: manager._id,
+          name: `${manager.nombre ?? ""} ${manager.apellido ?? ""}`.trim(),
         },
         companions,
         estimatedPatients: Number(formWorkday.estimatedPatients),
@@ -986,6 +1077,27 @@ export default function JornadasPage() {
     }
   };
 
+  const handleGuardarMedicos = async () => {
+    const doctors = users
+      .filter((user) => user.rol === "MEDICO" && selectedDoctorIds.includes(user._id))
+      .map((user) => ({
+        userId: user._id,
+        name: `${user.nombre} ${user.apellido}`.trim(),
+      }));
+
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const workday = await assignDoctors(selectedWorkday._id, doctors);
+      setSelectedWorkday(workday);
+      setModalMedicos(false);
+    } catch (err) {
+      setFormError(err.response?.data?.message ?? "No se pudieron actualizar los médicos");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Elimina jornada - cuando se conecte el backend usar deleteWorkday() de workdayService
   const handleConfirmarEliminar = async () => {
     setSubmitting(true);
@@ -1016,10 +1128,10 @@ export default function JornadasPage() {
       render: (row) => (
         <div>
           <p className="text-sm text-gray-700">
-            {new Date(row.startDate).toLocaleDateString("es-GT")}
+            {formatWorkdayDate(row.startDate)}
           </p>
           <p className="text-xs text-gray-400">
-            al {new Date(row.endDate).toLocaleDateString("es-GT")}
+            al {formatWorkdayDate(row.endDate)}
           </p>
         </div>
       ),
@@ -1186,6 +1298,7 @@ export default function JornadasPage() {
           onSubmit={handleCrearWorkday}
           onClose={() => setModalCrear(false)}
           departamentos={departamentosGuatemala}
+          medicalUsers={users.filter((user) => user.rol === "MEDICO")}
         />
       </Modal>
 
@@ -1221,11 +1334,46 @@ export default function JornadasPage() {
               e?.preventDefault?.();
               handleFinalizarJornada(selectedWorkday);
             }}
-            canAssign={canManageWorkdays}
+            onManageDoctors={() => {
+              setSelectedDoctorIds((selectedWorkday.doctors || []).map((doctor) => doctor.userId));
+              setModalMedicos(true);
+            }}
+            canAssign={canTransferMedication}
             canReturn={canManageWorkdays}
             canFinish={canManageWorkdays}
+            canManageDoctors={canTransferMedication}
+            formError={formError}
           />
         )}
+      </Modal>
+
+      <Modal
+        isOpen={modalMedicos}
+        onClose={() => setModalMedicos(false)}
+        title="Médicos asignados"
+      >
+        <div className="space-y-3">
+          {users.filter((user) => user.rol === "MEDICO").map((user) => (
+            <label key={user._id} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={selectedDoctorIds.includes(user._id)}
+                onChange={() => setSelectedDoctorIds((current) =>
+                  current.includes(user._id)
+                    ? current.filter((id) => id !== user._id)
+                    : [...current, user._id],
+                )}
+              />
+              <span>{user.nombre} {user.apellido}</span>
+            </label>
+          ))}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setModalMedicos(false)}>Cancelar</Button>
+            <Button variant="primary" onClick={handleGuardarMedicos} disabled={submitting}>
+              {submitting ? "Guardando..." : "Guardar asignación"}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal

@@ -4,6 +4,7 @@ import {
   createWorkday,
   deleteWorkday,
   changeWorkdayStatus,
+  updateWorkdayDoctors,
 } from "../../../shared/apis/workdayService";
 import {
   getCentralInventory,
@@ -41,6 +42,14 @@ function normalizeWorkdayInventoryItem(item) {
       stock: Number(lot.stock ?? 0),
     })),
   };
+}
+
+function hasAvailableLotStock(lot) {
+  // `stock` es el campo heredado. El inventario actual también puede guardar
+  // cantidades exclusivamente en cajas, blísteres o unidades.
+  return [lot?.stock, lot?.boxes, lot?.blisters, lot?.units].some(
+    (quantity) => Number(quantity ?? 0) > 0,
+  );
 }
 
 async function getNormalizedWorkdayInventory(workdayId) {
@@ -143,6 +152,15 @@ export function useWorkdayInventory() {
     [fetchBaseData],
   );
 
+  const assignDoctors = useCallback(
+    async (workdayId, doctors) => {
+      const { data } = await updateWorkdayDoctors(workdayId, doctors);
+      await fetchBaseData();
+      return data.data;
+    },
+    [fetchBaseData],
+  );
+
   const assignMedicine = useCallback(
     async ({ workday, medicineId, batch, entryQuantity, entryUnit }) => {
       const selected = centralInventory.find(
@@ -222,7 +240,7 @@ export function useWorkdayInventory() {
     () =>
       centralInventory.filter(
         (item) =>
-          item.totalStock > 0 && item.lots?.some((lot) => lot.stock > 0),
+          Number(item.totalStock) > 0 && item.lots?.some(hasAvailableLotStock),
       ),
     [centralInventory],
   );
@@ -240,6 +258,7 @@ export function useWorkdayInventory() {
     createNewWorkday,
     removeWorkday,
     updateWorkdayStatus,
+    assignDoctors,
     assignMedicine,
     registerWorkdayConsumption,
     registerWorkdayReturn,

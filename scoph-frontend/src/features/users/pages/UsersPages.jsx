@@ -159,6 +159,7 @@ export default function UsuariosPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState(formInicial);
   const currentUser = useAuthStore((state) => state.user);
+  const canManageUsers = currentUser?.rol === "SUPER_ADMIN";
   const isEditingSelf = selectedUser?._id === currentUser?._id;
 
   // Cargar usuarios desde Fastify
@@ -309,7 +310,7 @@ export default function UsuariosPage() {
           <span className="text-xs text-gray-400">Sin acceso</span>
         ),
     },
-    {
+    canManageUsers && {
       key: "acciones",
       label: "Acciones",
       render: (row) => (
@@ -327,7 +328,7 @@ export default function UsuariosPage() {
         </div>
       ),
     },
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="space-y-6">
@@ -335,6 +336,7 @@ export default function UsuariosPage() {
         title="Gestión de Usuarios"
         subtitle="Administra los usuarios y roles del sistema"
         action={
+          canManageUsers &&
           <Button
             variant="primary"
             onClick={() => {

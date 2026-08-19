@@ -123,7 +123,10 @@ function MedicineForm({
           >
             <option value="">Sin unidad intermedia</option>
             {measureUnitOptions
-              .filter((unit) => unit.activo !== false)
+              .filter(
+                (unit) =>
+                  unit.activo !== false && unit.name !== form.minimumUnit,
+              )
               .map((unit) => (
                 <option key={unit._id} value={unit.name}>
                   {unit.name}
@@ -157,7 +160,11 @@ function MedicineForm({
         </div>
 
         <Input
-          label="Unidad por empaque"
+          label={
+            form.intermediateUnit
+              ? `${form.intermediateUnit} por ${form.packageUnit || "empaque"}`
+              : `${form.minimumUnit || "Unidad mínima"} por ${form.packageUnit || "empaque"}`
+          }
           name="unitsPerPackage"
           type="number"
           min="1"
@@ -170,7 +177,7 @@ function MedicineForm({
 
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Unidad por unidad intermedia"
+          label={`${form.minimumUnit || "Unidad mínima"} por ${form.intermediateUnit || "unidad intermedia"}`}
           name="unitsPerMinimumUnit"
           type="number"
           min="1"
@@ -189,6 +196,11 @@ function MedicineForm({
           placeholder="10"
         />
       </div>
+      <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+        {form.intermediateUnit
+          ? `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.intermediateUnit}; 1 ${form.intermediateUnit} = ${form.unitsPerMinimumUnit || "…"} ${form.minimumUnit || "unidades mínimas"}.`
+          : `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.minimumUnit || "unidades mínimas"}.`}
+      </p>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
@@ -249,9 +261,11 @@ function MedicineForm({
 }
 
 export default function CatalogoPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageCatalog = currentUser?.rol === "SUPER_ADMIN";
   const { medicines, loading, error, refetch, create, update, toggleStatus } =
     useMedicines();
-  const { categories } = useCategories();
+  const { categories } = useCategories(canManageCatalog);
   const {
     measureUnits,
     loading: measureUnitsLoading,
@@ -260,7 +274,7 @@ export default function CatalogoPage() {
     create: createMeasureUnitRecord,
     update: updateMeasureUnitRecord,
     remove: removeMeasureUnitRecord,
-  } = useMeasureUnits();
+  } = useMeasureUnits(canManageCatalog);
   const {
     packagingUnits,
     loading: packagingUnitsLoading,
@@ -269,13 +283,10 @@ export default function CatalogoPage() {
     create: createPackagingUnitRecord,
     update: updatePackagingUnitRecord,
     remove: removePackagingUnitRecord,
-  } = usePackagingUnits();
+  } = usePackagingUnits(canManageCatalog);
   const categoryOptions = categories
     .filter((category) => category.status === "ACTIVO")
     .map((category) => category.name);
-  const currentUser = useAuthStore((state) => state.user);
-  const canManageCatalog =
-    currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -321,6 +332,10 @@ export default function CatalogoPage() {
       const next = { ...prev, [name]: value };
       if (name === "intermediateUnit") {
         next.unitsPerMinimumUnit = value ? prev.unitsPerMinimumUnit || "1" : "1";
+      }
+      if (name === "minimumUnit" && value === prev.intermediateUnit) {
+        next.intermediateUnit = "";
+        next.unitsPerMinimumUnit = "1";
       }
       return next;
     });

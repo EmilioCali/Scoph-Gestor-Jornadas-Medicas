@@ -7,6 +7,7 @@ import jwt from "@fastify/jwt";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import workdayRoutes from "./workdays/workday.routes.js";
+import { synchronizeWorkdayStatuses } from "./workdays/workday.controller.js";
 import { globalErrorHandler } from "./utils/errorHandler.js";
 
 const fastify = Fastify({ logger: true });
@@ -120,6 +121,40 @@ await app.register(swaggerUi, {
 
 await app.register(workdayRoutes, {
   prefix: "/api/v1",
+});
+
+let workdayStatusTimer;
+
+async function runWorkdayStatusSynchronization() {
+  try {
+    // Todos los servicios validan JWT con el mismo secreto. El token es de
+    // vida corta y solo se usa para ejecutar el retorno automático interno.
+    const authorization = `Bearer ${app.jwt.sign(
+      { id: "system", username: "system", rol: "SUPER_ADMIN" },
+      { expiresIn: "5m" },
+    )}`;
+    const synchronized = await synchronizeWorkdayStatuses({ authorization });
+    if (synchronized.length > 0) {
+      app.log.info({ synchronized }, "Estados de jornadas sincronizados");
+    }
+  } catch (error) {
+    // No se cambia el estado a FINALIZADA si el retorno falla; el siguiente
+    // ciclo lo reintentará sin perder inventario.
+    app.log.error(error, "No se pudieron sincronizar las jornadas");
+  }
+}
+
+app.addHook("onReady", async () => {
+  await runWorkdayStatusSynchronization();
+  workdayStatusTimer = setInterval(
+    () => void runWorkdayStatusSynchronization(),
+    15 * 60 * 1000,
+  );
+  workdayStatusTimer.unref?.();
+});
+
+app.addHook("onClose", async () => {
+  if (workdayStatusTimer) clearInterval(workdayStatusTimer);
 });
 
 const healthRateLimitErrorSchema = {

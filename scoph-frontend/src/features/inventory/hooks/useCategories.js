@@ -6,7 +6,7 @@ import {
   deleteCategory,
 } from "../../../shared/apis/coreService";
 
-export function useCategories() {
+export function useCategories(enabled = true) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,9 +25,13 @@ export function useCategories() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchCategories();
-  }, [fetchCategories]);
+  }, [enabled, fetchCategories]);
 
   const create = useCallback(async (formData) => {
     const { data } = await createCategory(formData);

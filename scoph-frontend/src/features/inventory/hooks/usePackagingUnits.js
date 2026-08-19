@@ -6,7 +6,7 @@ import {
   deletePackagingUnit,
 } from "../../../shared/apis/coreService";
 
-export function usePackagingUnits() {
+export function usePackagingUnits(enabled = true) {
   const [packagingUnits, setPackagingUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,9 +25,13 @@ export function usePackagingUnits() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchPackagingUnits();
-  }, [fetchPackagingUnits]);
+  }, [enabled, fetchPackagingUnits]);
 
   const create = useCallback(async (formData) => {
     const { data } = await createPackagingUnit(formData);

@@ -57,7 +57,7 @@ const medicineRoutes = async (fastify) => {
     fastify.post(
         '/medicines',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Crear medicamento',
@@ -125,7 +125,7 @@ const medicineRoutes = async (fastify) => {
     fastify.put(
         '/medicines/:id',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Actualizar medicamento',
@@ -171,7 +171,7 @@ const medicineRoutes = async (fastify) => {
     fastify.patch(
         '/medicines/:id/status',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Medicamentos'],
                 summary: 'Cambiar estado de medicamento',

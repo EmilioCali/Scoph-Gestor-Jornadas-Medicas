@@ -17,6 +17,10 @@ export const createWorkday = (data) =>
 export const updateWorkday = (id, data) =>
   workdayAPI.put(`/api/v1/workdays/${id}`, data);
 
+// PATCH /api/v1/workdays/:id/doctors
+export const updateWorkdayDoctors = (id, doctors) =>
+  workdayAPI.patch(`/api/v1/workdays/${id}/doctors`, { doctors });
+
 // PATCH /api/v1/workdays/:id/status
 export const changeWorkdayStatus = (id, status) =>
   workdayAPI.patch(`/api/v1/workdays/${id}/status`, { status });

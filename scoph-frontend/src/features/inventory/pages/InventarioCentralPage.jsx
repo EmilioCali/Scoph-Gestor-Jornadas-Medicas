@@ -620,11 +620,12 @@ const agregarInicial = {
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default function InventarioCentralPage() {
-  const { categories } = useCategories();
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageCatalogMetadata = currentUser?.rol === "SUPER_ADMIN";
+  const { categories } = useCategories(canManageCatalogMetadata);
   const categoryOptions = categories
     .filter((category) => category.status === "ACTIVO")
     .map((category) => category.name);
-  const currentUser = useAuthStore((state) => state.user);
   const canModifyCentralInventory =
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
   const {

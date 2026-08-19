@@ -12,12 +12,39 @@ const transporter = nodemailer.createTransport({
 
 const FROM = `"SCOPH — Sistema de Salud" <${process.env.SMTP_USER}>`
 
+function getMailErrorMessage(error) {
+  if (error?.code === 'EAUTH') {
+    return 'No fue posible autenticar con el servidor SMTP. Verifica SMTP_USER y SMTP_PASS.'
+  }
+
+  if (error?.code === 'ECONNECTION' || error?.code === 'ETIMEDOUT') {
+    return 'No fue posible conectar con el servidor SMTP. Verifica SMTP_HOST y SMTP_PORT.'
+  }
+
+  return 'No fue posible enviar el correo. Revisa la configuración SMTP y los logs del servicio.'
+}
+
+async function sendMail(options) {
+  try {
+    return await transporter.sendMail(options)
+  } catch (error) {
+    console.error('Error al enviar correo', {
+      code: error?.code,
+      command: error?.command,
+      response: error?.response,
+      message: error?.message
+    })
+
+    throw new Error(getMailErrorMessage(error))
+  }
+}
+
 /**
  * Envía las credenciales de acceso al nuevo usuario creado por un ADMIN.
  * @param {{ to: string, nombre: string, username: string, password: string }} opts
  */
 export async function sendCredentialsMail({ to, nombre, username, password }) {
-  await transporter.sendMail({
+  await sendMail({
     from: FROM,
     to,
     subject: 'Tu cuenta en SCOPH fue creada — Credenciales de acceso',
@@ -115,7 +142,7 @@ export async function sendVerificationCodeMail({ to, nombre, code }) {
   const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')
   const verificationUrl = `${frontendUrl}/verify-email?correo=${encodeURIComponent(to)}`
 
-  await transporter.sendMail({
+  await sendMail({
     from: FROM,
     to,
     subject: 'Verifica tu cuenta — SCOPH',
@@ -197,7 +224,7 @@ export async function sendVerificationCodeMail({ to, nombre, code }) {
 export async function sendPasswordResetMail({ to, nombre, code }) {
   const expiresMin = parseInt(process.env.VERIFICATION_TOKEN_EXPIRES_MINUTES || '10', 10)
 
-  await transporter.sendMail({
+  await sendMail({
     from: FROM,
     to,
     subject: 'Restablece tu contraseña — SCOPH',
