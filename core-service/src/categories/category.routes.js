@@ -88,7 +88,7 @@ const categoryRoutes = async (fastify) => {
   fastify.get(
     "/categories",
     {
-      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
       schema: {
         tags: ["Categorías"],
         summary: "Listar categorías",
@@ -117,7 +117,7 @@ const categoryRoutes = async (fastify) => {
   fastify.get(
     "/categories/:id",
     {
-      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
       schema: {
         tags: ["Categorías"],
         summary: "Obtener categoría por ID",

@@ -3,7 +3,7 @@ import { createConsumoJornada, createRetornoJornada, createRetornoAutomaticoJorn
 import { requireRole } from '../middlewares/authenticate.js';
 
 const ADMINISTRATIVE_ROLES = ['ADMIN', 'SUPER_ADMIN'];
-const AUTHENTICATED_ROLES = ['ADMIN', 'MEDICO', 'SUPER_ADMIN'];
+const WORKDAY_OPERATION_ROLES = ['MEDICO', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ONLY = ['SUPER_ADMIN'];
 
 const movementDetailInputSchema = {
@@ -98,7 +98,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/entrada',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar entrada a inventario central',
@@ -141,7 +141,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/salida-receta',
         {
-            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
+            preHandler: [requireRole(...WORKDAY_OPERATION_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar salida por receta',
@@ -215,7 +215,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/consumo-jornada',
         {
-            preHandler: [requireRole(...AUTHENTICATED_ROLES)],
+            preHandler: [requireRole(...WORKDAY_OPERATION_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar consumo en jornada',
@@ -256,6 +256,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/retorno-automatico-jornada',
         {
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Retorno automático de inventario al cerrar una jornada',
@@ -282,7 +283,7 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/retorno-jornada',
         {
-            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+            preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar retorno de jornada',

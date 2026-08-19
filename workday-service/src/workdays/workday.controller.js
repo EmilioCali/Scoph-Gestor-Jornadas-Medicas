@@ -36,6 +36,70 @@ function assertValidDateRange(startDate, endDate) {
   }
 }
 
+const WORKDAY_TIMEZONE = process.env.WORKDAY_TIMEZONE || "America/Guatemala";
+
+function getTodayCalendarDate(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: WORKDAY_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date(date))
+    .reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getWorkdayCalendarDate(date) {
+  // Las jornadas son eventos de día completo. Se conserva la parte YYYY-MM-DD
+  // enviada por el formulario, sin desplazarla al convertir a otra zona horaria.
+  return new Date(date).toISOString().slice(0, 10);
+}
+
+export function getAutomaticWorkdayStatus(workday, now = new Date()) {
+  const today = getTodayCalendarDate(now);
+  const startDate = getWorkdayCalendarDate(workday.startDate);
+  const endDate = getWorkdayCalendarDate(workday.endDate);
+
+  if (endDate < today) return "FINISHED";
+  if (startDate <= today && today <= endDate) return "IN_PROGRESS";
+  return "PLANNED";
+}
+
+async function returnRemainingInventory(workdayId, userId, authorization) {
+  const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3022";
+  await axios.post(
+    `${coreServiceUrl}/api/v1/movimientos/retorno-automatico-jornada`,
+    { workdayId, userId },
+    { headers: { Authorization: authorization || "" } },
+  );
+}
+
+export async function synchronizeWorkdayStatuses({ authorization, userId = "system" } = {}) {
+  const workdays = await Workday.find({
+    status: { $in: ["PLANNED", "IN_PROGRESS"] },
+  });
+  const synchronized = [];
+
+  for (const workday of workdays) {
+    const nextStatus = getAutomaticWorkdayStatus(workday);
+    if (nextStatus === workday.status) continue;
+
+    // El retorno debe completarse antes de cerrar la jornada. Si Core falla,
+    // queda IN_PROGRESS y se reintenta en la siguiente sincronización.
+    if (nextStatus === "FINISHED") {
+      await returnRemainingInventory(workday._id.toString(), userId, authorization);
+    }
+
+    workday.status = nextStatus;
+    await workday.save();
+    synchronized.push({ id: workday._id.toString(), status: nextStatus });
+  }
+
+  return synchronized;
+}
+
 /**
  * Normaliza y valida el arreglo de médicos asignados.
  * Deduplica por userId preservando el primer nombre encontrado.
@@ -141,6 +205,17 @@ export const createWorkday = async (request, reply) => {
 
 export const getWorkdays = async (request, reply) => {
   try {
+    try {
+      const authorization = `Bearer ${request.server.jwt.sign(
+        { id: "system", username: "system", rol: "SUPER_ADMIN" },
+        { expiresIn: "5m" },
+      )}`;
+      await synchronizeWorkdayStatuses({ authorization });
+    } catch (error) {
+      // Consultar jornadas debe seguir siendo posible aunque Core esté
+      // temporalmente fuera de servicio; el proceso programado lo reintentará.
+      request.log.error(error, "No se pudieron sincronizar las jornadas");
+    }
     const filter = {};
 
     // TKT-79: el médico solo ve jornadas donde está asignado
@@ -257,6 +332,44 @@ export const updateWorkday = async (request, reply) => {
   }
 };
 
+export const updateWorkdayDoctors = async (request, reply) => {
+  try {
+    const doctors = normalizeDoctors(request.body.doctors);
+    const workday = await Workday.findByIdAndUpdate(
+      request.params.id,
+      { $set: { doctors } },
+      { new: true, runValidators: true },
+    );
+
+    if (!workday) {
+      return reply.status(404).send({
+        success: false,
+        message: "Jornada no encontrada",
+        error: "NOT_FOUND",
+      });
+    }
+
+    await registerAuditEvent(
+      {
+        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
+        action: "ACTUALIZAR",
+        module: "WORKDAYS",
+        reference: workday._id?.toString() || request.params.id,
+        description: "Médicos asignados a jornada actualizados",
+      },
+      request,
+    );
+
+    return successResponse(reply, {
+      message: "Médicos asignados a la jornada correctamente",
+      data: workday,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return handleServiceError(error, reply);
+  }
+};
+
 export const updateWorkdayStatus = async (request, reply) => {
   try {
     const { status } = request.body;
@@ -273,11 +386,11 @@ export const updateWorkdayStatus = async (request, reply) => {
     const shouldAutoReturn = currentWorkday.status !== "FINISHED" && status === "FINISHED";
 
     if (shouldAutoReturn) {
-      const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3022";
-      await axios.post(`${coreServiceUrl}/api/v1/movimientos/retorno-automatico-jornada`, {
-        workdayId: request.params.id,
-        userId: request.user?.id || request.user?.sub || request.user?.username || "system",
-      });
+      await returnRemainingInventory(
+        request.params.id,
+        request.user?.id || request.user?.sub || request.user?.username || "system",
+        request.headers.authorization,
+      );
     }
 
     const workday = await Workday.findByIdAndUpdate(

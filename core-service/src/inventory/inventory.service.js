@@ -120,25 +120,57 @@ function addLotStock(lote, { boxes, blisters, units, quantity }) {
     lote.boxes = (Number(lote.boxes) || 0) + boxes;
     lote.blisters = (Number(lote.blisters) || 0) + blisters;
     lote.units = (Number(lote.units) || 0) + units;
-    lote.stock = (Number(lote.stock) || 0) + quantity;
+    // stock es el formato legado. No se duplica cuando hay desglose por empaque.
+    if (boxes === 0 && blisters === 0 && units === 0) {
+        lote.stock = (Number(lote.stock) || 0) + quantity;
+    }
 }
 
-function getLotUnitValue(lote, medicine = {}) {
+export function getLotUnitValue(lote, medicine = {}) {
     const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
-    return ((Number(lote.boxes) || 0) * unitsPerPackage) + ((Number(lote.blisters) || 0) * unitsPerMinimumUnit) + (Number(lote.units) || 0) + (Number(lote.stock) || 0);
+    const boxes = Number(lote.boxes) || 0;
+    const blisters = Number(lote.blisters) || 0;
+    const units = Number(lote.units) || 0;
+
+    if (boxes === 0 && blisters === 0 && units === 0) {
+        return Number(lote.stock) || 0;
+    }
+
+    return (boxes * unitsPerPackage * unitsPerMinimumUnit)
+        + (blisters * unitsPerMinimumUnit)
+        + units;
 }
 
-function subtractLotUnits(lote, amount, medicine = {}) {
+export function subtractLotUnits(lote, amount, medicine = {}) {
     let remaining = Math.max(0, Number(amount) || 0);
     const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
+    const unitsPerBox = unitsPerPackage * unitsPerMinimumUnit;
 
-    const boxesToRemove = Math.min(Math.floor(remaining / unitsPerPackage), Number(lote.boxes) || 0);
-    remaining -= boxesToRemove * unitsPerPackage;
-    lote.boxes = Math.max(0, (Number(lote.boxes) || 0) - boxesToRemove);
+    // Se consumen primero las unidades ya abiertas.
+    const looseUnitsToRemove = Math.min(remaining, Number(lote.units) || 0);
+    remaining -= looseUnitsToRemove;
+    lote.units = Math.max(0, (Number(lote.units) || 0) - looseUnitsToRemove);
 
-    const blistersToRemove = Math.min(Math.floor(remaining / unitsPerMinimumUnit), Number(lote.blisters) || 0);
+    const blistersToRemove = Math.min(
+        Math.floor(remaining / unitsPerMinimumUnit),
+        Number(lote.blisters) || 0,
+    );
     remaining -= blistersToRemove * unitsPerMinimumUnit;
     lote.blisters = Math.max(0, (Number(lote.blisters) || 0) - blistersToRemove);
+
+    const boxesToRemove = Math.min(Math.floor(remaining / unitsPerBox), Number(lote.boxes) || 0);
+    remaining -= boxesToRemove * unitsPerBox;
+    lote.boxes = Math.max(0, (Number(lote.boxes) || 0) - boxesToRemove);
+
+    // Si se pide una cantidad parcial, se abre el blíster o la caja necesaria
+    // y el sobrante se conserva como unidades sueltas del mismo lote.
+    if (remaining > 0 && (Number(lote.blisters) || 0) > 0) {
+        lote.blisters -= 1;
+        lote.units = (Number(lote.units) || 0) + unitsPerMinimumUnit;
+    } else if (remaining > 0 && (Number(lote.boxes) || 0) > 0) {
+        lote.boxes -= 1;
+        lote.units = (Number(lote.units) || 0) + unitsPerBox;
+    }
 
     const unitsToRemove = Math.min(remaining, Number(lote.units) || 0);
     remaining -= unitsToRemove;
@@ -192,7 +224,7 @@ export async function registrarEntrada({ tipoEntrada, detalle, userId, destinati
         if (loteExistente) {
             addLotStock(loteExistente, { boxes, blisters, units, quantity })
         } else {
-            inv.lots.push({ batch, expirationDate, boxes, blisters, units, stock: quantity })
+            inv.lots.push({ batch, expirationDate, boxes, blisters, units, stock: boxes || blisters || units ? 0 : quantity })
         }
 
         inv.totalStock += totalUnits
@@ -218,12 +250,12 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
         const lote = inv.lots.find(l => l.batch === batch);
         if (!lote) throw new Error("El lote no se ha encontrado");
 
-        const availableUnits = getLotUnitValue(lote);
+        const availableUnits = getLotUnitValue(lote, med);
         if (availableUnits < totalUnits) {
-            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits}, solicitado: ${totalUnits}`);
+            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits} ${med.minimumUnit}, solicitado: ${totalUnits} ${med.minimumUnit}`);
         }
 
-        subtractLotUnits(lote, totalUnits);
+        subtractLotUnits(lote, totalUnits, med);
         inv.totalStock = Math.max(0, (Number(inv.totalStock) || 0) - totalUnits);
 
         await inv.save();
@@ -273,12 +305,12 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
         const lote = inv.lots.find(l => l.batch === batch);
         if (!lote) throw new Error('El lote no se ha encontrado');
 
-        const availableUnits = getLotUnitValue(lote);
+        const availableUnits = getLotUnitValue(lote, med);
         if (availableUnits < totalUnits) {
-            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits}, solicitado: ${totalUnits}`);
+            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits} ${med.minimumUnit}, solicitado: ${totalUnits} ${med.minimumUnit}`);
         }
 
-        subtractLotUnits(lote, totalUnits);
+        subtractLotUnits(lote, totalUnits, med);
         inv.totalStock = Math.max(0, (Number(inv.totalStock) || 0) - totalUnits);
         await inv.save();
 
@@ -297,7 +329,7 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
         if (loteJornada) {
             addLotStock(loteJornada, { boxes, blisters, units, quantity });
         } else {
-            invJornada.lots.push({ batch, expirationDate: lote.expirationDate, boxes, blisters, units, stock: quantity });
+            invJornada.lots.push({ batch, expirationDate: lote.expirationDate, boxes, blisters, units, stock: boxes || blisters || units ? 0 : quantity });
         }
         invJornada.totalStock += totalUnits;
         await invJornada.save();
@@ -424,8 +456,7 @@ export async function procesarRetornoAutomaticoJornada({ workdayId, userId = 'sy
             const blisters = Number(lote.blisters || 0);
             const units = Number(lote.units || 0);
             const stock = Number(lote.stock || 0);
-            const { unitsPerPackage, unitsPerMinimumUnit } = getConversionFactors(medicine);
-            const totalUnits = (boxes * unitsPerPackage) + (blisters * unitsPerMinimumUnit) + units + stock;
+            const totalUnits = getLotUnitValue(lote, medicine);
 
             if (totalUnits <= 0) continue;
 

@@ -33,7 +33,7 @@ function levenshteinDistance(a, b) {
 
 async function assertUniqueCategoryName(name, excludeId = null) {
   if (!name || !name.trim()) {
-    throw new ValidationError("El nombre de la categorÃ­a es requerido");
+    throw new ValidationError("El nombre de la categoría es requerido");
   }
 
   const exactMatch = await Category.findOne({
@@ -45,7 +45,7 @@ async function assertUniqueCategoryName(name, excludeId = null) {
   });
 
   if (exactMatch) {
-    throw new ValidationError(`Ya existe la categorÃ­a "${exactMatch.name}"`);
+    throw new ValidationError(`Ya existe la categoría "${exactMatch.name}"`);
   }
 
   const normalizedName = normalizeText(name);
@@ -62,7 +62,7 @@ async function assertUniqueCategoryName(name, excludeId = null) {
     );
     if (maxLength >= 5 ? distance <= 2 : distance <= 1) {
       throw new ValidationError(
-        `Ya existe una categorÃ­a similar: "${category.name}". Verifica la ortografÃ­a.`,
+        `Ya existe una categoría similar: "${category.name}". Verifica la ortografía.`,
       );
     }
   }
@@ -85,7 +85,7 @@ export async function getAllCategories() {
 export async function getCategoryById(categoryId) {
   const category = await Category.findById(categoryId);
   if (!category) {
-    throw new NotFoundError("CategorÃ­a no encontrada");
+    throw new NotFoundError("Categoría no encontrada");
   }
   return category;
 }
@@ -102,7 +102,7 @@ export async function updateCategoryRecord(categoryId, categoryData) {
     context: "query",
   });
   if (!category) {
-    throw new NotFoundError("CategorÃ­a no encontrada");
+    throw new NotFoundError("Categoría no encontrada");
   }
   return category;
 }
@@ -110,7 +110,7 @@ export async function updateCategoryRecord(categoryId, categoryData) {
 export async function deleteCategoryRecord(categoryId) {
   const category = await Category.findByIdAndDelete(categoryId);
   if (!category) {
-    throw new NotFoundError("CategorÃ­a no encontrada");
+    throw new NotFoundError("Categoría no encontrada");
   }
   return category;
 }

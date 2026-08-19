@@ -115,7 +115,7 @@ async function authPlugin(fastify) {
     "/register",
     {
       schema: registerSchema,
-      preHandler: [requireRole("SUPER_ADMIN", "ADMIN")],
+      preHandler: [requireRole("SUPER_ADMIN")],
     },
     async (request, reply) => {
       try {
@@ -204,7 +204,7 @@ async function authPlugin(fastify) {
   fastify.patch(
     "/users/:id",
     {
-      preHandler: [requireRole("SUPER_ADMIN", "ADMIN")],
+      preHandler: [requireRole("SUPER_ADMIN")],
       schema: {
         tags: ["Usuarios"],
         summary: "Actualizar usuario",
@@ -314,7 +314,7 @@ async function authPlugin(fastify) {
   fastify.patch(
     "/users/:id/status",
     {
-      preHandler: [requireRole("SUPER_ADMIN", "ADMIN")],
+      preHandler: [requireRole("SUPER_ADMIN")],
       schema: {
         tags: ["Usuarios"],
         summary: "Cambiar estado de usuario",

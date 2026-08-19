@@ -6,7 +6,7 @@ import {
   deleteMeasureUnit,
 } from "../../../shared/apis/coreService";
 
-export function useMeasureUnits() {
+export function useMeasureUnits(enabled = true) {
   const [measureUnits, setMeasureUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,9 +25,13 @@ export function useMeasureUnits() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchMeasureUnits();
-  }, [fetchMeasureUnits]);
+  }, [enabled, fetchMeasureUnits]);
 
   const create = useCallback(async (formData) => {
     const { data } = await createMeasureUnit(formData);

@@ -109,16 +109,14 @@ export async function register(
 
   await user.save();
 
-  // Enviar credenciales y código de verificación (no bloquean si fallan)
-  sendCredentialsMail({
+  // El registro solo se confirma cuando SMTP acepta ambos correos.
+  await sendCredentialsMail({
     to: correo,
     nombre,
     username,
     password: tempPassword,
-  }).catch(() => {});
-  sendVerificationCodeMail({ to: correo, nombre, code: activationCode }).catch(
-    () => {},
-  );
+  });
+  await sendVerificationCodeMail({ to: correo, nombre, code: activationCode });
 
   return user;
 }

@@ -3,6 +3,7 @@ import {
   getWorkdays,
   getWorkdayById,
   updateWorkday,
+  updateWorkdayDoctors,
   updateWorkdayStatus,
   deleteWorkday,
 } from "./workday.controller.js";
@@ -157,7 +158,7 @@ async function workdayRoutes(fastify) {
   fastify.post(
     "/workdays",
     {
-      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
       schema: {
         tags: ["Jornadas"],
         summary: "Crear jornada médica",
@@ -214,7 +215,7 @@ async function workdayRoutes(fastify) {
   fastify.put(
     "/workdays/:id",
     {
-      preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
       schema: {
         tags: ["Jornadas"],
         summary: "Actualizar jornada",
@@ -233,9 +234,32 @@ async function workdayRoutes(fastify) {
   );
 
   fastify.patch(
-    "/workdays/:id/status",
+    "/workdays/:id/doctors",
     {
       preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
+      schema: {
+        tags: ["Jornadas"],
+        summary: "Asignar médicos a jornada",
+        security: [{ bearerAuth: [] }],
+        params: idParam,
+        body: {
+          type: "object",
+          required: ["doctors"],
+          properties: { doctors: doctorsSchema },
+        },
+        response: {
+          200: successBody(workdayResponseSchema),
+          404: errorSchema("Jornada no encontrada"),
+        },
+      },
+    },
+    updateWorkdayDoctors,
+  );
+
+  fastify.patch(
+    "/workdays/:id/status",
+    {
+      preHandler: [requireRole(...SUPER_ADMIN_ONLY)],
       schema: {
         tags: ["Jornadas"],
         summary: "Cambiar estado de jornada",
