@@ -71,7 +71,7 @@ function normalizeMovement(movement) {
         concentration: firstDetail.medicationSnapshot?.concentration || "",
         batch: firstDetail.batch || "",
         quantity: firstDetail.quantity ?? 0,
-        user: movement.userId || "Desconocido",
+        user: movement.userDisplayName || movement.userName || movement.userId || "Desconocido",
         motive: movement.metadata?.reason || movement.metadata?.deliveryType || "",
         createdAt: movement.createdAt || movement.appliedAt || movement.updatedAt,
     };

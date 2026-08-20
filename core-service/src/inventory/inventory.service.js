@@ -289,6 +289,61 @@ export async function registrarSalidaReceta({ detalle, userId, destination, meta
 
 }
 
+export async function registrarSalidaRecetaJornada({ jornadaId, detalle, userId, destination, metadata }) {
+    const movimientos = [];
+
+    for (const item of detalle) {
+        const { medicineId, batch } = item;
+        const medicine = await Medicine.findById(medicineId);
+        if (!medicine) throw new Error("Medicamento no encontrado");
+
+        const { boxes, blisters, units, quantity, totalUnits } = normalizeLotData(item, medicine);
+        if (totalUnits <= 0) throw new Error("La cantidad debe ser positiva");
+
+        const inventory = await WorkdayInventory.findOne({ workdayId: jornadaId, medicineId });
+        if (!inventory) throw new Error("El medicamento no está asignado a esta jornada");
+
+        const lot = inventory.lots.find((itemLot) => itemLot.batch === batch);
+        if (!lot) throw new Error("El lote no está asignado a esta jornada");
+        validarNoVencido(lot.expirationDate);
+
+        const availableUnits = getLotUnitValue(lot, medicine);
+        if (availableUnits < totalUnits) {
+            throw new Error(`Stock insuficiente en el lote ${batch}. Disponible: ${availableUnits} ${medicine.minimumUnit}, solicitado: ${totalUnits} ${medicine.minimumUnit}`);
+        }
+
+        subtractLotUnits(lot, totalUnits, medicine);
+        inventory.totalStock = Math.max(0, (Number(inventory.totalStock) || 0) - totalUnits);
+        await inventory.save();
+
+        const movimiento = new Movement({
+            type: "SALIDA",
+            subType: "RECETA",
+            origin: { type: "INVENTARIO_JORNADA", id: jornadaId },
+            destination,
+            detail: [{
+                medicineId,
+                medicationSnapshot: { name: medicine.name, concentration: medicine.concentration },
+                batch,
+                quantity,
+                boxes,
+                blisters,
+                units,
+                expirationDate: lot.expirationDate,
+            }],
+            status: "APLICADO",
+            userId,
+            metadata,
+            appliedAt: new Date(),
+        });
+
+        await movimiento.save();
+        movimientos.push(movimiento);
+    }
+
+    return movimientos;
+}
+
 export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle, userId, authHeader }) {
     const movimientos = [];
     await getWorkdayById(jornadaId, authHeader);

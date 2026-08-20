@@ -2,6 +2,7 @@ import Movement from './movement.model.js'
 import {
     registrarEntrada,
     registrarSalidaReceta,
+    registrarSalidaRecetaJornada,
     registrarTransferencia,
     validarStockJornada,
     descontarStockJornada,
@@ -64,6 +65,40 @@ export const createSalidaReceta = async (request, reply) => {
         return handleServiceError(error, reply);
     }
 }
+
+export const createSalidaRecetaJornada = async (request, reply) => {
+    try {
+        const { jornadaId, detalle, prescription, reason } = request.body;
+
+        // El servicio de jornadas valida que el MÉDICO autenticado esté asignado
+        // antes de modificar el inventario de la jornada.
+        await getWorkdayById(jornadaId, request.headers.authorization);
+
+        const movimientos = await registrarSalidaRecetaJornada({
+            jornadaId,
+            detalle,
+            destination: { type: "RECETA", id: null },
+            metadata: { prescription, reason },
+            userId: request.user?.id || "system",
+        });
+
+        await registerAudit({
+            userId: request.user?.id || "system",
+            action: AUDIT_ACTIONS.SALIDA,
+            module: AUDIT_MODULES.MOVEMENTS,
+            reference: movimientos[0]._id.toString(),
+            description: AUDIT_MESSAGES.SALIDA_RECETA_JORNADA,
+        });
+
+        return successResponse(reply, {
+            message: "Salida por receta de jornada registrada correctamente",
+            data: movimientos,
+            statusCode: 201,
+        });
+    } catch (error) {
+        return handleServiceError(error, reply);
+    }
+};
 
 export const createTransferencia = async (request, reply) => {
     try {

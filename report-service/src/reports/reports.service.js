@@ -22,6 +22,47 @@ async function fetchJson(url, authHeader, message, options = {}) {
     return response.json();
 }
 
+async function fetchAuthUsers(authHeader) {
+    const response = await fetch(
+        `${SERVICES.auth.baseUrl}/api/auth/users`,
+        getAuthOptions(authHeader),
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    return Array.isArray(data.users) ? data.users : [];
+}
+
+function getUserDisplayName(user, fallback = 'Sistema') {
+    if (!user) return fallback;
+
+    return [user.nombre, user.apellido]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+        || user.username
+        || user.correo
+        || String(user._id);
+}
+
+export function enrichMovementEntriesWithUserNames(entries = [], users = []) {
+    const userById = new Map(users.map((user) => [String(user._id), user]));
+
+    return (entries || []).map((entry) => {
+        const displayName = getUserDisplayName(
+            userById.get(String(entry.userId)),
+            entry.userId || 'Sistema',
+        );
+
+        return {
+            ...entry,
+            userName: displayName,
+            userDisplayName: displayName,
+        };
+    });
+}
+
 function getMedicineValue(inv, key, fallback = '') {
     if (inv.medicineId && typeof inv.medicineId === 'object') {
         return inv.medicineId[key] ?? fallback;
@@ -200,7 +241,15 @@ export async function obtenerMovimientos({ fecha, jornadaId, tipo, usuario, page
     if (page) url += `page=${page}&`;
     if (limit) url += `limit=${limit}&`;
 
-    return fetchJson(url, authHeader, 'Error al consultar los movimientos');
+    const [data, users] = await Promise.all([
+        fetchJson(url, authHeader, 'Error al consultar los movimientos'),
+        fetchAuthUsers(authHeader),
+    ]);
+
+    return {
+        ...data,
+        data: enrichMovementEntriesWithUserNames(data.data || [], users),
+    };
 }
 
 export function buildDashboardMetrics({ medicines = [], workdays = [], movements = [], inventory = [], users = [] } = {}) {
@@ -613,10 +662,10 @@ export function enrichAuditEntriesWithUserNames(entries = [], users = []) {
     const userById = new Map(users.map((user) => [String(user._id), user]));
 
     return (entries || []).map((entry) => {
-        const user = userById.get(String(entry.userId));
-        const displayName = user
-            ? [user.nombre, user.apellido].filter(Boolean).join(' ').trim() || user.username || user.correo || String(user._id)
-            : entry.userId || 'Sistema';
+        const displayName = getUserDisplayName(
+            userById.get(String(entry.userId)),
+            entry.userId || 'Sistema',
+        );
 
         return {
             ...entry,
@@ -633,17 +682,10 @@ export async function obtenerAuditorias({ userId, action, module, fecha }, authH
     if (module) url += `module=${module}&`;
     if (fecha) url += `fecha=${fecha}&`;
 
-    const [data, usersResponse] = await Promise.all([
+    const [data, users] = await Promise.all([
         fetchJson(url, authHeader, 'Error al consultar auditorias'),
-        fetch(`${SERVICES.auth.baseUrl || 'http://localhost:3020'}/api/auth/users`, getAuthOptions(authHeader))
+        fetchAuthUsers(authHeader),
     ]);
-
-    if (!usersResponse.ok) {
-        return data.data;
-    }
-
-    const usersData = await usersResponse.json();
-    const users = usersData.users || [];
     return enrichAuditEntriesWithUserNames(data.data || [], users);
 }
 
