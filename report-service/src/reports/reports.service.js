@@ -426,13 +426,17 @@ export async function obtenerAlertasVencimiento(dias = 30, authHeader) {
 }
 
 export async function exportarMovimientosExcel(authHeader) {
-    const data = await fetchJson(
-        `${SERVICES.core.baseUrl}/api/v1/movimientos`,
-        authHeader,
-        'Error al consultar movimientos'
-    );
+    const [data, users] = await Promise.all([
+        fetchJson(
+            `${SERVICES.core.baseUrl}/api/v1/movimientos`,
+            authHeader,
+            'Error al consultar movimientos'
+        ),
+        fetchAuthUsers(authHeader),
+    ]);
+    const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    const filas = data.data.flatMap(mov =>
+    const filas = movements.flatMap(mov =>
         mov.detail.map(item => ({
         Tipo: mov.type,
         SubTipo: mov.subType,
@@ -442,7 +446,7 @@ export async function exportarMovimientosExcel(authHeader) {
         Cantidad: item.quantity,
         FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
         Estado: mov.status,
-        Usuario: mov.userId,
+        Usuario: mov.userDisplayName,
         Fecha: new Date(mov.createdAt).toLocaleDateString()
         }))
     );
@@ -509,13 +513,17 @@ export async function exportarJornadasExcel(authHeader) {
 }
 
 export async function exportarConsumoExcel(authHeader) {
-    const data = await fetchJson(
-        `${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`,
-        authHeader,
-        'Error al consultar consumo'
-    );
+    const [data, users] = await Promise.all([
+        fetchJson(
+            `${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`,
+            authHeader,
+            'Error al consultar consumo'
+        ),
+        fetchAuthUsers(authHeader),
+    ]);
+    const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    const filas = data.data.flatMap(mov =>
+    const filas = movements.flatMap(mov =>
         mov.detail.map(item => ({
         JornadaId: mov.destination?.id,
         Medicamento: item.medicationSnapshot.name,
@@ -523,7 +531,7 @@ export async function exportarConsumoExcel(authHeader) {
         Lote: item.batch,
         Cantidad: item.quantity,
         FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
-        Usuario: mov.userId,
+        Usuario: mov.userDisplayName,
         Fecha: new Date(mov.createdAt).toLocaleDateString()
         }))
     );
@@ -536,11 +544,15 @@ export async function exportarConsumoExcel(authHeader) {
 }
 
 export async function exportarMovimientosPDF(authHeader) {
-    const data = await fetchJson(
-        `${SERVICES.core.baseUrl}/api/v1/movimientos`,
-        authHeader,
-        'Error al consultar movimientos'
-    );
+    const [data, users] = await Promise.all([
+        fetchJson(
+            `${SERVICES.core.baseUrl}/api/v1/movimientos`,
+            authHeader,
+            'Error al consultar movimientos'
+        ),
+        fetchAuthUsers(authHeader),
+    ]);
+    const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
     return new Promise((resolve) => {
         const doc = new PDFDocument({ margin: 30 });
@@ -552,10 +564,10 @@ export async function exportarMovimientosPDF(authHeader) {
         doc.fontSize(18).text('Reporte de Movimientos', { align: 'center' });
         doc.moveDown();
 
-        data.data.forEach(mov => {
+        movements.forEach(mov => {
         doc.fontSize(11).text(`Tipo: ${mov.type} - ${mov.subType}`);
         doc.text(`Estado: ${mov.status}`);
-        doc.text(`Usuario: ${mov.userId}`);
+        doc.text(`Usuario: ${mov.userDisplayName}`);
         doc.text(`Fecha: ${new Date(mov.createdAt).toLocaleDateString()}`);
         mov.detail.forEach(item => {
             doc.text(`  Medicamento: ${item.medicationSnapshot.name} | Lote: ${item.batch} | Cantidad: ${item.quantity}`);
