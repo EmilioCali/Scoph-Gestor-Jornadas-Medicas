@@ -219,13 +219,14 @@ const movementRoutes = async (fastify) => {
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar consumo en jornada',
-                description: 'Descuenta stock del inventario de jornada. productoId corresponde al _id del medicamento.',
+                description: 'Descuenta stock del inventario de la jornada indicada. productoId corresponde al _id del medicamento.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',
-                    required: ['productoId', 'cantidad'],
+                    required: ['productoId', 'workdayId', 'cantidad'],
                     properties: {
                         productoId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
+                        workdayId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
                         cantidad: { type: 'number', minimum: 1, example: 3 }
                     }
                 },
@@ -291,9 +292,10 @@ const movementRoutes = async (fastify) => {
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',
-                    required: ['productoId', 'cantidad'],
+                    required: ['productoId', 'workdayId', 'cantidad'],
                     properties: {
                         productoId: { type: 'string', example: '664f1a2b3c4d5e6f78901234' },
+                        workdayId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
                         cantidad: { type: 'number', minimum: 1, example: 2 }
                     }
                 },

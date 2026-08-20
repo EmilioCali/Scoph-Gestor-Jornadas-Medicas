@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getMedicines } from "../../../shared/apis/coreService";
 import {
     getCentralInventory,
@@ -38,8 +38,16 @@ export function useInventarioCentral() {
     }, [fetchAll]);
 
     // Medicamentos activos que aún no tienen registro en inventario central
-    const availableMedicines = medicines.filter(
-        (m) => m.status === "ACTIVO" && !inventory.some((i) => String(i.medicineId) === String(m._id))
+    const availableMedicines = useMemo(
+        () =>
+            medicines.filter(
+                (m) =>
+                    m.status === "ACTIVO" &&
+                    !inventory.some(
+                        (i) => String(i.medicineId) === String(m._id),
+                    ),
+            ),
+        [inventory, medicines],
     );
 
     // Agrega medicamento al inventario usando la cantidad y unidad seleccionadas

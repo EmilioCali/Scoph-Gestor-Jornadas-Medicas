@@ -50,6 +50,37 @@ function MedicineForm({
   measureUnitOptions,
   packagingUnitOptions,
 }) {
+  const initialUnitLevel = form.intermediateUnit
+    ? 3
+    : form.packageUnit === form.minimumUnit && Number(form.unitsPerPackage) === 1
+      ? 1
+      : 2;
+  const [unitLevel, setUnitLevel] = useState(initialUnitLevel);
+
+  const changeUnitLevel = (level) => {
+    setUnitLevel(level);
+
+    if (level === 1) {
+      onChange({ target: { name: "intermediateUnit", value: "" } });
+      onChange({ target: { name: "packageUnit", value: form.minimumUnit || "" } });
+      onChange({ target: { name: "unitsPerPackage", value: "1" } });
+      onChange({ target: { name: "unitsPerMinimumUnit", value: "1" } });
+      return;
+    }
+
+    if (level === 2) {
+      onChange({ target: { name: "intermediateUnit", value: "" } });
+      onChange({ target: { name: "unitsPerMinimumUnit", value: "1" } });
+    }
+  };
+
+  const handleMinimumUnitChange = (event) => {
+    onChange(event);
+    if (unitLevel === 1) {
+      onChange({ target: { name: "packageUnit", value: event.target.value } });
+    }
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -88,15 +119,57 @@ function MedicineForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div>
+        <p className="mb-2 text-sm font-semibold text-gray-600">
+          Niveles de control de inventario
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={unitLevel === 3 ? "bg-primary text-white" : ""}
+            onClick={() => changeUnitLevel(3)}
+          >
+            3 niveles
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={unitLevel === 2 ? "bg-primary text-white" : ""}
+            onClick={() => changeUnitLevel(2)}
+          >
+            2 niveles
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={unitLevel === 1 ? "bg-primary text-white" : ""}
+            onClick={() => changeUnitLevel(1)}
+          >
+            1 nivel
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          {unitLevel === 3
+            ? "Ejemplo: Caja → Blíster → Tableta."
+            : unitLevel === 2
+              ? "Ejemplo: Caja → Jarabe."
+              : "Ejemplo: Unidad de un producto."}
+        </p>
+      </div>
+
+      <div className={unitLevel === 3 ? "grid grid-cols-2 gap-4" : "flex flex-col gap-1"}>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
-            Unidad mínima
+            {unitLevel === 1 ? "Unidad del producto" : "Unidad mínima"}
           </label>
           <select
             name="minimumUnit"
             value={form.minimumUnit}
-            onChange={onChange}
+            onChange={handleMinimumUnitChange}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
             required
           >
@@ -111,81 +184,88 @@ function MedicineForm({
           </select>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">
-            Unidad intermedia
-          </label>
-          <select
-            name="intermediateUnit"
-            value={form.intermediateUnit || ""}
-            onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-          >
-            <option value="">Sin unidad intermedia</option>
-            {measureUnitOptions
-              .filter(
-                (unit) =>
-                  unit.activo !== false && unit.name !== form.minimumUnit,
-              )
-              .map((unit) => (
-                <option key={unit._id} value={unit.name}>
-                  {unit.name}
-                </option>
-              ))}
-          </select>
-        </div>
+        {unitLevel === 3 && (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">
+              Unidad intermedia
+            </label>
+            <select
+              name="intermediateUnit"
+              value={form.intermediateUnit || ""}
+              onChange={onChange}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+              required
+            >
+              <option value="">Seleccionar</option>
+              {measureUnitOptions
+                .filter(
+                  (unit) =>
+                    unit.activo !== false && unit.name !== form.minimumUnit,
+                )
+                .map((unit) => (
+                  <option key={unit._id} value={unit.name}>
+                    {unit.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">
-            Unidad de empaque
-          </label>
-          <select
-            name="packageUnit"
-            value={form.packageUnit}
+      {unitLevel > 1 && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">
+              Unidad de empaque
+            </label>
+            <select
+              name="packageUnit"
+              value={form.packageUnit}
+              onChange={onChange}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+              required
+            >
+              <option value="">Seleccionar</option>
+              {packagingUnitOptions
+                .filter((unit) => unit.activo !== false)
+                .map((unit) => (
+                  <option key={unit._id} value={unit.name}>
+                    {unit.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <Input
+            label={
+              unitLevel === 3
+                ? `${form.intermediateUnit || "Unidad intermedia"} por ${form.packageUnit || "empaque"}`
+                : `${form.minimumUnit || "Unidad mínima"} por ${form.packageUnit || "empaque"}`
+            }
+            name="unitsPerPackage"
+            type="number"
+            min="1"
+            value={form.unitsPerPackage}
             onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            placeholder="100"
             required
-          >
-            <option value="">Seleccionar</option>
-            {packagingUnitOptions
-              .filter((unit) => unit.activo !== false)
-              .map((unit) => (
-                <option key={unit._id} value={unit.name}>
-                  {unit.name}
-                </option>
-              ))}
-          </select>
+          />
         </div>
-
-        <Input
-          label={
-            form.intermediateUnit
-              ? `${form.intermediateUnit} por ${form.packageUnit || "empaque"}`
-              : `${form.minimumUnit || "Unidad mínima"} por ${form.packageUnit || "empaque"}`
-          }
-          name="unitsPerPackage"
-          type="number"
-          min="1"
-          value={form.unitsPerPackage}
-          onChange={onChange}
-          placeholder="100"
-          required
-        />
-      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label={`${form.minimumUnit || "Unidad mínima"} por ${form.intermediateUnit || "unidad intermedia"}`}
-          name="unitsPerMinimumUnit"
-          type="number"
-          min="1"
-          value={form.intermediateUnit ? form.unitsPerMinimumUnit : ""}
-          onChange={onChange}
-          placeholder="10"
-          disabled={!form.intermediateUnit}
-        />
+        {unitLevel === 3 && (
+          <Input
+            label={`${form.minimumUnit || "Unidad mínima"} por ${form.intermediateUnit || "unidad intermedia"}`}
+            name="unitsPerMinimumUnit"
+            type="number"
+            min="1"
+            value={form.unitsPerMinimumUnit}
+            onChange={onChange}
+            placeholder="10"
+            required
+          />
+        )}
         <Input
           label="Stock mínimo"
           name="minimumStock"
@@ -197,9 +277,11 @@ function MedicineForm({
         />
       </div>
       <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-        {form.intermediateUnit
+        {unitLevel === 3
           ? `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.intermediateUnit}; 1 ${form.intermediateUnit} = ${form.unitsPerMinimumUnit || "…"} ${form.minimumUnit || "unidades mínimas"}.`
-          : `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.minimumUnit || "unidades mínimas"}.`}
+          : unitLevel === 2
+            ? `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.minimumUnit || "unidades mínimas"}.`
+            : `Cada ingreso se contabiliza directamente como ${form.minimumUnit || "una unidad"}.`}
       </p>
 
       <div className="grid grid-cols-2 gap-4">

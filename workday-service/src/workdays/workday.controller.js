@@ -134,8 +134,13 @@ function normalizeDoctors(doctors) {
 
 function isDoctorAssigned(workday, userId) {
   if (!workday || userId == null) return false;
-  return (workday.doctors || []).some(
-    (doctor) => String(doctor.userId) === String(userId),
+  const normalizedUserId = String(userId);
+
+  return (
+    String(workday.manager?.userId ?? "") === normalizedUserId ||
+    (workday.doctors || []).some(
+      (doctor) => String(doctor.userId) === normalizedUserId,
+    )
   );
 }
 
@@ -218,9 +223,14 @@ export const getWorkdays = async (request, reply) => {
     }
     const filter = {};
 
-    // TKT-79: el médico solo ve jornadas donde está asignado
+    // El médico solo ve jornadas donde fue asignado, incluido cuando es el
+    // responsable. El segundo caso mantiene acceso a jornadas ya creadas que
+    // aún no guardaban al responsable dentro de `doctors`.
     if (request.user?.rol === "MEDICO") {
-      filter["doctors.userId"] = request.user.id;
+      filter.$or = [
+        { "doctors.userId": request.user.id },
+        { "manager.userId": request.user.id },
+      ];
     }
 
     const workdays = await Workday.find(filter).sort({ startDate: -1 });

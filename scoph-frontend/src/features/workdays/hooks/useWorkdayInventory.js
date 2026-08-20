@@ -205,6 +205,7 @@ export function useWorkdayInventory() {
       const amount = Number(entryQuantity || 0);
       const { data } = await registerConsumption({
         productoId: String(item.medicineId),
+        workdayId: String(item.workdayId),
         cantidad: amount,
         quantity: amount,
         entryUnitType: entryUnit || null,
@@ -223,6 +224,7 @@ export function useWorkdayInventory() {
       const amount = Number(entryQuantity || 0);
       const { data } = await registerReturn({
         productoId: String(item.medicineId),
+        workdayId: String(item.workdayId),
         cantidad: amount,
         quantity: amount,
         entryUnitType: entryUnit || null,

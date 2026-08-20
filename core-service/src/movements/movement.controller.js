@@ -97,8 +97,8 @@ export const createTransferencia = async (request, reply) => {
 
 export const createConsumoJornada = async (request, reply) => {
     try {
-        const { productoId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
-        const payload = { boxes, blisters, units, quantity };
+        const { productoId, workdayId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
+        const payload = { workdayId, boxes, blisters, units, quantity };
 
         // Autorizar antes de mutar stock (TKT-80)
         if (request.user?.rol === 'MEDICO') {
@@ -148,8 +148,8 @@ export const createConsumoJornada = async (request, reply) => {
 
 export const createRetornoJornada = async (request, reply) => {
     try {
-        const { productoId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
-        const payload = { boxes, blisters, units, quantity };
+        const { productoId, workdayId, cantidad, boxes = 0, blisters = 0, units = 0, quantity = cantidad || 0 } = request.body;
+        const payload = { workdayId, boxes, blisters, units, quantity };
 
         const { inventory, lote, medicine } = await procesarRetornoJornada(productoId, payload);
 
