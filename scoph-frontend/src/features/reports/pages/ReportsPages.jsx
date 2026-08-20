@@ -429,6 +429,11 @@ export default function ReportesPage() {
             render: (row) => <Badge variant="gray">{row.module}</Badge>,
         },
         { key: "description", label: "Descripción" },
+        {
+            key: "userId",
+            label: "ID de usuario",
+            render: (row) => <span className="font-mono text-xs text-gray-600">{row.userId || "Sistema"}</span>,
+        },
         { key: "reference", label: "Referencia" },
     ];
 

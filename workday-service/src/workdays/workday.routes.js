@@ -182,7 +182,7 @@ async function workdayRoutes(fastify) {
         tags: ["Jornadas"],
         summary: "Listar jornadas médicas",
         description:
-          "ADMIN/SUPER_ADMIN ven todas. MEDICO solo ve jornadas donde está asignado en doctors.",
+          "ADMIN/SUPER_ADMIN ven todas. MEDICO solo ve jornadas donde está asignado o es responsable.",
         security: [{ bearerAuth: [] }],
         response: {
           200: successBody({ type: "array", items: workdayResponseSchema }),
@@ -199,7 +199,7 @@ async function workdayRoutes(fastify) {
       schema: {
         tags: ["Jornadas"],
         summary: "Obtener jornada por ID",
-        description: "MEDICO recibe 403 si no está asignado a la jornada.",
+        description: "MEDICO recibe 403 si no está asignado ni es responsable de la jornada.",
         security: [{ bearerAuth: [] }],
         params: idParam,
         response: {
