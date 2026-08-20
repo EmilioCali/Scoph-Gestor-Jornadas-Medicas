@@ -153,6 +153,42 @@ function getLotDisplayQuantities(item, lot) {
   return { boxes, equivalentBlisters, totalUnits };
 }
 
+// La disponibilidad operativa se guarda por empaque; `stock` es compatibilidad
+// para lotes creados antes del desglose por cajas, blísteres y unidades.
+function getLotUnitValue(lot, item) {
+  const boxes = Math.max(0, Number(lot?.boxes ?? 0) || 0);
+  const blisters = Math.max(0, Number(lot?.blisters ?? 0) || 0);
+  const units = Math.max(0, Number(lot?.units ?? 0) || 0);
+
+  if (boxes === 0 && blisters === 0 && units === 0) {
+    return Math.max(0, Number(lot?.stock ?? 0) || 0);
+  }
+
+  const unitsPerPackage = Math.max(1, Number(item?.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(item?.unitsPerMinimumUnit ?? 1) || 1);
+
+  return (
+    boxes * unitsPerPackage * unitsPerMinimumUnit
+    + blisters * unitsPerMinimumUnit
+    + units
+  );
+}
+
+function getEntryUnitFactor(item, entryUnit) {
+  if (!entryUnit) return 1;
+
+  const unitsPerPackage = Math.max(1, Number(item?.unitsPerPackage ?? 1) || 1);
+  const unitsPerMinimumUnit = Math.max(1, Number(item?.unitsPerMinimumUnit ?? 1) || 1);
+
+  if (String(entryUnit) === String(item?.packageUnit)) {
+    return unitsPerPackage * unitsPerMinimumUnit;
+  }
+  if (String(entryUnit) === String(item?.intermediateUnit)) {
+    return unitsPerMinimumUnit;
+  }
+  return 1;
+}
+
 function getEntryUnits(item) {
   const entryUnits = new Set();
 
@@ -499,6 +535,12 @@ function SalidaForm({
     return createConversionSummary(item, Number(form.entryQuantity || 0), form.entryUnit, "a restar");
   }, [form.entryQuantity, form.entryUnit, item]);
 
+  const selectedLot = item?.lots?.find((lot) => lot.batch === form.batch);
+  const availableLotUnits = getLotUnitValue(selectedLot, item);
+  const maxWithdrawalQuantity = Math.floor(
+    availableLotUnits / getEntryUnitFactor(item, form.entryUnit),
+  );
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -529,10 +571,10 @@ function SalidaForm({
         >
           <option value="">Seleccionar lote</option>
           {item?.lots
-            ?.filter((l) => l.stock > 0)
+            ?.filter((lot) => getLotUnitValue(lot, item) > 0)
             .map((l) => (
               <option key={l.batch} value={l.batch}>
-                {l.batch} — Stock: {l.stock} — Vence:{" "}
+                {l.batch} — Disponible: {getLotUnitValue(l, item)} {item?.minimumUnit ?? "unidades"} — Vence:{" "}
                 {new Date(l.expirationDate).toLocaleDateString("es-GT")}
               </option>
             ))}
@@ -544,10 +586,7 @@ function SalidaForm({
           name="entryQuantity"
           type="number"
           min="0"
-          max={
-            item?.lots?.find((l) => l.batch === form.batch)?.stock ??
-            item?.totalStock
-          }
+          max={form.batch && form.entryUnit ? maxWithdrawalQuantity : undefined}
           value={form.entryQuantity ?? ""}
           onChange={onChange}
           placeholder="5"
