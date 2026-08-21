@@ -328,16 +328,6 @@ function AgregarForm({
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Cantidad a ingresar"
-          name="entryQuantity"
-          type="number"
-          min="0"
-          value={form.entryQuantity ?? ""}
-          onChange={onChange}
-          placeholder="5"
-          required
-        />
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
             Unidad de ingreso
@@ -358,6 +348,16 @@ function AgregarForm({
             ))}
           </select>
         </div>
+        <Input
+          label="Cantidad a ingresar"
+          name="entryQuantity"
+          type="number"
+          min="0"
+          value={form.entryQuantity ?? ""}
+          onChange={onChange}
+          placeholder="5"
+          required
+        />
       </div>
       {conversionSummary && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
@@ -457,16 +457,6 @@ function EntradaForm({
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Cantidad a ingresar"
-          name="entryQuantity"
-          type="number"
-          min="0"
-          value={form.entryQuantity ?? ""}
-          onChange={onChange}
-          placeholder="5"
-          required
-        />
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
             Unidad de ingreso
@@ -487,6 +477,16 @@ function EntradaForm({
             ))}
           </select>
         </div>
+        <Input
+          label="Cantidad a ingresar"
+          name="entryQuantity"
+          type="number"
+          min="0"
+          value={form.entryQuantity ?? ""}
+          onChange={onChange}
+          placeholder="5"
+          required
+        />
       </div>
       {conversionSummary && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">

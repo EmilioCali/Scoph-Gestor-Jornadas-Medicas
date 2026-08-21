@@ -309,6 +309,7 @@ function WorkdayDetail({
   onFinish,
   onManageDoctors,
   canAssign,
+  canConsume,
   canReturn,
   canFinish,
   canManageDoctors,
@@ -446,7 +447,7 @@ function WorkdayDetail({
                       </span>
                     </p>
                   </div>
-                  {workday.status === "IN_PROGRESS" && (
+                  {workday.status === "IN_PROGRESS" && (canConsume || canReturn) && (
                     <div className="flex gap-2">
                       {canRegisterPrescription && (
                         <Button
@@ -464,6 +465,15 @@ function WorkdayDetail({
                       >
                         Consumo
                       </Button>
+                      {canConsume && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onConsumption(item)}
+                        >
+                          Consumo
+                        </Button>
+                      )}
                       {canReturn && (
                         <Button
                           variant="outline"
@@ -625,18 +635,7 @@ function AssignMedicineForm({
           </select>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Cantidad a asignar (en la unidad elegida)"
-          name="entryQuantity"
-          type="number"
-          min="1"
-          value={form.entryQuantity ?? ""}
-          onChange={onChange}
-          placeholder="5"
-          required
-        />
-        <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
             Unidad de asignación
           </label>
@@ -656,6 +655,18 @@ function AssignMedicineForm({
             ))}
           </select>
         </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Cantidad a asignar (en la unidad elegida)"
+          name="entryQuantity"
+          type="number"
+          min="1"
+          value={form.entryQuantity ?? ""}
+          onChange={onChange}
+          placeholder="5"
+          required
+        />
+
       </div>
       {conversionSummary && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
@@ -916,6 +927,8 @@ export default function JornadasPage() {
   const canManageWorkdays = currentUser?.rol === "SUPER_ADMIN";
   const canTransferMedication =
     currentUser?.rol === "ADMIN" || currentUser?.rol === "SUPER_ADMIN";
+  const canConsumeMedication =
+    currentUser?.rol === "MEDICO" || currentUser?.rol === "SUPER_ADMIN";
   const {
     workdays,
     users,
@@ -935,6 +948,22 @@ export default function JornadasPage() {
     registerWorkdayPrescription,
     registerWorkdayReturn,
   } = useWorkdayInventory();
+
+  // El backend aplica este mismo control. Se conserva aquí para que la vista
+  // del médico nunca muestre jornadas ajenas, aun si recibe datos en caché.
+  const visibleWorkdays = useMemo(() => {
+    if (currentUser?.rol !== "MEDICO") return workdays;
+
+    const currentUserId = String(currentUser._id ?? currentUser.id ?? "");
+    if (!currentUserId) return [];
+
+    return workdays.filter((workday) =>
+      String(workday.manager?.userId ?? "") === currentUserId ||
+      (workday.doctors ?? []).some(
+        (doctor) => String(doctor.userId ?? "") === currentUserId,
+      ),
+    );
+  }, [currentUser, workdays]);
 
   const [modalCrear, setModalCrear] = useState(false);
   const [modalDetalle, setModalDetalle] = useState(false);
@@ -1039,6 +1068,14 @@ export default function JornadasPage() {
           userId: manager._id,
           name: `${manager.nombre ?? ""} ${manager.apellido ?? ""}`.trim(),
         },
+        // El responsable también es un médico asignado a la jornada, por lo
+        // que heredará su acceso e inventario al iniciar sesión.
+        doctors: [
+          {
+            userId: manager._id,
+            name: `${manager.nombre ?? ""} ${manager.apellido ?? ""}`.trim(),
+          },
+        ],
         companions,
         estimatedPatients: Number(formWorkday.estimatedPatients),
         estimatedMedicines: Number(formWorkday.estimatedMedicines),
@@ -1349,19 +1386,19 @@ export default function JornadasPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
           <p className="text-xs text-gray-400 font-medium">Total Jornadas</p>
           <p className="text-2xl font-extrabold text-gray-800">
-            {workdays.length}
+            {visibleWorkdays.length}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
           <p className="text-xs text-gray-400 font-medium">En Curso</p>
           <p className="text-2xl font-extrabold text-green-500">
-            {workdays.filter((j) => j.status === "IN_PROGRESS").length}
+            {visibleWorkdays.filter((j) => j.status === "IN_PROGRESS").length}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
           <p className="text-xs text-gray-400 font-medium">Planificadas</p>
           <p className="text-2xl font-extrabold text-blue-500">
-            {workdays.filter((j) => j.status === "PLANNED").length}
+            {visibleWorkdays.filter((j) => j.status === "PLANNED").length}
           </p>
         </div>
       </div>
@@ -1369,7 +1406,7 @@ export default function JornadasPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <Table
           columns={columnas}
-          data={workdays}
+          data={visibleWorkdays}
           loading={loading}
           emptyMessage="No hay jornadas registradas"
         />
@@ -1439,6 +1476,7 @@ export default function JornadasPage() {
               setModalMedicos(true);
             }}
             canAssign={canTransferMedication}
+            canConsume={canConsumeMedication}
             canReturn={canManageWorkdays}
             canFinish={canManageWorkdays}
             canManageDoctors={canTransferMedication}

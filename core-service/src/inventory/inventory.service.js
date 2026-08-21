@@ -417,8 +417,15 @@ export async function registrarTransferencia({ jornadaId, jornadaNombre, detalle
     return movimientos;
 }
 
-async function getWorkdayInventory(productoId) {
-    const inventory = await WorkdayInventory.findOne({ medicineId: new mongoose.Types.ObjectId(productoId) });
+async function getWorkdayInventory(productoId, workdayId) {
+    if (!workdayId) {
+        throw new Error('El ID de la jornada es requerido');
+    }
+
+    const inventory = await WorkdayInventory.findOne({
+        medicineId: new mongoose.Types.ObjectId(productoId),
+        workdayId: String(workdayId),
+    });
     if (!inventory) {
         throw new Error('Inventario de jornada no encontrado');
     }
@@ -427,7 +434,7 @@ async function getWorkdayInventory(productoId) {
 
 
 export async function validarStockJornada(productoId, payload = {}) {
-    const inventory = await getWorkdayInventory(productoId);
+    const inventory = await getWorkdayInventory(productoId, payload.workdayId);
     const medicine = await Medicine.findById(inventory.medicineId);
     if (!medicine) {
         throw new Error('Medicamento no encontrado');
@@ -469,7 +476,7 @@ export async function descontarStockJornada(productoId, payload = {}) {
 }
 
 export async function procesarRetornoJornada(productoId, payload = {}) {
-    const inventory = await getWorkdayInventory(productoId);
+    const inventory = await getWorkdayInventory(productoId, payload.workdayId);
     const medicine = await Medicine.findById(inventory.medicineId);
     if (!medicine) {
         throw new Error('Medicamento no encontrado');
