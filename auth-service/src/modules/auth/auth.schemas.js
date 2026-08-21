@@ -95,7 +95,7 @@ export const changePasswordSchema = {
     required: ['currentPassword', 'newPassword'],
     properties: {
       currentPassword: { type: 'string', minLength: 1, example: 'contraseñaTemporal', description: 'Contraseña actual o temporal recibida por correo' },
-      newPassword: { type: 'string', minLength: 8, example: 'nuevaContraseña123', description: 'Nueva contraseña (mínimo 8 caracteres)' }
+      newPassword: { type: 'string', example: 'NuevaClave1!', description: 'Debe incluir mayúscula, minúscula, número, carácter especial y al menos 8 caracteres' }
     }
   },
   response: {
@@ -176,7 +176,7 @@ export const resetPasswordSchema = {
     properties: {
       correo: { type: 'string', example: 'daniel@gmail.com' },
       code: { type: 'string', minLength: 6, maxLength: 6, example: '391047' },
-      newPassword: { type: 'string', minLength: 8, example: 'nuevaContraseñaSegura123' }
+      newPassword: { type: 'string', example: 'NuevaClave1!' }
     }
   },
   response: {

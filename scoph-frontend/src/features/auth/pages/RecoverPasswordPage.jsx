@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { EnvelopeIcon, KeyIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { forgotPassword, resetPassword } from "../../../shared/apis/authService";
 import { useUIStore } from "../../../shared/store/uiStore";
+import PasswordStrengthMeter from "../../../shared/components/PasswordStrengthMeter";
+import {
+    getPasswordStrength,
+    getPasswordValidationMessage,
+} from "../../../shared/utils/passwordStrength";
 import logo from "../../../assets/logo.png";
 import personalMedico from "../../../assets/PersonalMedico.jpeg";
 
@@ -161,8 +166,9 @@ export default function RecoverPasswordPage() {
             showError(message);
             return;
         }
-        if (newPassword.length < 8) {
-            const message = "La contraseña debe tener al menos 8 caracteres.";
+        const passwordStrength = getPasswordStrength(newPassword);
+        if (!passwordStrength.isValid) {
+            const message = getPasswordValidationMessage(newPassword);
             setError(message);
             showError(message);
             return;
@@ -289,6 +295,7 @@ export default function RecoverPasswordPage() {
                                             placeholder="Mínimo 8 caracteres"
                                             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 placeholder-gray-300 transition"
                                             required />
+                                        <PasswordStrengthMeter password={newPassword} />
                                     </div>
 
                                     {/* Confirmar contraseña */}

@@ -4,6 +4,11 @@ import { EyeIcon, EyeSlashIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "../store/authStore.js";
 import { changePassword } from "../../../shared/apis/authService";
 import { useUIStore } from "../../../shared/store/uiStore";
+import PasswordStrengthMeter from "../../../shared/components/PasswordStrengthMeter";
+import {
+  getPasswordStrength,
+  getPasswordValidationMessage,
+} from "../../../shared/utils/passwordStrength";
 import logo from "../../../assets/logo.png";
 import personalMedico from "../../../assets/PersonalMedico.jpeg";
 
@@ -93,8 +98,9 @@ export default function ChangePasswordPage() {
       showError(validationError);
       return;
     }
-    if (form.newPassword.length < 8) {
-      const validationError = "La contraseña debe tener al menos 8 caracteres.";
+    const passwordStrength = getPasswordStrength(form.newPassword);
+    if (!passwordStrength.isValid) {
+      const validationError = getPasswordValidationMessage(form.newPassword);
       setError(validationError);
       showError(validationError);
       return;
@@ -276,6 +282,7 @@ export default function ChangePasswordPage() {
                     )}
                   </button>
                 </div>
+                <PasswordStrengthMeter password={form.newPassword} />
               </div>
 
               <div className="flex flex-col gap-1">

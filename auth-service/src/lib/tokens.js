@@ -12,8 +12,27 @@ const EXPIRES_MINUTES = parseInt(process.env.VERIFICATION_TOKEN_EXPIRES_MINUTES 
  * @returns {string}
  */
 export function generateTempPassword() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  return Array.from({ length: 12 }, () => chars[randomInt(0, chars.length)]).join('')
+  const uppercase = 'ABCDEFGHJKMNPQRSTUVWXYZ'
+  const lowercase = 'abcdefghjkmnpqrstuvwxyz'
+  const numbers = '23456789'
+  const specialCharacters = '!@#$%^&*?'
+  const chars = `${uppercase}${lowercase}${numbers}${specialCharacters}`
+  const password = [
+    uppercase[randomInt(0, uppercase.length)],
+    lowercase[randomInt(0, lowercase.length)],
+    numbers[randomInt(0, numbers.length)],
+    specialCharacters[randomInt(0, specialCharacters.length)],
+    ...Array.from({ length: 8 }, () => chars[randomInt(0, chars.length)]),
+  ]
+
+  for (let index = password.length - 1; index > 0; index -= 1) {
+    const randomIndex = randomInt(0, index + 1)
+    const currentCharacter = password[index]
+    password[index] = password[randomIndex]
+    password[randomIndex] = currentCharacter
+  }
+
+  return password.join('')
 }
 
 /**
