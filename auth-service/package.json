@@ -6,6 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test",
     "predev": "node -e \"require('fs').mkdirSync('.mongodb/data', { recursive: true })\"",
     "dev": "node --env-file-if-exists=.env --watch src/index.js",
     "start": "node --env-file-if-exists=.env src/index.js"

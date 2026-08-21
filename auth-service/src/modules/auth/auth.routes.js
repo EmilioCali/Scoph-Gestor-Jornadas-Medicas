@@ -22,6 +22,15 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "./auth.schemas.js";
+import { validatePassword } from "../../utils/passwordValidator.js";
+
+function hasValidNewPassword(newPassword, reply) {
+  const validation = validatePassword(newPassword);
+  if (validation.valid) return true;
+
+  reply.status(400).send({ ok: false, message: validation.errors[0] });
+  return false;
+}
 
 async function registerAuditEvent(payload, request) {
   const coreServiceUrl = process.env.CORE_SERVICE_URL || "http://localhost:3001";
@@ -151,6 +160,7 @@ async function authPlugin(fastify) {
     async (request, reply) => {
       try {
         const { currentPassword, newPassword } = request.body;
+        if (!hasValidNewPassword(newPassword, reply)) return;
         await changePassword(request.user.id, currentPassword, newPassword);
         return reply.send({
           ok: true,
@@ -473,6 +483,7 @@ async function authPlugin(fastify) {
     async (request, reply) => {
       try {
         const { correo, code, newPassword } = request.body;
+        if (!hasValidNewPassword(newPassword, reply)) return;
         await resetPassword(correo, code, newPassword);
         return reply.send({
           ok: true,

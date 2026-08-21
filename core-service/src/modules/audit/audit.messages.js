@@ -2,6 +2,9 @@ export const AUDIT_MESSAGES = {
     CONSUMO_JORNADA:
         'Consumo de jornada registrado',
 
+    SALIDA_RECETA_JORNADA:
+        'Salida por receta desde jornada registrada',
+
     RETORNO_JORNADA:
         'Retorno de jornada registrado',
 

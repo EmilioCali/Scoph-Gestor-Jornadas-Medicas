@@ -12,6 +12,7 @@ import {
   registerTransfer,
   registerConsumption,
   registerReturn,
+  registerWorkdayPrescription as registerWorkdayPrescriptionRequest,
 } from "../../../shared/apis/coreService";
 import { getUsers } from "../../../shared/apis/authService.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
@@ -219,6 +220,29 @@ export function useWorkdayInventory() {
     [fetchWorkdayInventory],
   );
 
+  const registerWorkdayPrescription = useCallback(
+    async ({ workdayId, item, batch, entryQuantity, entryUnit, prescription, reason }) => {
+      const amount = Number(entryQuantity || 0);
+      const { data } = await registerWorkdayPrescriptionRequest({
+        jornadaId: String(workdayId),
+        detalle: [{
+          medicineId: String(item.medicineId),
+          batch,
+          quantity: amount,
+          entryUnitType: entryUnit || null,
+          boxes: entryUnit && String(entryUnit) === String(item.packageUnit) ? amount : 0,
+          blisters: entryUnit && item.intermediateUnit && String(entryUnit) === String(item.intermediateUnit) ? amount : 0,
+          units: entryUnit && String(entryUnit) === String(item.minimumUnit) ? amount : 0,
+        }],
+        prescription: prescription || undefined,
+        reason: reason || undefined,
+      });
+      await fetchWorkdayInventory(workdayId);
+      return data.data;
+    },
+    [fetchWorkdayInventory],
+  );
+
   const registerWorkdayReturn = useCallback(
     async ({ item, entryQuantity, entryUnit }) => {
       const amount = Number(entryQuantity || 0);
@@ -263,6 +287,7 @@ export function useWorkdayInventory() {
     assignDoctors,
     assignMedicine,
     registerWorkdayConsumption,
+    registerWorkdayPrescription,
     registerWorkdayReturn,
   };
 }

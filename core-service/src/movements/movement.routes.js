@@ -1,4 +1,4 @@
-import { createEntrada, createSalidaReceta, createTransferencia } from './movement.controller.js'
+import { createEntrada, createSalidaReceta, createSalidaRecetaJornada, createTransferencia } from './movement.controller.js'
 import { createConsumoJornada, createRetornoJornada, createRetornoAutomaticoJornada, getMovimientos } from './movement.controller.js'
 import { requireRole } from '../middlewares/authenticate.js';
 
@@ -141,11 +141,11 @@ const movementRoutes = async (fastify) => {
     fastify.post(
         '/movimientos/salida-receta',
         {
-            preHandler: [requireRole(...WORKDAY_OPERATION_ROLES)],
+            preHandler: [requireRole(...ADMINISTRATIVE_ROLES)],
             schema: {
                 tags: ['Movimientos'],
                 summary: 'Registrar salida por receta',
-                description: 'Descuenta stock del inventario central usando un lote existente.',
+                description: 'Descuenta stock del inventario central usando un lote existente. Solo personal administrativo.',
                 security: [{ bearerAuth: [] }],
                 body: {
                     type: 'object',
@@ -169,6 +169,46 @@ const movementRoutes = async (fastify) => {
             }
         },
         createSalidaReceta
+    )
+
+    fastify.post(
+        '/movimientos/salida-receta-jornada',
+        {
+            preHandler: [requireRole('MEDICO')],
+            schema: {
+                tags: ['Movimientos'],
+                summary: 'Registrar salida por receta desde una jornada',
+                description: 'Un médico asignado descuenta un lote específico del inventario de su jornada.',
+                security: [{ bearerAuth: [] }],
+                body: {
+                    type: 'object',
+                    required: ['jornadaId', 'detalle'],
+                    properties: {
+                        jornadaId: { type: 'string', example: '664f1a2b3c4d5e6f78909999' },
+                        detalle: {
+                            type: 'array',
+                            minItems: 1,
+                            items: movementDetailInputSchema,
+                        },
+                        prescription: { type: 'string', example: 'RX-001' },
+                        reason: { type: 'string', example: 'Entrega por receta médica' },
+                    },
+                },
+                response: {
+                    201: successWithMovementArraySchema,
+                    400: badRequestErrorSchema,
+                    401: unauthorizedErrorSchema,
+                    403: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            message: { type: 'string', example: 'No tienes permiso para acceder a esta jornada' },
+                        },
+                    },
+                },
+            },
+        },
+        createSalidaRecetaJornada,
     )
 
     fastify.post(

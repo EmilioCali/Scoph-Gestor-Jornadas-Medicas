@@ -304,6 +304,7 @@ function WorkdayDetail({
   loading,
   onAssign,
   onConsumption,
+  onPrescription,
   onReturn,
   onFinish,
   onManageDoctors,
@@ -312,6 +313,7 @@ function WorkdayDetail({
   canReturn,
   canFinish,
   canManageDoctors,
+  canRegisterPrescription,
   formError,
 }) {
   return (
@@ -447,6 +449,22 @@ function WorkdayDetail({
                   </div>
                   {workday.status === "IN_PROGRESS" && (canConsume || canReturn) && (
                     <div className="flex gap-2">
+                      {canRegisterPrescription && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => onPrescription(item)}
+                        >
+                          Salida por receta
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onConsumption(item)}
+                      >
+                        Consumo
+                      </Button>
                       {canConsume && (
                         <Button
                           variant="outline"
@@ -742,6 +760,20 @@ function WorkdayMovementForm({
     return null;
   }, [form.entryQuantity, form.entryUnit, item, tipo]);
 
+  const selectedLot = item?.lots?.find((lot) => lot.batch === form.batch);
+  const availableLotUnits = getLotAvailableUnits(item, selectedLot);
+  const unitFactor = (() => {
+    if (String(form.entryUnit) === String(item?.packageUnit)) {
+      return Math.max(1, Number(item?.unitsPerPackage ?? 1) || 1)
+        * Math.max(1, Number(item?.unitsPerMinimumUnit ?? 1) || 1);
+    }
+    if (String(form.entryUnit) === String(item?.intermediateUnit)) {
+      return Math.max(1, Number(item?.unitsPerMinimumUnit ?? 1) || 1);
+    }
+    return 1;
+  })();
+  const maxRecipeQuantity = Math.floor(availableLotUnits / unitFactor);
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {formError && (
@@ -759,15 +791,44 @@ function WorkdayMovementForm({
           </span>
         </p>
       </div>
+      {tipo === "RECETA" && (
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">Lote a retirar</label>
+          <select
+            name="batch"
+            value={form.batch || ""}
+            onChange={onChange}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            required
+          >
+            <option value="">Seleccionar lote</option>
+            {item?.lots
+              ?.filter((lot) => getLotAvailableUnits(item, lot) > 0)
+              .map((lot) => (
+                <option key={lot.batch} value={lot.batch}>
+                  {lot.batch} — Disponible: {getLotAvailableUnits(item, lot)} {item?.minimumUnit ?? item?.unitOfMeasure}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <Input
           label={
-            tipo === "CONSUMO" ? "Cantidad consumida" : "Cantidad a retornar"
+            tipo === "CONSUMO"
+              ? "Cantidad consumida"
+              : tipo === "RECETA"
+                ? "Cantidad a entregar"
+                : "Cantidad a retornar"
           }
           name="entryQuantity"
           type="number"
           min="0"
-          max={item?.totalStock ?? 0}
+          max={
+            tipo === "RECETA"
+              ? (form.batch && form.entryUnit ? maxRecipeQuantity : undefined)
+              : item?.totalStock ?? 0
+          }
           value={form.entryQuantity ?? ""}
           onChange={onChange}
           placeholder="5"
@@ -775,7 +836,11 @@ function WorkdayMovementForm({
         />
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
-            {tipo === "CONSUMO" ? "Unidad de consumo" : "Unidad de retorno"}
+            {tipo === "CONSUMO"
+              ? "Unidad de consumo"
+              : tipo === "RECETA"
+                ? "Unidad de salida"
+                : "Unidad de retorno"}
           </label>
           <select
             name="entryUnit"
@@ -801,14 +866,16 @@ function WorkdayMovementForm({
         </div>
       )}
       <Input
-        label="Observación"
+        label={tipo === "RECETA" ? "Número de receta / observación" : "Observación"}
         name="observacion"
         value={form.observacion}
         onChange={onChange}
         placeholder={
-          tipo === "CONSUMO"
-            ? "Ej: Receta paciente"
-            : "Ej: Medicamento no utilizado"
+          tipo === "RECETA"
+            ? "Ej: RX-001"
+            : tipo === "CONSUMO"
+              ? "Ej: Receta paciente"
+              : "Ej: Medicamento no utilizado"
         }
       />
       <div className="flex gap-3 justify-end pt-2">
@@ -821,13 +888,15 @@ function WorkdayMovementForm({
           Cancelar
         </Button>
         <Button
-          variant={tipo === "CONSUMO" ? "danger" : "primary"}
+          variant={tipo === "RETORNO" ? "primary" : "danger"}
           type="submit"
           disabled={submitting}
         >
           {submitting
             ? "Guardando..."
-            : tipo === "CONSUMO"
+            : tipo === "RECETA"
+              ? "Registrar salida por receta"
+              : tipo === "CONSUMO"
               ? "Registrar consumo"
               : "Registrar retorno"}
         </Button>
@@ -851,7 +920,7 @@ const workdayInicial = {
   status: "PLANNED",
 };
 const assignInicial = { medicineId: "", batch: "", entryQuantity: "", entryUnit: "" };
-const movementInicial = { entryQuantity: "", observacion: "", entryUnit: "" };
+const movementInicial = { batch: "", entryQuantity: "", observacion: "", entryUnit: "" };
 
 export default function JornadasPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -876,6 +945,7 @@ export default function JornadasPage() {
     assignDoctors,
     assignMedicine,
     registerWorkdayConsumption,
+    registerWorkdayPrescription,
     registerWorkdayReturn,
   } = useWorkdayInventory();
 
@@ -899,6 +969,7 @@ export default function JornadasPage() {
   const [modalDetalle, setModalDetalle] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalConsumo, setModalConsumo] = useState(false);
+  const [modalSalidaReceta, setModalSalidaReceta] = useState(false);
   const [modalRetorno, setModalRetorno] = useState(false);
   const [modalMedicos, setModalMedicos] = useState(false);
   const [confirmEliminar, setConfirmEliminar] = useState(false);
@@ -1063,6 +1134,36 @@ export default function JornadasPage() {
     } catch (err) {
       setFormError(
         err.response?.data?.message ?? "No se pudo registrar el consumo",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRegistrarSalidaReceta = async (e) => {
+    e.preventDefault();
+    if (!formMovement.batch || !formMovement.entryQuantity || !formMovement.entryUnit) {
+      setFormError("Debes seleccionar el lote, cantidad y unidad de salida");
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await registerWorkdayPrescription({
+        workdayId: selectedWorkday._id,
+        item: selectedInventoryItem,
+        batch: formMovement.batch,
+        entryQuantity: formMovement.entryQuantity,
+        entryUnit: formMovement.entryUnit,
+        prescription: formMovement.observacion,
+        reason: "Salida por receta médica desde jornada",
+      });
+      setFormMovement(movementInicial);
+      setModalSalidaReceta(false);
+    } catch (err) {
+      setFormError(
+        err.response?.data?.message ?? "No se pudo registrar la salida por receta",
       );
     } finally {
       setSubmitting(false);
@@ -1354,6 +1455,12 @@ export default function JornadasPage() {
               setFormError(null);
               setModalConsumo(true);
             }}
+            onPrescription={(item) => {
+              setSelectedInventoryItem(item);
+              setFormMovement(movementInicial);
+              setFormError(null);
+              setModalSalidaReceta(true);
+            }}
             onReturn={(item) => {
               setSelectedInventoryItem(item);
               setFormMovement(movementInicial);
@@ -1373,6 +1480,7 @@ export default function JornadasPage() {
             canReturn={canManageWorkdays}
             canFinish={canManageWorkdays}
             canManageDoctors={canTransferMedication}
+            canRegisterPrescription={currentUser?.rol === "MEDICO"}
             formError={formError}
           />
         )}
@@ -1437,6 +1545,24 @@ export default function JornadasPage() {
           onClose={() => setModalConsumo(false)}
           item={selectedInventoryItem}
           tipo="CONSUMO"
+          submitting={submitting}
+          formError={formError}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={modalSalidaReceta}
+        onClose={() => setModalSalidaReceta(false)}
+        title="Registrar salida por receta"
+        size="sm"
+      >
+        <WorkdayMovementForm
+          form={formMovement}
+          onChange={handleChangeMovement}
+          onSubmit={handleRegistrarSalidaReceta}
+          onClose={() => setModalSalidaReceta(false)}
+          item={selectedInventoryItem}
+          tipo="RECETA"
           submitting={submitting}
           formError={formError}
         />

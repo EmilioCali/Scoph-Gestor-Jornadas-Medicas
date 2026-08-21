@@ -11,8 +11,16 @@ import {
   sendVerificationCodeMail,
   sendPasswordResetMail,
 } from "../../lib/mailer.js";
+import { validatePassword } from "../../utils/passwordValidator.js";
 
 const SALT_ROUNDS = 12;
+
+function assertValidPassword(password) {
+  const validation = validatePassword(password);
+  if (!validation.valid) {
+    throw new Error(validation.errors[0]);
+  }
+}
 
 /**
  * Autentica un usuario por username o correo.
@@ -87,6 +95,7 @@ export async function register(
   }
 
   const tempPassword = generateTempPassword();
+  assertValidPassword(tempPassword);
   const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
   const activationCode = generateCode();
   const activationTokenExpires = getExpiresAt();
@@ -193,6 +202,8 @@ export async function changePassword(id, currentPassword, newPassword) {
   const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isValid) throw new Error("La contraseña actual es incorrecta");
 
+  assertValidPassword(newPassword);
+
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   user.passwordHash = passwordHash;
   user.mustChangePassword = false;
@@ -246,6 +257,8 @@ export async function resetPassword(correo, code, newPassword) {
       "El código de restablecimiento ha expirado. Solicita uno nuevo.",
     );
   }
+
+  assertValidPassword(newPassword);
 
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   user.passwordHash = passwordHash;

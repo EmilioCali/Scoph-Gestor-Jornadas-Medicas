@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeftIcon, KeyIcon } from "@heroicons/react/24/outline";
 import {
@@ -54,6 +54,7 @@ function FloatingElements() {
   );
 }
 
+// Igual que LoginPage: sin tinte naranja de fondo
 function BackgroundElements() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -83,6 +84,27 @@ export default function VerifyEmailPage() {
   const { setSession } = useAuthStore();
   const { showError, showSuccess } = useUIStore();
   const navigate = useNavigate();
+
+  // Cursor tracking para el gradiente (igual que LoginPage)
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCursorPosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   const handleCodeChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -166,12 +188,24 @@ export default function VerifyEmailPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 py-8 relative"
+      ref={containerRef}
+      className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #F2F2F0 0%, #F2BB77 100%)",
+        background: "linear-gradient(135deg, #F2F2F0 0%, #ffffff 100%)",
       }}
     >
       <BackgroundElements />
+      <div
+        className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+        style={{
+          background: `radial-gradient(
+        circle 700px at ${cursorPosition.x}px ${cursorPosition.y}px,
+        rgba(242, 187, 119, 0.4) 0%,
+        rgba(242, 187, 119, 0.15) 50%,
+        transparent 80%
+    )`,
+        }}
+      />
 
       <div className="relative z-10 w-full max-w-4xl min-h-[580px] flex rounded-3xl shadow-2xl overflow-hidden">
         <div
@@ -231,89 +265,89 @@ export default function VerifyEmailPage() {
             </div>
 
             <div>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 border-2 border-primary bg-transparent">
-                  <KeyIcon className="w-7 h-7 text-primary" />
-                </div>
-                <h2 className="text-gray-800 text-2xl font-extrabold mb-1">
-                  Verificar cuenta
-                </h2>
-                <p className="text-gray-400 text-sm mb-7">
-                  Ingresa el codigo de 6 digitos enviado a tu correo.
-                </p>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
-                    <p className="text-xs text-red-500 font-medium">{error}</p>
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-semibold text-gray-600">
-                      Correo electronico
-                    </label>
-                    <input
-                      type="email"
-                      value={correo}
-                      onChange={(event) => setCorreo(event.target.value)}
-                      placeholder="ejemplo@scoph.org"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 placeholder-gray-300 transition"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex gap-2 justify-between">
-                    {code.map((digit, index) => (
-                      <input
-                        key={index}
-                        id={`activation-code-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(event) =>
-                          handleCodeChange(index, event.target.value)
-                        }
-                        onKeyDown={(event) =>
-                          handleCodeKeyDown(index, event)
-                        }
-                        className="w-11 h-12 text-center text-lg font-bold rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full text-white font-bold py-3 rounded-xl transition duration-200 shadow-md hover:shadow-xl active:scale-95 text-base disabled:opacity-60"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #F27405 0%, #D97236 60%, #F29863 100%)",
-                    }}
-                  >
-                    {loading ? "Verificando..." : "Verificar cuenta"}
-                  </button>
-
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={resending}
-                      className="text-sm text-gray-400 hover:text-primary transition font-medium disabled:opacity-60"
-                    >
-                      {resending ? "Reenviando..." : "Reenviar codigo"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/login")}
-                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition font-medium"
-                    >
-                      <ArrowLeftIcon className="w-4 h-4" />
-                      Volver al inicio de sesion
-                    </button>
-                  </div>
-                </form>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 border-2 border-primary bg-transparent">
+                <KeyIcon className="w-7 h-7 text-primary" />
               </div>
+              <h2 className="text-gray-800 text-2xl font-extrabold mb-1">
+                Verificar cuenta
+              </h2>
+              <p className="text-gray-400 text-sm mb-7">
+                Ingresa el codigo de 6 digitos enviado a tu correo.
+              </p>
+
+              {error && (
+                <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+                  <p className="text-xs text-red-500 font-medium">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-semibold text-gray-600">
+                    Correo electronico
+                  </label>
+                  <input
+                    type="email"
+                    value={correo}
+                    readOnly
+                    placeholder="ejemplo@scoph.org"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 placeholder-gray-300 cursor-not-allowed select-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-between">
+                  {code.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`activation-code-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(event) =>
+                        handleCodeChange(index, event.target.value)
+                      }
+                      onKeyDown={(event) =>
+                        handleCodeKeyDown(index, event)
+                      }
+                      className="w-11 h-12 text-center text-lg font-bold rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-white font-bold py-3 rounded-xl transition duration-200 shadow-md hover:shadow-xl active:scale-95 text-base disabled:opacity-60"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #F27405 0%, #D97236 60%, #F29863 100%)",
+                  }}
+                >
+                  {loading ? "Verificando..." : "Verificar cuenta"}
+                </button>
+
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="text-sm text-gray-400 hover:text-primary transition font-medium disabled:opacity-60"
+                  >
+                    {resending ? "Reenviando..." : "Reenviar codigo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-primary transition font-medium"
+                  >
+                    <ArrowLeftIcon className="w-4 h-4" />
+                    Volver al inicio de sesion
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>

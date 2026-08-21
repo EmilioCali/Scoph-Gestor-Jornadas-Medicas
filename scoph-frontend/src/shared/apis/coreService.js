@@ -77,6 +77,10 @@ export const registerEntry = (data) =>
 export const registerSalidaReceta = (data) =>
   coreAPI.post("/api/v1/movimientos/salida-receta", data);
 
+// POST /api/v1/movimientos/salida-receta-jornada
+export const registerWorkdayPrescription = (data) =>
+  coreAPI.post("/api/v1/movimientos/salida-receta-jornada", data);
+
 // POST /api/v1/movimientos/transferencia  (ASIGNACION_JORNADA)
 export const registerTransfer = (data) =>
   coreAPI.post("/api/v1/movimientos/transferencia", data);
