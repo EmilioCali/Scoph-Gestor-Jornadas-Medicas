@@ -446,7 +446,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="absolute bottom-4 left-0 right-0 text-center">
-            <p className="text-white/30 text-xs">© 2025 SCOPH - URL</p>
+            <p className="text-white/30 text-xs">© 2026 SCOPH - URL</p>
           </div>
         </div>
 
@@ -597,14 +597,14 @@ export default function LoginPage() {
             </form>
 
             <p className="lg:hidden text-center text-gray-300 text-xs mt-8">
-              © 2025 SCOPH - URL · Todos los derechos reservados
+              © 2026 SCOPH - URL · Todos los derechos reservados
             </p>
           </div>
         </div>
       </div>
 
       <p className="absolute bottom-4 left-0 right-0 text-center text-gray-400/60 text-xs">
-        © 2025 SCOPH - URL · Todos los derechos reservados
+        © 2026 SCOPH - URL · Todos los derechos reservados
       </p>
     </div>
   );

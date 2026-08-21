@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "../store/authStore.js";
@@ -23,6 +23,22 @@ function FloatingElements() {
   );
 }
 
+// Elementos decorativos del fondo (igual que LoginPage)
+function BackgroundElements() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div
+        className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl"
+        style={{ background: "radial-gradient(circle, #F2BB77, transparent)" }}
+      />
+      <div
+        className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-20 blur-3xl"
+        style={{ background: "radial-gradient(circle, #F29863, transparent)" }}
+      />
+    </div>
+  );
+}
+
 export default function ChangePasswordPage() {
   const [form, setForm] = useState({
     currentPassword: "",
@@ -34,6 +50,27 @@ export default function ChangePasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Cursor tracking para el gradiente (igual que LoginPage)
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCursorPosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   // EXTRAEMOS SOLO ZUSTAND
   const { user, updateUser } = useAuthStore();
@@ -96,25 +133,24 @@ export default function ChangePasswordPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 py-8 relative"
+      ref={containerRef}
+      className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #F2F2F0 0%, #F2BB77 100%)",
+        background: "linear-gradient(135deg, #F2F2F0 0%, #ffffff 100%)",
       }}
     >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{
-            background: "radial-gradient(circle, #F2BB77, transparent)",
-          }}
-        />
-        <div
-          className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{
-            background: "radial-gradient(circle, #F29863, transparent)",
-          }}
-        />
-      </div>
+      <BackgroundElements />
+      <div
+        className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+        style={{
+          background: `radial-gradient(
+        circle 700px at ${cursorPosition.x}px ${cursorPosition.y}px,
+        rgba(242, 187, 119, 0.4) 0%,
+        rgba(242, 187, 119, 0.15) 50%,
+        transparent 80%
+    )`,
+        }}
+      />
 
       <div className="relative z-10 w-full max-w-4xl min-h-[580px] flex rounded-3xl shadow-2xl overflow-hidden">
         <div
