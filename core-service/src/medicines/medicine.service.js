@@ -25,6 +25,23 @@ async function assertCategoryExists(categoryName) {
   return category;
 }
 
+async function assertCategoriesExist(categoryNames) {
+  const categories = Array.isArray(categoryNames) ? categoryNames : [categoryNames];
+  if (!categories.length) {
+    throw new ValidationError("Debes seleccionar al menos una categoría");
+  }
+
+  const validCategories = [];
+  for (const categoryName of categories) {
+    const category = await assertCategoryExists(categoryName);
+    if (!validCategories.some((name) => name.toLowerCase() === category.name.toLowerCase())) {
+      validCategories.push(category.name);
+    }
+  }
+
+  return validCategories;
+}
+
 function normalizeMedicineData(data) {
   const normalized = { ...data };
 
@@ -51,11 +68,16 @@ function normalizeMedicineData(data) {
     "unitOfMeasure",
     "minimumUnit",
     "packageUnit",
-    "category",
   ]) {
     if (typeof normalized[field] === "string") {
       normalized[field] = normalized[field].trim();
     }
+  }
+
+  if (normalized.category !== undefined) {
+    normalized.category = Array.isArray(normalized.category)
+      ? normalized.category.map((category) => String(category).trim()).filter(Boolean)
+      : [String(normalized.category).trim()].filter(Boolean);
   }
 
   if (normalized.barcode === "") {
@@ -131,8 +153,7 @@ async function assertUniqueMedicine({ name, barcode, excludeId = null }) {
 export const createMedicineRecord = async (medicineData) => {
   const normalizedData = normalizeMedicineData(medicineData);
   assertValidUnitHierarchy(normalizedData);
-  const category = await assertCategoryExists(normalizedData.category);
-  normalizedData.category = category.name;
+  normalizedData.category = await assertCategoriesExist(normalizedData.category);
   await assertUniqueMedicine(normalizedData);
 
   const medicine = new Medicine(normalizedData);
@@ -156,9 +177,8 @@ export const updateMedicineRecord = async (id, updateData) => {
     normalizedData.unitsPerMinimumUnit = 1;
   }
 
-  if (normalizedData.category) {
-    const category = await assertCategoryExists(normalizedData.category);
-    normalizedData.category = category.name;
+  if (normalizedData.category !== undefined) {
+    normalizedData.category = await assertCategoriesExist(normalizedData.category);
   }
 
   await assertUniqueMedicine({

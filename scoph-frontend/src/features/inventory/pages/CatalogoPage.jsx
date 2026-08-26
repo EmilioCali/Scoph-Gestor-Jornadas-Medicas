@@ -36,9 +36,14 @@ const FORM_INICIAL = {
   unitsPerPackage: "",
   unitsPerMinimumUnit: "",
   minimumStock: "",
-  category: "",
+  category: [""],
   status: "ACTIVO",
 };
+
+function normalizeCategories(category) {
+  if (Array.isArray(category)) return category.filter(Boolean);
+  return category ? [category] : [];
+}
 
 function MedicineForm({
   form,
@@ -80,6 +85,19 @@ function MedicineForm({
     if (unitLevel === 1) {
       onChange({ target: { name: "packageUnit", value: event.target.value } });
     }
+  };
+
+  const selectedCategories = normalizeCategories(form.category);
+  const categorySlots = [...selectedCategories, ""];
+  const updateCategory = (index, value) => {
+    const nextCategories = [...categorySlots];
+    nextCategories[index] = value;
+    onChange({
+      target: {
+        name: "category",
+        value: nextCategories.filter(Boolean),
+      },
+    });
   };
 
   return (
@@ -162,43 +180,6 @@ function MedicineForm({
         </p>
       </div>
 
-      <div className={unitLevel === 3 ? "grid grid-cols-2 gap-4" : "flex flex-col gap-1"}>
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">
-            {unitLevel === 1 ? "Unidad del producto" : "Unidad mínima"}
-          </label>
-          <SearchableSelect
-            name="minimumUnit"
-            value={form.minimumUnit}
-            onChange={handleMinimumUnitChange}
-            options={measureUnitOptions
-              .filter((unit) => unit.activo !== false)
-              .map((unit) => ({ value: unit.name, label: unit.name }))}
-            required
-          />
-        </div>
-
-        {unitLevel === 3 && (
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-600">
-              Unidad intermedia
-            </label>
-            <SearchableSelect
-              name="intermediateUnit"
-              value={form.intermediateUnit || ""}
-              onChange={onChange}
-              options={measureUnitOptions
-                .filter(
-                  (unit) =>
-                    unit.activo !== false && unit.name !== form.minimumUnit,
-                )
-                .map((unit) => ({ value: unit.name, label: unit.name }))}
-              required
-            />
-          </div>
-        )}
-      </div>
-
       {unitLevel > 1 && (
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
@@ -233,8 +214,25 @@ function MedicineForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        {unitLevel === 3 && (
+      {unitLevel === 3 && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-gray-600">
+              Unidad intermedia
+            </label>
+            <SearchableSelect
+              name="intermediateUnit"
+              value={form.intermediateUnit || ""}
+              onChange={onChange}
+              options={measureUnitOptions
+                .filter(
+                  (unit) =>
+                    unit.activo !== false && unit.name !== form.minimumUnit,
+                )
+                .map((unit) => ({ value: unit.name, label: unit.name }))}
+              required
+            />
+          </div>
           <Input
             label={`${form.minimumUnit || "Unidad mínima"} por ${form.intermediateUnit || "unidad intermedia"}`}
             name="unitsPerMinimumUnit"
@@ -245,17 +243,37 @@ function MedicineForm({
             placeholder="10"
             required
           />
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-600">
+            {unitLevel === 1 ? "Unidad del producto" : "Unidad mínima"}
+          </label>
+          <SearchableSelect
+            name="minimumUnit"
+            value={form.minimumUnit}
+            onChange={handleMinimumUnitChange}
+            options={measureUnitOptions
+              .filter((unit) => unit.activo !== false)
+              .map((unit) => ({ value: unit.name, label: unit.name }))}
+            required
+          />
+        </div>
+        {unitLevel === 3 && (
+          <div aria-hidden="true" />
         )}
-        <Input
-          label="Stock mínimo"
-          name="minimumStock"
-          type="number"
-          min="0"
-          value={form.minimumStock}
-          onChange={onChange}
-          placeholder="10"
-        />
       </div>
+      <Input
+        label="Stock mínimo"
+        name="minimumStock"
+        type="number"
+        min="0"
+        value={form.minimumStock}
+        onChange={onChange}
+        placeholder="10"
+      />
       <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
         {unitLevel === 3
           ? `Conversión: 1 ${form.packageUnit || "empaque"} = ${form.unitsPerPackage || "…"} ${form.intermediateUnit}; 1 ${form.intermediateUnit} = ${form.unitsPerMinimumUnit || "…"} ${form.minimumUnit || "unidades mínimas"}.`
@@ -264,26 +282,25 @@ function MedicineForm({
             : `Cada ingreso se contabiliza directamente como ${form.minimumUnit || "una unidad"}.`}
       </p>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold text-gray-600">
-            Categoría
-          </label>
-          <select
-            name="category"
-            value={form.category}
-            onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-            required
-          >
-            <option value="">Seleccionar</option>
-            {categoryOptions.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-gray-600">Categorías</p>
+        {categorySlots.map((category, index) => {
+          const availableOptions = categoryOptions
+            .filter((option) => !selectedCategories.includes(option) || option === category)
+            .map((option) => ({ value: option, label: option }));
+
+          return (
+            <SearchableSelect
+              key={`category-${index}`}
+              name={`category-${index}`}
+              value={category}
+              onChange={(event) => updateCategory(index, event.target.value)}
+              options={availableOptions}
+              placeholder={index === 0 ? "Seleccionar categoría" : "Agregar otra categoría (opcional)"}
+              required={index === 0}
+            />
+          );
+        })}
       </div>
 
       {isEdit && (
@@ -380,7 +397,7 @@ export default function CatalogoPage() {
           m.compound.toLowerCase().includes(busqueda.toLowerCase()) ||
           m.barcode?.includes(busqueda);
         const matchCategory = filtroCategoria
-          ? m.category === filtroCategoria
+          ? normalizeCategories(m.category).includes(filtroCategoria)
           : true;
         const matchStatus = filtroEstado ? m.status === filtroEstado : true;
         return matchSearch && matchCategory && matchStatus;
@@ -545,7 +562,7 @@ export default function CatalogoPage() {
         unitsPerPackage: Number(form.unitsPerPackage || 1),
         unitsPerMinimumUnit: Number(form.intermediateUnit ? (form.unitsPerMinimumUnit || 1) : 1),
         minimumStock: Number(form.minimumStock || 0),
-        category: form.category,
+        category: normalizeCategories(form.category),
       };
 
       // Solo llamar PATCH /status si realmente cambió
@@ -610,7 +627,7 @@ export default function CatalogoPage() {
         m.concentration,
         m.minimumUnit ?? m.presentation,
         m.packageUnit ?? m.unitOfMeasure,
-        m.category,
+        normalizeCategories(m.category).join(", "),
         m.status,
       ]),
       styles: { fontSize: 9 },
@@ -627,7 +644,7 @@ export default function CatalogoPage() {
         Concentración: m.concentration,
         "Unidad mínima": m.minimumUnit ?? m.presentation,
         "Unidad de empaque": m.packageUnit ?? m.unitOfMeasure,
-        Categoría: m.category,
+        Categoría: normalizeCategories(m.category).join(", "),
         "Código Barras": m.barcode || "",
         Estado: m.status,
         "Fecha Registro": new Date(m.createdAt).toLocaleDateString("es-GT"),
@@ -656,7 +673,7 @@ export default function CatalogoPage() {
     {
       key: "category",
       label: "Categoría",
-      render: (row) => <Badge variant="primary">{row.category}</Badge>,
+      render: (row) => <Badge variant="primary">{normalizeCategories(row.category).join(", ")}</Badge>,
     },
     {
       key: "barcode",
@@ -687,6 +704,7 @@ export default function CatalogoPage() {
               setSelectedItem(row);
               setForm({
                 ...row,
+                category: normalizeCategories(row.category),
                 minimumUnit: row.minimumUnit ?? row.presentation ?? "",
                 intermediateUnit: row.intermediateUnit ?? "",
                 packageUnit: row.packageUnit ?? row.unitOfMeasure ?? "",

@@ -22,6 +22,11 @@ import { useCategories } from "../hooks/useCategories";
 import { useInventarioCentral } from "../hooks/useInventarioCentral";
 import { useAuthStore } from "../../../features/auth/store/authStore.js";
 
+function normalizeCategories(category) {
+  if (Array.isArray(category)) return category.filter(Boolean);
+  return category ? [category] : [];
+}
+
 // ── Badges ────────────────────────────────────────────────────────────────────
 
 function getStockBadge(totalStock, minimumStock) {
@@ -722,7 +727,7 @@ export default function InventarioCentralPage() {
           item.name?.toLowerCase().includes(busqueda.toLowerCase()) ||
           item.compound?.toLowerCase().includes(busqueda.toLowerCase());
         const matchCategory = filtroCategoria
-          ? item.category === filtroCategoria
+          ? normalizeCategories(item.category).includes(filtroCategoria)
           : true;
         const matchStock = (() => {
           if (!filtroStock) return true;
@@ -880,7 +885,7 @@ export default function InventarioCentralPage() {
       ],
       body: filteredInventory.map((item) => [
         item.name,
-        item.category,
+        normalizeCategories(item.category).join(", "),
         `${item.totalStock} ${item.packageUnit ?? item.unitOfMeasure ?? 'uds.'}`,
         item.minimumStock,
         item.totalStock <= 0
@@ -900,7 +905,7 @@ export default function InventarioCentralPage() {
       item.lots.map((lot) => ({
         Medicamento: item.name,
         Compuesto: item.compound,
-        Categoría: item.category,
+        Categoría: normalizeCategories(item.category).join(", "),
         "Unidad de empaque": item.packageUnit ?? item.unitOfMeasure,
         Lote: lot.batch,
         "Stock Lote": lot.stock,
@@ -932,7 +937,7 @@ export default function InventarioCentralPage() {
         <div>
           <p className="font-semibold text-gray-700">{row.name}</p>
           <p className="text-xs text-gray-400">
-            {row.compound} · {row.category}
+            {row.compound} · {normalizeCategories(row.category).join(", ")}
           </p>
         </div>
       ),

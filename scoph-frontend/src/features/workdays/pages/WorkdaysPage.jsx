@@ -424,7 +424,7 @@ function WorkdayDetail({
                       {item.name}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {item.compound || item.category || "Medicamento asignado"}{" "}
+                      {item.compound || (Array.isArray(item.category) ? item.category.join(", ") : item.category) || "Medicamento asignado"}{" "}
                       · Stock disponible:{" "}
                       <span className="font-semibold text-gray-600">
                         {item.totalStock} {item.packageUnit ?? item.unitOfMeasure}

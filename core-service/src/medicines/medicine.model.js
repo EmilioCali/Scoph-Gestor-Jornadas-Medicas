@@ -63,9 +63,15 @@ const medicineSchema = new Schema(
             default: 0,
         },
         category: {
-            type: String,
+            type: [{
+                type: String,
+                trim: true,
+            }],
             required: [true, 'La categoría es requerida'],
-            trim: true,
+            validate: {
+                validator: (categories) => Array.isArray(categories) && categories.length > 0,
+                message: 'Debe seleccionar al menos una categoría',
+            },
         },
         status: {
             type: String,
