@@ -18,6 +18,7 @@ import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
+import SearchableSelect from "../../../shared/components/ui/SearchableSelect";
 import { useCategories } from "../hooks/useCategories";
 import { useMedicines } from "../hooks/useMedicines";
 import { useMeasureUnits } from "../hooks/useMeasureUnits";
@@ -166,22 +167,15 @@ function MedicineForm({
           <label className="text-sm font-semibold text-gray-600">
             {unitLevel === 1 ? "Unidad del producto" : "Unidad mínima"}
           </label>
-          <select
+          <SearchableSelect
             name="minimumUnit"
             value={form.minimumUnit}
             onChange={handleMinimumUnitChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-            required
-          >
-            <option value="">Seleccionar</option>
-            {measureUnitOptions
+            options={measureUnitOptions
               .filter((unit) => unit.activo !== false)
-              .map((unit) => (
-                <option key={unit._id} value={unit.name}>
-                  {unit.name}
-                </option>
-              ))}
-          </select>
+              .map((unit) => ({ value: unit.name, label: unit.name }))}
+            required
+          />
         </div>
 
         {unitLevel === 3 && (
@@ -189,25 +183,18 @@ function MedicineForm({
             <label className="text-sm font-semibold text-gray-600">
               Unidad intermedia
             </label>
-            <select
+            <SearchableSelect
               name="intermediateUnit"
               value={form.intermediateUnit || ""}
               onChange={onChange}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-              required
-            >
-              <option value="">Seleccionar</option>
-              {measureUnitOptions
+              options={measureUnitOptions
                 .filter(
                   (unit) =>
                     unit.activo !== false && unit.name !== form.minimumUnit,
                 )
-                .map((unit) => (
-                  <option key={unit._id} value={unit.name}>
-                    {unit.name}
-                  </option>
-                ))}
-            </select>
+                .map((unit) => ({ value: unit.name, label: unit.name }))}
+              required
+            />
           </div>
         )}
       </div>
@@ -218,22 +205,15 @@ function MedicineForm({
             <label className="text-sm font-semibold text-gray-600">
               Unidad de empaque
             </label>
-            <select
+            <SearchableSelect
               name="packageUnit"
               value={form.packageUnit}
               onChange={onChange}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
-              required
-            >
-              <option value="">Seleccionar</option>
-              {packagingUnitOptions
+              options={packagingUnitOptions
                 .filter((unit) => unit.activo !== false)
-                .map((unit) => (
-                  <option key={unit._id} value={unit.name}>
-                    {unit.name}
-                  </option>
-                ))}
-            </select>
+                .map((unit) => ({ value: unit.name, label: unit.name }))}
+              required
+            />
           </div>
 
           <Input
