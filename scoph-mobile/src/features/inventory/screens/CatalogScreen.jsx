@@ -39,6 +39,8 @@ const INITIAL_FORM = {
   status: 'ACTIVO'
 };
 
+const getCategories = (category) => (Array.isArray(category) ? category : category ? [category] : []);
+
 function MedicineBadge({ status }) {
   return status === 'ACTIVO' ? (
     <Badge variant="success">Activo</Badge>
@@ -91,7 +93,7 @@ export function CatalogScreen() {
           item.name?.toLowerCase().includes(query) ||
           item.compound?.toLowerCase().includes(query) ||
           item.barcode?.includes(searchText);
-        const matchesCategory = filterCategory ? item.category === filterCategory : true;
+        const matchesCategory = filterCategory ? getCategories(item.category).includes(filterCategory) : true;
         const matchesStatus = filterStatus ? item.status === filterStatus : true;
 
         return matchesSearch && matchesCategory && matchesStatus;
@@ -352,7 +354,7 @@ export function CatalogScreen() {
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Categoria</Text>
-                    <Badge variant="primary">{item.category}</Badge>
+                    <Badge variant="primary">{getCategories(item.category).join(', ')}</Badge>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Cod. Barras</Text>

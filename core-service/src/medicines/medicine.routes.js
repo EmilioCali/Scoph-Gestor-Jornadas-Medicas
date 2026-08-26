@@ -18,7 +18,7 @@ const medicineSchema = {
         unitsPerPackage: { type: 'number', example: 100 },
         unitsPerMinimumUnit: { type: 'number', example: 10 },
         minimumStock: { type: 'number', example: 10 },
-        category: { type: 'string', example: 'Analgesico' },
+        category: { anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'string' }], example: ['Analgesico'] },
         status: { type: 'string', enum: ['ACTIVO', 'INACTIVO'], example: 'ACTIVO' },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' }
@@ -76,7 +76,7 @@ const medicineRoutes = async (fastify) => {
                         unitsPerPackage: { type: 'number', example: 100 },
                         unitsPerMinimumUnit: { type: 'number', example: 10 },
                         minimumStock: { type: 'number', example: 10 },
-                        category: { type: 'string', example: 'Analgesico' }
+                        category: { anyOf: [{ type: 'array', minItems: 1, items: { type: 'string' } }, { type: 'string' }], example: ['Analgesico', 'Antibiotico'] }
                     }
                 },
                 response: {
@@ -148,7 +148,7 @@ const medicineRoutes = async (fastify) => {
                         unitsPerPackage: { type: 'number' },
                         unitsPerMinimumUnit: { type: 'number' },
                         minimumStock: { type: 'number' },
-                        category: { type: 'string' }
+                        category: { anyOf: [{ type: 'array', minItems: 1, items: { type: 'string' } }, { type: 'string' }] }
                     }
                 },
                 response: {

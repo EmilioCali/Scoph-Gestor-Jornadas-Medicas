@@ -26,6 +26,8 @@ const ADD_INITIAL = { medicineId: '', minimumStock: '', batch: '', expirationDat
 const ENTRY_INITIAL = { tipoEntrada: 'DONACION', batch: '', expirationDate: '', quantity: '' };
 const EXIT_INITIAL = { batch: '', quantity: '' };
 
+const getCategories = (category) => (Array.isArray(category) ? category : category ? [category] : []);
+
 function getStockVariant(totalStock, minimumStock) {
   if (totalStock <= 0) return { label: 'Agotado', variant: 'danger' };
   if (totalStock <= minimumStock * 0.5) return { label: 'Critico', variant: 'danger' };
@@ -105,7 +107,7 @@ export function InventarioCentralScreen() {
         const matchesSearch =
           item.name?.toLowerCase().includes(query) ||
           item.compound?.toLowerCase().includes(query);
-        const matchesCategory = filterCategory ? item.category === filterCategory : true;
+        const matchesCategory = filterCategory ? getCategories(item.category).includes(filterCategory) : true;
         const matchesStock = (() => {
           if (!filterStock) return true;
           if (filterStock === 'AGOTADO') return item.totalStock <= 0;
@@ -375,7 +377,7 @@ export function InventarioCentralScreen() {
                   <View style={styles.cardHeader}>
                     <View style={styles.cardTitleSection}>
                       <Text style={styles.itemName}>{item.name}</Text>
-                      <Text style={styles.itemCompound}>{item.compound} - {item.category}</Text>
+                      <Text style={styles.itemCompound}>{item.compound} - {getCategories(item.category).join(', ')}</Text>
                     </View>
                     <Badge variant={stockInfo.variant}>{stockInfo.label}</Badge>
                   </View>

@@ -17,9 +17,15 @@ import Badge from "../../../shared/components/ui/Badge";
 import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
+import SearchableSelect from "../../../shared/components/ui/SearchableSelect";
 import { useCategories } from "../hooks/useCategories";
 import { useInventarioCentral } from "../hooks/useInventarioCentral";
 import { useAuthStore } from "../../../features/auth/store/authStore.js";
+
+function normalizeCategories(category) {
+  if (Array.isArray(category)) return category.filter(Boolean);
+  return category ? [category] : [];
+}
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
@@ -282,20 +288,17 @@ function AgregarForm({
         <label className="text-sm font-semibold text-gray-600">
           Medicamento del catálogo
         </label>
-        <select
+        <SearchableSelect
           name="medicineId"
           value={form.medicineId}
           onChange={onChange}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+          options={availableMedicines.map((m) => ({
+            value: m._id,
+            label: `${m.name} — ${m.compound} ${m.concentration}`,
+          }))}
+          placeholder="Seleccionar medicamento"
           required
-        >
-          <option value="">Seleccionar medicamento</option>
-          {availableMedicines.map((m) => (
-            <option key={m._id} value={m._id}>
-              {m.name} — {m.compound} {m.concentration}
-            </option>
-          ))}
-        </select>
+        />
       </div>
       )}
       <Input
@@ -332,21 +335,15 @@ function AgregarForm({
           <label className="text-sm font-semibold text-gray-600">
             Unidad de ingreso
           </label>
-          <select
+          <SearchableSelect
             name="entryUnit"
             value={form.entryUnit || ""}
             onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            options={availableEntryUnits.map((unit) => ({ value: unit, label: unit }))}
+            placeholder="Seleccionar unidad"
             required
             disabled={!availableEntryUnits.length}
-          >
-            <option value="">Seleccionar unidad</option>
-            {availableEntryUnits.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <Input
           label="Cantidad a ingresar"
@@ -730,7 +727,7 @@ export default function InventarioCentralPage() {
           item.name?.toLowerCase().includes(busqueda.toLowerCase()) ||
           item.compound?.toLowerCase().includes(busqueda.toLowerCase());
         const matchCategory = filtroCategoria
-          ? item.category === filtroCategoria
+          ? normalizeCategories(item.category).includes(filtroCategoria)
           : true;
         const matchStock = (() => {
           if (!filtroStock) return true;
@@ -888,7 +885,7 @@ export default function InventarioCentralPage() {
       ],
       body: filteredInventory.map((item) => [
         item.name,
-        item.category,
+        normalizeCategories(item.category).join(", "),
         `${item.totalStock} ${item.packageUnit ?? item.unitOfMeasure ?? 'uds.'}`,
         item.minimumStock,
         item.totalStock <= 0
@@ -908,7 +905,7 @@ export default function InventarioCentralPage() {
       item.lots.map((lot) => ({
         Medicamento: item.name,
         Compuesto: item.compound,
-        Categoría: item.category,
+        Categoría: normalizeCategories(item.category).join(", "),
         "Unidad de empaque": item.packageUnit ?? item.unitOfMeasure,
         Lote: lot.batch,
         "Stock Lote": lot.stock,
@@ -940,7 +937,7 @@ export default function InventarioCentralPage() {
         <div>
           <p className="font-semibold text-gray-700">{row.name}</p>
           <p className="text-xs text-gray-400">
-            {row.compound} · {row.category}
+            {row.compound} · {normalizeCategories(row.category).join(", ")}
           </p>
         </div>
       ),

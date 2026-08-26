@@ -30,7 +30,7 @@ const inventoryRoutes = async (fastify) => {
                                         medicineId: { type: 'string' },
                                         name: { type: 'string' },
                                         compound: { type: 'string' },
-                                        category: { type: 'string' },
+                                        category: { type: 'array', items: { type: 'string' } },
                                         minimumUnit: { type: 'string' },
                                         intermediateUnit: { type: ['string', 'null'] },
                                         packageUnit: { type: 'string' },

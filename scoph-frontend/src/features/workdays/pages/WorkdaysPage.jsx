@@ -6,6 +6,7 @@ import Badge from "../../../shared/components/ui/Badge";
 import Button from "../../../shared/components/ui/Button";
 import Modal from "../../../shared/components/ui/Modal";
 import Input from "../../../shared/components/ui/Input";
+import SearchableSelect from "../../../shared/components/ui/SearchableSelect";
 import ConfirmDialog from "../../../shared/components/ui/ConfirmDialog";
 import { departamentosGuatemala } from "../../../shared/constants/catalogOptions";
 import { useWorkdayInventory } from "../hooks/useWorkdayInventory";
@@ -126,40 +127,26 @@ function WorkdayForm({
           <label className="text-sm font-semibold text-gray-600">
             Departamento
           </label>
-          <select
+          <SearchableSelect
             name="department"
             value={form.department}
             onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            options={departamentos.map((dep) => ({ value: dep.nombre, label: dep.nombre }))}
             required
-          >
-            <option value="">Seleccionar</option>
-            {departamentos.map((dep) => (
-              <option key={dep._id} value={dep.nombre}>
-                {dep.nombre}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-gray-600">
             Municipio
           </label>
-          <select
+          <SearchableSelect
             name="municipality"
             value={form.municipality}
             onChange={onChange}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+            options={municipios.map((mun) => ({ value: mun.nombre, label: mun.nombre }))}
             required
             disabled={!form.department}
-          >
-            <option value="">Seleccionar</option>
-            {municipios.map((mun) => (
-              <option key={mun.codigo} value={mun.nombre}>
-                {mun.nombre}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       </div>
       <Input
@@ -174,20 +161,17 @@ function WorkdayForm({
         <label className="text-sm font-semibold text-gray-600">
           Responsable de la jornada
         </label>
-        <select
+        <SearchableSelect
           name="managerUserId"
           value={form.managerUserId}
           onChange={onChange}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-gray-700 transition"
+          options={medicalUsers.map((user) => ({
+            value: user._id,
+            label: `${user.nombre ?? ""} ${user.apellido ?? ""}`.trim(),
+          }))}
+          placeholder="Seleccionar médico responsable"
           required
-        >
-          <option value="">Seleccionar médico responsable</option>
-          {medicalUsers.map((user) => (
-            <option key={user._id} value={user._id}>
-              {`${user.nombre ?? ""} ${user.apellido ?? ""}`.trim()}
-            </option>
-          ))}
-        </select>
+        />
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-gray-600">
@@ -440,7 +424,7 @@ function WorkdayDetail({
                       {item.name}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {item.compound || item.category || "Medicamento asignado"}{" "}
+                      {item.compound || (Array.isArray(item.category) ? item.category.join(", ") : item.category) || "Medicamento asignado"}{" "}
                       · Stock disponible:{" "}
                       <span className="font-semibold text-gray-600">
                         {item.totalStock} {item.packageUnit ?? item.unitOfMeasure}
