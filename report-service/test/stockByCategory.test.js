@@ -19,3 +19,15 @@ test('buildDashboardMetrics groups stock by category', () => {
     { name: 'Antibióticos', value: 6 },
   ]);
 });
+
+test('buildDashboardMetrics joins array categories', () => {
+  const result = buildDashboardMetrics({
+    inventory: [
+      { category: ['Analgesicos', 'Antiinflamatorios'], totalStock: 4, lots: [] },
+    ],
+  });
+
+  assert.deepEqual(result.stockPorCategoria, [
+    { name: 'Analgesicos, Antiinflamatorios', value: 4 },
+  ]);
+});

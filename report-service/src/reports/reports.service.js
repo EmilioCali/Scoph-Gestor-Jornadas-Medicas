@@ -262,7 +262,11 @@ export function buildDashboardMetrics({ medicines = [], workdays = [], movements
     const activeDoctors = doctors.filter(user => user.isActive !== false).length;
 
     const stockPorCategoria = inventory.reduce((acc, item) => {
-        const categoryName = item.medicineId?.category || item.category || 'Sin categoría';
+        const rawCategory = item.medicineId?.category ?? item.category;
+        const categoryNames = Array.isArray(rawCategory)
+            ? rawCategory.map((name) => String(name).trim()).filter(Boolean)
+            : (rawCategory ? [String(rawCategory).trim()] : []);
+        const categoryName = categoryNames.length ? categoryNames.join(', ') : 'Sin categoría';
         const existing = acc.find(entry => entry.name === categoryName);
         if (existing) {
             existing.value += Number(item.totalStock || 0);

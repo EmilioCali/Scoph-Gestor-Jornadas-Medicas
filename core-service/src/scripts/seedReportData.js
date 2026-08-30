@@ -110,7 +110,7 @@ async function seed() {
       concentration,
       presentation,
       unitOfMeasure,
-      category: 'SIMULADO',
+      category: ['SIMULADO'],
       status: 'ACTIVO',
     }));
   }
