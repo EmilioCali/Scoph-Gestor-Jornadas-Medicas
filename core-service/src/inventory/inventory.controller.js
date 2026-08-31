@@ -1,4 +1,3 @@
-import { appendFileSync } from 'node:fs';
 import centralInventory from "./centralInventory.model.js";
 import WorkdayInventory from './workdayInventory.model.js';
 import { registrarEntrada, calculateBaseUnits } from './inventory.service.js';
@@ -51,46 +50,10 @@ export const getInventarioCentral = async (request, reply) => {
             }
         ]);
 
-        // #region agent log
-        const categoryTypeCounts = {};
-        const mismatched = [];
-        for (const item of inventarios) {
-            const cat = item.category;
-            const catType = cat === null ? 'null' : Array.isArray(cat) ? 'array' : typeof cat;
-            categoryTypeCounts[catType] = (categoryTypeCounts[catType] || 0) + 1;
-            const arrayOk = Array.isArray(cat) && cat.every((c) => typeof c === 'string');
-            if (!arrayOk) {
-                mismatched.push({
-                    name: item.name,
-                    categoryType: catType,
-                    categorySample: Array.isArray(cat) ? cat.slice(0, 3) : cat,
-                    intermediateUnitType: item.intermediateUnit === null ? 'null' : typeof item.intermediateUnit,
-                    medicineIdType: item.medicineId == null ? 'null' : typeof item.medicineId,
-                    unitsPerPackageType: typeof item.unitsPerPackage,
-                    lotsType: Array.isArray(item.lots) ? 'array' : typeof item.lots,
-                });
-            }
-        }
-        const debugPayload = {sessionId:'46cf1c',runId:'post-fix',hypothesisId:'A',location:'inventory.controller.js:getInventarioCentral',message:'inventario category type distribution',data:{count:inventarios.length,categoryTypeCounts,mismatchCount:mismatched.length,mismatched:mismatched.slice(0,15)},timestamp:Date.now()};
-        try { appendFileSync('c:/workspace/Scoph-Gestor-Jornadas-Medicas/debug-46cf1c.log', `${JSON.stringify(debugPayload)}\n`); } catch {}
-        fetch('http://127.0.0.1:7593/ingest/5bdb1c38-071a-4ee3-be95-814ab109fa9d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'46cf1c'},body:JSON.stringify(debugPayload)}).catch(()=>{});
-        // #endregion
-
         const normalizedInventarios = inventarios.map((item) => ({
             ...item,
             category: toCategoryArray(item.category),
         }));
-
-        // #region agent log
-        const afterTypes = {};
-        for (const item of normalizedInventarios) {
-            const catType = Array.isArray(item.category) ? 'array' : typeof item.category;
-            afterTypes[catType] = (afterTypes[catType] || 0) + 1;
-        }
-        const afterPayload = {sessionId:'46cf1c',runId:'post-fix',hypothesisId:'A',location:'inventory.controller.js:getInventarioCentral:normalized',message:'inventario category after normalize',data:{count:normalizedInventarios.length,afterTypes},timestamp:Date.now()};
-        try { appendFileSync('c:/workspace/Scoph-Gestor-Jornadas-Medicas/debug-46cf1c.log', `${JSON.stringify(afterPayload)}\n`); } catch {}
-        fetch('http://127.0.0.1:7593/ingest/5bdb1c38-071a-4ee3-be95-814ab109fa9d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'46cf1c'},body:JSON.stringify(afterPayload)}).catch(()=>{});
-        // #endregion
 
         return successResponse(reply, {
             message: 'Inventario central obtenido exitosamente',

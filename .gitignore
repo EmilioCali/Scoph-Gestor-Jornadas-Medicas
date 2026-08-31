@@ -5,6 +5,7 @@ node_modules/
 # Secretos locales (cada servicio mantiene su propio archivo)
 .env
 .env.local
+.env.production
 
 # Archivos de logs
 logs
@@ -38,3 +39,8 @@ build/
 
 # Docker / procesos
 *.pid
+
+# Cursor
+.cursor/
+*.cursor/debug-*.log
+*debug-46cf1c.log

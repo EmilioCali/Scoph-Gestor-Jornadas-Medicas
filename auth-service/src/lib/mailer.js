@@ -1,16 +1,41 @@
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+function getFrom() {
+  if (process.env.RESEND_FROM_EMAIL) {
+    return process.env.RESEND_FROM_EMAIL.includes('<')
+      ? process.env.RESEND_FROM_EMAIL
+      : `"SCOPH — Sistema de Salud" <${process.env.RESEND_FROM_EMAIL}>`
   }
-})
 
-const FROM = `"SCOPH — Sistema de Salud" <${process.env.SMTP_USER}>`
+  return `"SCOPH — Sistema de Salud" <${process.env.SMTP_USER}>`
+}
+
+let smtpTransporter
+function getSmtpTransporter() {
+  if (!smtpTransporter) {
+    smtpTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    })
+  }
+
+  return smtpTransporter
+}
+
+let resendClient
+function getResendClient() {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY)
+  }
+
+  return resendClient
+}
 
 function getMailErrorMessage(error) {
   if (error?.code === 'EAUTH') {
@@ -21,17 +46,37 @@ function getMailErrorMessage(error) {
     return 'No fue posible conectar con el servidor SMTP. Verifica SMTP_HOST y SMTP_PORT.'
   }
 
+  if (process.env.RESEND_API_KEY) {
+    return 'No fue posible enviar el correo con Resend. Revisa RESEND_API_KEY, RESEND_FROM_EMAIL y los logs del servicio.'
+  }
+
   return 'No fue posible enviar el correo. Revisa la configuración SMTP y los logs del servicio.'
 }
 
 async function sendMail(options) {
   try {
-    return await transporter.sendMail(options)
+    if (process.env.RESEND_API_KEY) {
+      const { error } = await getResendClient().emails.send({
+        from: options.from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html
+      })
+
+      if (error) {
+        throw error
+      }
+
+      return
+    }
+
+    return await getSmtpTransporter().sendMail(options)
   } catch (error) {
     console.error('Error al enviar correo', {
       code: error?.code,
       command: error?.command,
       response: error?.response,
+      name: error?.name,
       message: error?.message
     })
 
@@ -45,7 +90,7 @@ async function sendMail(options) {
  */
 export async function sendCredentialsMail({ to, nombre, username, password }) {
   await sendMail({
-    from: FROM,
+    from: getFrom(),
     to,
     subject: 'Tu cuenta en SCOPH fue creada — Credenciales de acceso',
     html: `
@@ -143,7 +188,7 @@ export async function sendVerificationCodeMail({ to, nombre, code }) {
   const verificationUrl = `${frontendUrl}/verify-email?correo=${encodeURIComponent(to)}`
 
   await sendMail({
-    from: FROM,
+    from: getFrom(),
     to,
     subject: 'Verifica tu cuenta — SCOPH',
     html: `
@@ -225,7 +270,7 @@ export async function sendPasswordResetMail({ to, nombre, code }) {
   const expiresMin = parseInt(process.env.VERIFICATION_TOKEN_EXPIRES_MINUTES || '10', 10)
 
   await sendMail({
-    from: FROM,
+    from: getFrom(),
     to,
     subject: 'Restablece tu contraseña — SCOPH',
     html: `
