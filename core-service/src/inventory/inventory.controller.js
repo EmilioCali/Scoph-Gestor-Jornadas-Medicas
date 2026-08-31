@@ -9,6 +9,16 @@ import { registerAudit } from '../modules/audit/audit.service.js';
 import { AUDIT_ACTIONS, AUDIT_MODULES } from '../modules/audit/audit.constants.js';
 import { AUDIT_MESSAGES } from '../modules/audit/audit.messages.js';
 
+function toCategoryArray(category) {
+    if (Array.isArray(category)) {
+        return category.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (category == null || category === '') {
+        return [];
+    }
+    return [String(category).trim()].filter(Boolean);
+}
+
 export const getInventarioCentral = async (request, reply) => {
     try {
         const inventarios = await centralInventory.aggregate([
@@ -40,9 +50,14 @@ export const getInventarioCentral = async (request, reply) => {
             }
         ]);
 
+        const normalizedInventarios = inventarios.map((item) => ({
+            ...item,
+            category: toCategoryArray(item.category),
+        }));
+
         return successResponse(reply, {
             message: 'Inventario central obtenido exitosamente',
-            data: inventarios,
+            data: normalizedInventarios,
             statusCode: 200
         });
     } catch (error) {

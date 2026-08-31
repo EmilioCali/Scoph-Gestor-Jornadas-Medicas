@@ -1,4 +1,5 @@
 # Los valores con sync: false se solicitan en Render y no se guardan en Git.
+# No pegues API keys ni secretos en este archivo.
 services:
   - type: web
     name: scoph-auth-api
@@ -11,6 +12,8 @@ services:
     healthCheckPath: /api/healthz
     autoDeployTrigger: commit
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
@@ -23,7 +26,13 @@ services:
         sync: false
       - key: SMTP_PASS
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
       - key: FRONTEND_URL
+        sync: false
+      - key: CORE_SERVICE_URL
         sync: false
       - key: VERIFICATION_TOKEN_EXPIRES_MINUTES
         value: "10"
@@ -49,6 +58,8 @@ services:
     healthCheckPath: /api/v1/health
     autoDeployTrigger: commit
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -57,6 +68,8 @@ services:
           type: web
           envVarKey: JWT_SECRET
       - key: CORE_SERVICE_URL
+        sync: false
+      - key: FRONTEND_URL
         sync: false
 
   - type: web
@@ -70,6 +83,8 @@ services:
     healthCheckPath: /api/v1/health
     autoDeployTrigger: commit
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -78,6 +93,8 @@ services:
           type: web
           envVarKey: JWT_SECRET
       - key: WORKDAY_SERVICE_URL
+        sync: false
+      - key: FRONTEND_URL
         sync: false
 
   - type: web
@@ -91,6 +108,8 @@ services:
     healthCheckPath: /api/v1/health
     autoDeployTrigger: commit
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -98,7 +117,11 @@ services:
           name: scoph-auth-api
           type: web
           envVarKey: JWT_SECRET
+      - key: AUTH_SERVICE_URL
+        sync: false
       - key: WORKDAY_SERVICE_URL
         sync: false
       - key: CORE_SERVICE_URL
+        sync: false
+      - key: FRONTEND_URL
         sync: false
