@@ -1,6 +1,6 @@
 # Los valores con sync: false se solicitan en Render y no se guardan en Git.
 # Un solo Web Service: SPA + nginx + cuatro APIs en el mismo contenedor.
-# Copia aquí las variables que ya tenías en los cuatro servicios (no las subas a Git).
+# Copia aquí las variables de `.env.example` (raíz). No las subas a Git.
 # No pegues API keys ni secretos en este archivo.
 services:
   - type: web

@@ -6,7 +6,7 @@ Documentación del sistema: [README de la raíz](../README.md).
 Arranque local: [docs/ENTORNO-LOCAL.md](../docs/ENTORNO-LOCAL.md).
 
 ```bash
-cp .env.example .env
+cp ../.env.example ../.env   # un solo archivo en la raíz del repo
 pnpm install
 pnpm dev
 ```

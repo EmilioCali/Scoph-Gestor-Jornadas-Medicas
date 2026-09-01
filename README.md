@@ -106,7 +106,7 @@ core 3001, workday 3002, report 3003). En este proyecto **usa 3020–3023**.
 - Node.js 22 y [pnpm](https://pnpm.io) 10.x
 - MongoDB accesible (local o Atlas)
 - Docker y Docker Compose, si se usan los backends en contenedor
-- Copia de cada `*/.env.example` → `*/.env` (nunca subir secretos)
+- Copia de `.env.example` → `.env` en la **raíz** (nunca subir secretos)
 
 La guía paso a paso está en [docs/ENTORNO-LOCAL.md](./docs/ENTORNO-LOCAL.md).
 **No hace falta levantarlo para leer o editar documentación.**

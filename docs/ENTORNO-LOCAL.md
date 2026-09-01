@@ -28,29 +28,25 @@ para las APIs y Mongo en el host, en las URI usa
 
 ## Variables de entorno
 
-En **cada** servicio:
+Un solo archivo en la **raíz** del repo:
 
 ```bash
-cp auth-service/.env.example     auth-service/.env
-cp workday-service/.env.example  workday-service/.env
-cp core-service/.env.example     core-service/.env
-cp report-service/.env.example   report-service/.env
-cp scoph-frontend/.env.example   scoph-frontend/.env
-cp scoph-mobile/.env.example     scoph-mobile/.env
+cp .env.example .env
 ```
 
 Rellena al menos:
 
-1. `JWT_SECRET` — **el mismo valor** en auth, workday, core y report.
-2. `MONGODB_URI` (auth) y `MONGO_URI` (los otros tres). Pueden apuntar
-   a la misma instancia y distintas bases, o a la misma base; sé
-   consistente con lo que ya use el ciclo.
-3. `ADMIN_*` y correo (`SMTP_*` o `RESEND_*`) en auth, si vas a login real.
-4. URLs entre servicios en `http://localhost:302x` para desarrollo en host.
-5. Frontend: `VITE_AUTH_SERVICE_URL`, etc. (ya documentadas en el example).
-6. Móvil en teléfono físico: cambia `192.168.x.x` por la IP LAN de tu máquina.
+1. `JWT_SECRET` — un valor, lo leen las cuatro APIs.
+2. `MONGODB_URI` (auth) y `MONGO_URI` (core, workday, report).
+3. `ADMIN_*` y correo (`RESEND_*` en Render; `SMTP_*` solo local si aplica).
+4. `FRONTEND_URL` / `CORS_ORIGIN`.
+5. Vite lee `VITE_*` del mismo `.env` (`envDir` en `scoph-frontend/vite.config.js`).
+6. Móvil: sigue usando `scoph-mobile/.env` (IP LAN). Fuera de este archivo.
 
-No pegues secretos de producción. No hagas commit de `.env`.
+`pnpm dev` / `pnpm start` de cada API cargan `../.env`. Compose también.
+No pegues secretos de producción en Git. No hagas commit de `.env`.
+
+Las plantillas `*/.env.example` de cada paquete solo apuntan a este archivo.
 
 ## Opción A — APIs en el host (desarrollo)
 
@@ -88,7 +84,7 @@ cd scoph-mobile && pnpm install && pnpm start
 
 ## Opción B — APIs con Docker Compose
 
-Los Dockerfiles esperan `.env` por servicio (opcionales en compose:
+Los Dockerfiles esperan el `.env` de la raíz (opcional en compose:
 `required: false`). Compose fuerza `PORT` 3020–3023 y las URLs internas
 `http://<servicio>:<puerto>`.
 
@@ -108,8 +104,8 @@ Al despertar, nginx y las cuatro APIs arrancan en el mismo proceso
 supervisor. El navegador ve la pantalla de carga de Render y luego
 la SPA (PWA). Login usa `/auth/api/auth/...`.
 
-En el dashboard del servicio **único** pega las variables que ya
-tenías en los cuatro Web Services (no las subas a Git):
+En el dashboard del servicio **único** pega las claves de `.env.example`
+(raíz), las mismas que en tu `.env` local (no las subas a Git):
 
 - `MONGODB_URI` (auth), `MONGO_URI` (core/workday/report)
 - `JWT_SECRET` (el mismo)
