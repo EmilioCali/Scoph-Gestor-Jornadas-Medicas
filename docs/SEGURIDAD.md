@@ -21,10 +21,9 @@ portátil de un estudiante sin autorización y anonimización.
 
 ### Estado actual del repo
 
-Están versionados `scoph-frontend/.env` y `scoph-mobile/.env` con URLs
-de localhost/LAN, no con secretos de base de datos. Sigue siendo mala
-práctica. No agregues credenciales a esos archivos. El example del
-frontend es `scoph-frontend/.env.example`.
+`scoph-mobile/.env` puede estar versionado con URLs de LAN, no con
+secretos de base de datos. Sigue siendo mala práctica. No agregues
+credenciales. El frontend lee el `.env` de la raíz (gitignored).
 
 ## Superficie de red
 

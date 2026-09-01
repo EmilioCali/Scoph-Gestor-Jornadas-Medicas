@@ -14,5 +14,5 @@ pnpm dev
 Rutas y roles: `src/app/routes/AppRouter.jsx` y
 [docs/ROLES-Y-PERMISOS.md](../docs/ROLES-Y-PERMISOS.md).
 
-En producción (contenedor Render) las APIs van por el mismo origen
+En producción la SPA y las APIs salen de `https://scoph.onrender.com`
 (`/auth`, `/workday`, `/core`, `/report`). PWA: `vite-plugin-pwa`.
