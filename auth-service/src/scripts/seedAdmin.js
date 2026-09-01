@@ -4,6 +4,22 @@ import { User } from '../models/user.model.js'
 
 const SALT_ROUNDS = 12
 
+function systemAccountFilter() {
+  const username = (process.env.ADMIN_USERNAME || 'admin').toLowerCase()
+  const correo = process.env.ADMIN_CORREO?.toLowerCase()
+  const or = [{ username }]
+  if (correo) or.push({ correo })
+  return { $or: or }
+}
+
+/**
+ * Marca como cuenta de sistemas al usuario seed (ADMIN_USERNAME / ADMIN_CORREO).
+ * Otros SUPER_ADMIN no se tocan.
+ */
+async function markSystemAccount() {
+  await User.updateMany(systemAccountFilter(), { $set: { esCuentaSistema: true } })
+}
+
 /**
  * Crea el primer usuario SUPER_ADMIN si no existe ninguno en la base de datos.
  * Configurable via variables de entorno:
@@ -18,49 +34,50 @@ const SALT_ROUNDS = 12
 export async function seedAdmin() {
   const existingAdmin = await User.findOne({ rol: 'SUPER_ADMIN' })
 
-  if (existingAdmin) {
-    return
+  if (!existingAdmin) {
+    const correo = process.env.ADMIN_CORREO
+    if (!correo) {
+      console.warn('')
+      console.warn('  No existe ningún SUPER_ADMIN y ADMIN_CORREO no está definido en el .env')
+      console.warn('     Agrega ADMIN_CORREO al .env y reinicia el servicio para crear el admin inicial.')
+      console.warn('')
+      return
+    }
+
+    const nombre    = process.env.ADMIN_NOMBRE   || 'Administrador'
+    const apellido  = process.env.ADMIN_APELLIDO || 'SCOPH'
+    const username  = process.env.ADMIN_USERNAME  || 'admin'
+    const password  = process.env.ADMIN_PASSWORD  || randomBytes(8).toString('hex')
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+
+    const admin = new User({
+      nombre,
+      apellido,
+      username: username.toLowerCase(),
+      correo: correo.toLowerCase(),
+      passwordHash,
+      rol: 'SUPER_ADMIN',
+      mustChangePassword: true,
+      emailVerificado: true,
+      isActive: true,
+      esCuentaSistema: true
+    })
+
+    await admin.save()
+
+    console.log('')
+    console.log('  ╔══════════════════════════════════════════════════╗')
+    console.log('  ║        👤  Usuario SUPER_ADMIN creado            ║')
+    console.log('  ╠══════════════════════════════════════════════════╣')
+    console.log(`  ║  Username  : ${username.padEnd(34)}║`)
+    console.log(`  ║  Correo    : ${correo.padEnd(34)}║`)
+    console.log(`  ║  Password  : ${password.padEnd(34)}║`)
+    console.log('  ╠══════════════════════════════════════════════════╣')
+    console.log('  ║   Cambia la contraseña al iniciar sesión       ║')
+    console.log('  ╚══════════════════════════════════════════════════╝')
+    console.log('')
   }
 
-  const correo = process.env.ADMIN_CORREO
-  if (!correo) {
-    console.warn('')
-    console.warn('  No existe ningún SUPER_ADMIN y ADMIN_CORREO no está definido en el .env')
-    console.warn('     Agrega ADMIN_CORREO al .env y reinicia el servicio para crear el admin inicial.')
-    console.warn('')
-    return
-  }
-
-  const nombre    = process.env.ADMIN_NOMBRE   || 'Administrador'
-  const apellido  = process.env.ADMIN_APELLIDO || 'SCOPH'
-  const username  = process.env.ADMIN_USERNAME  || 'admin'
-  const password  = process.env.ADMIN_PASSWORD  || randomBytes(8).toString('hex')
-
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
-
-  const admin = new User({
-    nombre,
-    apellido,
-    username: username.toLowerCase(),
-    correo: correo.toLowerCase(),
-    passwordHash,
-    rol: 'SUPER_ADMIN',
-    mustChangePassword: true,
-    emailVerificado: true,
-    isActive: true
-  })
-
-  await admin.save()
-
-  console.log('')
-  console.log('  ╔══════════════════════════════════════════════════╗')
-  console.log('  ║        👤  Usuario SUPER_ADMIN creado            ║')
-  console.log('  ╠══════════════════════════════════════════════════╣')
-  console.log(`  ║  Username  : ${username.padEnd(34)}║`)
-  console.log(`  ║  Correo    : ${correo.padEnd(34)}║`)
-  console.log(`  ║  Password  : ${password.padEnd(34)}║`)
-  console.log('  ╠══════════════════════════════════════════════════╣')
-  console.log('  ║   Cambia la contraseña al iniciar sesión       ║')
-  console.log('  ╚══════════════════════════════════════════════════╝')
-  console.log('')
+  await markSystemAccount()
 }

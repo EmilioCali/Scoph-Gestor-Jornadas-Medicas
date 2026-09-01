@@ -267,7 +267,9 @@ async function authPlugin(fastify) {
         );
         return reply.send({ ok: true, user: user.toSafeJSON() });
       } catch (err) {
-        return reply.status(400).send({ ok: false, message: err.message });
+        return reply
+          .status(err.statusCode || 400)
+          .send({ ok: false, message: err.message });
       }
     },
   );
@@ -283,7 +285,8 @@ async function authPlugin(fastify) {
       schema: {
         tags: ["Usuarios"],
         summary: "Eliminar usuario",
-        description: "Elimina un usuario del sistema. Solo SUPER_ADMIN.",
+        description:
+          "Desactiva un usuario (baja lógica). No aplica a la cuenta de sistemas.",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -309,10 +312,12 @@ async function authPlugin(fastify) {
         );
         return reply.send({
           ok: true,
-          message: "Usuario eliminado correctamente",
+          message: "Usuario desactivado correctamente",
         });
       } catch (err) {
-        return reply.status(404).send({ ok: false, message: err.message });
+        return reply
+          .status(err.statusCode || 404)
+          .send({ ok: false, message: err.message });
       }
     },
   );
@@ -370,7 +375,9 @@ async function authPlugin(fastify) {
         );
         return reply.send({ ok: true, user: user.toSafeJSON() });
       } catch (err) {
-        return reply.status(404).send({ ok: false, message: err.message });
+        return reply
+          .status(err.statusCode || 404)
+          .send({ ok: false, message: err.message });
       }
     },
   );

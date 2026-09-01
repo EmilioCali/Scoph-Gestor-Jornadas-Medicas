@@ -58,7 +58,12 @@ const userSchema = new mongoose.Schema(
     emailVerificado: { type: Boolean, default: false },
     ultimoAcceso: { type: Date, default: null },
 
-    creadoPor: { type: String, ref: 'User', default: null }
+    creadoPor: { type: String, ref: 'User', default: null },
+
+    esCuentaSistema: {
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true,

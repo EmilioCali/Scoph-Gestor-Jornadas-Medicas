@@ -17,6 +17,10 @@ import {
   updateUser,
 } from "../../../shared/apis/authService";
 
+function isSystemAccount(user) {
+  return Boolean(user?.esCuentaSistema);
+}
+
 function getRolBadge(rol) {
   return rol === "ADMIN" || rol === "SUPER_ADMIN" ? (
     <Badge variant="primary">Administrador</Badge>
@@ -199,12 +203,20 @@ export default function UsuariosPage() {
   };
 
   const handleEditar = (user) => {
+    if (isSystemAccount(user)) {
+      toast.error("La cuenta de sistemas no se puede editar.");
+      return;
+    }
     setSelectedUser(user);
     setForm({ ...user });
     setModalEditar(true);
   };
 
   const handleEliminar = (user) => {
+    if (isSystemAccount(user)) {
+      toast.error("La cuenta de sistemas no se puede eliminar.");
+      return;
+    }
     setSelectedUser(user);
     setConfirmEliminar(true);
   };
@@ -248,7 +260,7 @@ export default function UsuariosPage() {
     const toastId = toast.loading("Eliminando usuario...");
     try {
       await deleteUser(selectedUser._id);
-      toast.success("Usuario eliminado", { id: toastId });
+      toast.success("Usuario desactivado", { id: toastId });
       setConfirmEliminar(false);
       cargarUsuarios(); // Recargar datos frescos
     } catch (error) {
@@ -313,20 +325,23 @@ export default function UsuariosPage() {
     canManageUsers && {
       key: "acciones",
       label: "Acciones",
-      render: (row) => (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleEditar(row)}>
-            <PencilIcon className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleEliminar(row)}
-          >
-            <TrashIcon className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
+      render: (row) =>
+        row.esCuentaSistema ? (
+          <span className="text-xs text-gray-400">Cuenta protegida</span>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleEditar(row)}>
+              <PencilIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleEliminar(row)}
+            >
+              <TrashIcon className="w-4 h-4" />
+            </Button>
+          </div>
+        ),
     },
   ].filter(Boolean);
 
@@ -397,8 +412,8 @@ export default function UsuariosPage() {
         isOpen={confirmEliminar}
         onClose={() => setConfirmEliminar(false)}
         onConfirm={handleConfirmarEliminar}
-        title="¿Eliminar usuario?"
-        message={`¿Estás seguro que deseas eliminar a ${selectedUser?.nombre} ${selectedUser?.apellido}? Esta acción no se puede deshacer.`}
+        title="¿Desactivar usuario?"
+        message={`¿Desactivar a ${selectedUser?.nombre} ${selectedUser?.apellido}? La cuenta quedará inactiva y no podrá iniciar sesión.`}
       />
     </div>
   );
