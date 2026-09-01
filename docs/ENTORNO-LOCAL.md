@@ -95,30 +95,26 @@ docker compose up --build
 Sigue corriendo frontend y móvil **en el host**, apuntando a
 `http://localhost:3020` … `3023`.
 
-## Producción — un contenedor en Render
+## Producción — Render
 
-No uses Vercel para este entorno. El Blueprint (`render.yaml`) define
-el servicio `scoph`. Imagen: `deploy/Dockerfile`.
+Repo de deploy: [scophgt/SCOPH](https://github.com/scophgt/SCOPH), rama
+`main`. Blueprint (`render.yaml`): un Web Service Docker `scoph`.
+Imagen: `deploy/Dockerfile`. URL: `https://scoph.onrender.com`.
 
-Al despertar, nginx y las cuatro APIs arrancan en el mismo proceso
-supervisor. El navegador ve la pantalla de carga de Render y luego
-la SPA (PWA). Login usa `/auth/api/auth/...`.
+Al despertar, nginx y las cuatro APIs arrancan juntas. La SPA es PWA.
+Login: `/auth/api/auth/...`.
 
-En el dashboard del servicio **único** pega las claves de `.env.example`
-(raíz), las mismas que en tu `.env` local (no las subas a Git):
+En el dashboard del servicio `scoph` (no en Git):
 
 - `MONGODB_URI` (auth), `MONGO_URI` (core/workday/report)
 - `JWT_SECRET` (el mismo)
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (no SMTP)
-- `FRONTEND_URL` y `CORS_ORIGIN` = `https://<servicio>.onrender.com`
+- `FRONTEND_URL` y `CORS_ORIGIN` = `https://scoph.onrender.com`
 - `ADMIN_*`
 
 Health: `GET /auth/api/healthz`.
 
 No construyas ni arranques Docker salvo que lo pidan.
-
-Apaga los cuatro APIs viejos de Render y el proyecto Vercel cuando
-el servicio único responda.
 
 ## Primer usuario
 

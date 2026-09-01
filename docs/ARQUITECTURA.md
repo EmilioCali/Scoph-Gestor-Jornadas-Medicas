@@ -76,12 +76,16 @@ de sistema. Por eso **el secreto JWT es compartido**.
 
 ## Despliegue
 
-- Render: un Web Service Docker (`render.yaml`, `deploy/Dockerfile`).
+Producción web: un Web Service Docker en Render
+([scophgt/SCOPH](https://github.com/scophgt/SCOPH)), servicio `scoph`,
+URL `https://scoph.onrender.com`.
+
+- Blueprint: `render.yaml` + `deploy/Dockerfile`.
   nginx sirve la SPA y enruta `/auth`, `/workday`, `/core`, `/report`
   a Fastify en `127.0.0.1:3020–3023`. Hibernan juntos. Mongo fuera.
-- Correo en Render: Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`).
-  SMTP está bloqueado en el plan gratuito.
-- `FRONTEND_URL` = URL pública de ese servicio (no Vercel).
+- Correo: Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`).
+  SMTP del plan gratuito de Render está bloqueado.
+- `FRONTEND_URL` y `CORS_ORIGIN` = `https://scoph.onrender.com`.
 - Local: Compose solo APIs; Vite en el host.
 - Móvil: Expo / stores; no entra en la imagen.
 
