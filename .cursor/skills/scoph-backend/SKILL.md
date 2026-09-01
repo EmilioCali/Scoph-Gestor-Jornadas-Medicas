@@ -17,7 +17,7 @@ description: Crear o cambiar endpoints Fastify en auth-service, workday-service,
 
 - URLs solo desde env (`CORE_SERVICE_URL`, `WORKDAY_SERVICE_URL`, `AUTH_SERVICE_URL`, `*_HOSTPORT`).
 - Reenvía `Authorization`. No hardcodees `localhost:3001`.
-- Nueva variable → `.env.example` del servicio + `docs/ENTORNO-LOCAL.md`.
+- Nueva variable → `.env.example` de la raíz + `docs/ENTORNO-LOCAL.md`.
 
 ## No hagas
 

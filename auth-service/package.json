@@ -9,8 +9,8 @@
   "scripts": {
     "test": "node --test",
     "predev": "node -e \"require('fs').mkdirSync('.mongodb/data', { recursive: true })\"",
-    "dev": "node --env-file-if-exists=.env --watch src/index.js",
-    "start": "node --env-file-if-exists=.env src/index.js"
+    "dev": "node --env-file-if-exists=../.env --watch src/index.js",
+    "start": "node --env-file-if-exists=../.env src/index.js"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

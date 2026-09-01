@@ -9,7 +9,7 @@ alwaysApply: false
 - React 19, Vite 8, Tailwind 4, Zustand, react-router-dom 7, axios.
 - Rutas: `src/app/routes/AppRouter.jsx`. Roles admin: dashboard, usuarios, inventario, reportes. `MEDICO` → `/jornadas`.
 - Features en `src/features/{auth,dashboard,users,workdays,inventory,reports}`.
-- APIs: `src/shared/apis/`. Variables `VITE_*_SERVICE_URL` (ver `.env.example`). En Render: `/auth`, `/workday`, `/core`, `/report`. PWA sin cachear esas rutas.
+- APIs: `src/shared/apis/`. Variables `VITE_*_SERVICE_URL` en el `.env` de la raíz. En Render: `/auth`, `/workday`, `/core`, `/report`. PWA sin cachear esas rutas.
 - Interceptor: Bearer + logout en 401. Persistencia `auth-scoph-storage`.
 - No agregues otra librería de UI (no MUI, no shadcn) salvo acuerdo explícito del ciclo.
 - `pnpm lint` / `pnpm build` al cambiar UI de verdad. No hay suite de tests.

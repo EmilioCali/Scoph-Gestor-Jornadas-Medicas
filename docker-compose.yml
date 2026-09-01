@@ -5,7 +5,7 @@ services:
     ports:
       - "3020:3020"
     env_file:
-      - path: ./auth-service/.env
+      - path: .env
         required: false
     environment:
       NODE_ENV: production
@@ -35,7 +35,7 @@ services:
     ports:
       - "3021:3021"
     env_file:
-      - path: ./workday-service/.env
+      - path: .env
         required: false
     environment:
       NODE_ENV: production
@@ -68,7 +68,7 @@ services:
     ports:
       - "3022:3022"
     env_file:
-      - path: ./core-service/.env
+      - path: .env
         required: false
     environment:
       NODE_ENV: production
@@ -99,7 +99,7 @@ services:
     ports:
       - "3023:3023"
     env_file:
-      - path: ./report-service/.env
+      - path: .env
         required: false
     environment:
       NODE_ENV: production

@@ -7,7 +7,7 @@ Puertos de referencia: **3020–3023** (Compose/Render). Docs Swagger en
 
 Scripts: `pnpm dev`, `pnpm start`, `pnpm test`.  
 Health: `GET /api/healthz`.  
-Env: `auth-service/.env.example` (`MONGODB_URI`, no `MONGO_URI`).
+Env: `.env` de la raíz (`MONGODB_URI`, no `MONGO_URI`).
 
 Rutas de aplicación (prefijo `/api/auth`): login, registro, verify-email,
 reset de contraseña, CRUD de usuarios según rol. El detalle vivo está

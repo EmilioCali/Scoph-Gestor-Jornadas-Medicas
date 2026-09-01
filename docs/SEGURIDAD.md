@@ -12,7 +12,7 @@ portátil de un estudiante sin autorización y anonimización.
 ## Secretos
 
 - Nunca commits de `.env` con Mongo, JWT, SMTP, Resend o `ADMIN_PASSWORD`.
-- Plantillas: `*/.env.example` y `.env.example` de la raíz.
+- Plantillas: `.env.example` en la raíz (un archivo). Los `*/.env.example` de cada paquete solo remiten ahí.
 - `JWT_SECRET` compartido: si se filtra uno, se filtran los cuatro APIs.
 - Render: variables `sync: false` en `render.yaml`. El `Dockerfile`
   no copia `.env`. En producción usa Resend, no SMTP.

@@ -62,7 +62,7 @@ instala y corre por separado.
 - Auth: `MONGODB_URI`. Core, workday, report: `MONGO_URI`.
 - Compose/Render: puertos 3020–3023. Defaults de código sin `PORT`:
   8080 / 3001 / 3002 / 3003. Documenta y usa **3020–3023**.
-- Frontend: `VITE_*_SERVICE_URL` (ver `scoph-frontend/.env.example`).
+- Frontend: `VITE_*_SERVICE_URL` en el `.env` de la raíz.
 - Móvil: `AUTH_SERVICE_URL` y hermanos en `scoph-mobile/.env.example`.
 
 ## Skills del repo (léelas cuando apliquen)
@@ -87,7 +87,7 @@ Reglas Cursor siempre activas: `.cursor/rules/scoph.mdc`.
 - Si agregas ruta, regístrala en el `app.js`/`routes` del servicio y
   en `docs/SERVICIOS.md`.
 - Prueba con `pnpm test` en el paquete tocado.
-- Actualiza `.env.example` si agregas variables (nunca el valor secreto).
+- Actualiza `.env.example` de la raíz si agregas variables (nunca el valor secreto).
 
 ## Deuda conocida (no “la arregles” de paso)
 

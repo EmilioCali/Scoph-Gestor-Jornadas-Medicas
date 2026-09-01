@@ -2,7 +2,7 @@
 node_modules/
 .pnpm-store/
 
-# Secretos locales (cada servicio mantiene su propio archivo)
+# Secretos locales (un solo .env en la raíz; no versionar)
 .env
 .env.local
 .env.production
