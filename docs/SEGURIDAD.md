@@ -14,7 +14,10 @@ portátil de un estudiante sin autorización y anonimización.
 - Nunca commits de `.env` con Mongo, JWT, SMTP, Resend o `ADMIN_PASSWORD`.
 - Plantillas: `*/.env.example` y `.env.example` de la raíz.
 - `JWT_SECRET` compartido: si se filtra uno, se filtran los cuatro APIs.
-- Render: variables `sync: false` en `render.yaml`.
+- Render: variables `sync: false` en `render.yaml`. El `Dockerfile`
+  no copia `.env`. En producción usa Resend, no SMTP.
+- Atlas: la IP de un Web Service free **cambia** al despertar; no
+  filtres una sola IP.
 
 ### Estado actual del repo
 
@@ -26,8 +29,10 @@ frontend es `scoph-frontend/.env.example`.
 ## Superficie de red
 
 - Compose publica 3020–3023 en la máquina anfitriona.
+- En Render el público es un solo puerto (nginx); 3020–3023 son internos.
 - Mongo no debe quedar abierto a internet.
-- CORS: `FRONTEND_URL` y `CORS_ORIGIN`. No uses `*` en producción.
+- CORS: `FRONTEND_URL` y `CORS_ORIGIN` = origen de la SPA. Same-origin
+  en el contenedor único. No uses `*` en producción.
 
 ## Deuda conocida (no es backlog silencioso)
 

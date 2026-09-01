@@ -13,7 +13,7 @@ Sigue `docs/ENTORNO-LOCAL.md`. No inventes puertos.
 2. Node 22 + pnpm. Mongo aparte.
 3. Copia `.env.example` → `.env` en cada paquete. Mismo `JWT_SECRET` en las cuatro APIs.
 4. Auth usa `MONGODB_URI`. Core/workday/report usan `MONGO_URI`.
-5. Host: `pnpm install && pnpm dev` por servicio. Docker: `docker compose up --build` (solo APIs).
+5. Host: `pnpm install && pnpm dev` por servicio. Docker local: `docker compose up --build` (solo APIs). Render: un contenedor (`deploy/`).
 6. Health: `3020/api/healthz`, `3021|3022|3023/api/v1/health`.
 7. Web: `scoph-frontend` `pnpm dev`. Móvil: IP LAN en teléfono físico.
 

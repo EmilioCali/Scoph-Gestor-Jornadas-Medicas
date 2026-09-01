@@ -12,7 +12,7 @@ description: Actualizar README, docs/, AGENTS.md, LICENSE, colaboración o skill
 | Titularidad / uso / quién contribuye | `LICENSE`, `COLABORACION.md`, `CONTRIBUTING.md` |
 | Visión y tabla de paquetes | `README.md` |
 | Instrucciones para agentes | `AGENTS.md`, `.cursor/rules/`, `.cursor/skills/` |
-| Rutas, env, puertos | `docs/SERVICIOS.md`, `docs/ENTORNO-LOCAL.md`, `.env.example` |
+| Rutas, env, puertos, Render | `docs/SERVICIOS.md`, `docs/ENTORNO-LOCAL.md`, `render.yaml`, `deploy/`, `.env.example` |
 | Permisos | `docs/ROLES-Y-PERMISOS.md` |
 | Secretos / deuda | `docs/SEGURIDAD.md` |
 

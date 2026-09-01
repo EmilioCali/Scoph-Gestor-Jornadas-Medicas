@@ -82,8 +82,9 @@ core 3001, workday 3002, report 3003). En este proyecto **usa 3020–3023**.
 - Fastify 5, Mongoose, `@fastify/jwt`, Swagger.
 - React 19 + Vite 8 + Tailwind 4 + Zustand (web).
 - Expo 55 + React Native 0.83 (móvil).
-- Docker Compose solo para los cuatro backends.
-- Render (`render.yaml`) para APIs; Vercel (`scoph-frontend/vercel.json`) para la web.
+- Docker Compose solo para los cuatro backends (local).
+- Render: un contenedor (`deploy/Dockerfile`) con SPA, nginx y las
+  cuatro APIs. Correo: Resend. Mongo fuera.
 
 ## Documentación
 

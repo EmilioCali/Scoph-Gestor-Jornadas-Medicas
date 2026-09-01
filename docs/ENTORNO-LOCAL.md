@@ -99,6 +99,31 @@ docker compose up --build
 Sigue corriendo frontend y móvil **en el host**, apuntando a
 `http://localhost:3020` … `3023`.
 
+## Producción — un contenedor en Render
+
+No uses Vercel para este entorno. El Blueprint (`render.yaml`) define
+el servicio `scoph`. Imagen: `deploy/Dockerfile`.
+
+Al despertar, nginx y las cuatro APIs arrancan en el mismo proceso
+supervisor. El navegador ve la pantalla de carga de Render y luego
+la SPA (PWA). Login usa `/auth/api/auth/...`.
+
+En el dashboard del servicio **único** pega las variables que ya
+tenías en los cuatro Web Services (no las subas a Git):
+
+- `MONGODB_URI` (auth), `MONGO_URI` (core/workday/report)
+- `JWT_SECRET` (el mismo)
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (no SMTP)
+- `FRONTEND_URL` y `CORS_ORIGIN` = `https://<servicio>.onrender.com`
+- `ADMIN_*`
+
+Health: `GET /auth/api/healthz`.
+
+No construyas ni arranques Docker salvo que lo pidan.
+
+Apaga los cuatro APIs viejos de Render y el proyecto Vercel cuando
+el servicio único responda.
+
 ## Primer usuario
 
 auth-service ejecuta seed de `SUPER_ADMIN` si no hay usuarios, usando
@@ -119,5 +144,6 @@ pnpm test   # dentro de cada *-service
 | Auth no conecta a Mongo | Usaste `MONGO_URI` en vez de `MONGODB_URI` |
 | Compose no llega a Mongo | URI con `localhost` dentro del contenedor |
 | Frontend en blanco / CORS | `FRONTEND_URL` / `CORS_ORIGIN` no incluyen el origen Vite |
+| Correo falla en Render | Falta `RESEND_*` o el `from` no está verificado; SMTP está bloqueado |
 | Móvil no llama APIs | `localhost` en un teléfono físico |
 | Refresh 404 en móvil | `POST /api/auth/refresh` no existe en auth (deuda conocida) |

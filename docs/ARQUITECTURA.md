@@ -76,10 +76,14 @@ de sistema. Por eso **el secreto JWT es compartido**.
 
 ## Despliegue
 
-- APIs: `render.yaml` (servicios Node, plan free, región oregon).
-  `JWT_SECRET` de workday/core/report se sincroniza desde auth.
-- Web: Vercel, SPA rewrite en `scoph-frontend/vercel.json`.
-- Móvil: distribución Expo / stores, fuera de este YAML.
+- Render: un Web Service Docker (`render.yaml`, `deploy/Dockerfile`).
+  nginx sirve la SPA y enruta `/auth`, `/workday`, `/core`, `/report`
+  a Fastify en `127.0.0.1:3020–3023`. Hibernan juntos. Mongo fuera.
+- Correo en Render: Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`).
+  SMTP está bloqueado en el plan gratuito.
+- `FRONTEND_URL` = URL pública de ese servicio (no Vercel).
+- Local: Compose solo APIs; Vite en el host.
+- Móvil: Expo / stores; no entra en la imagen.
 
 ## Layout interno (backends)
 

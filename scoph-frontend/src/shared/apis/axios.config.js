@@ -2,14 +2,20 @@ import axios from "axios";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { useUIStore } from "../store/uiStore.js";
 
+const isProd = import.meta.env.PROD;
+
 const AUTH_BASE_URL =
-  import.meta.env.VITE_AUTH_SERVICE_URL || "http://localhost:3020";
+  import.meta.env.VITE_AUTH_SERVICE_URL ||
+  (isProd ? "/auth" : "http://localhost:3020");
 const CORE_BASE_URL =
-  import.meta.env.VITE_CORE_SERVICE_URL || "http://localhost:3022";
+  import.meta.env.VITE_CORE_SERVICE_URL ||
+  (isProd ? "/core" : "http://localhost:3022");
 const WORKDAY_BASE_URL =
-  import.meta.env.VITE_WORKDAY_SERVICE_URL || "http://localhost:3021";
+  import.meta.env.VITE_WORKDAY_SERVICE_URL ||
+  (isProd ? "/workday" : "http://localhost:3021");
 const REPORTS_BASE_URL =
-  import.meta.env.VITE_REPORTS_SERVICE_URL || "http://localhost:3023";
+  import.meta.env.VITE_REPORTS_SERVICE_URL ||
+  (isProd ? "/report" : "http://localhost:3023");
 
 const extractErrorMessage = (error) => {
   const data = error?.response?.data;
@@ -31,7 +37,10 @@ const extractErrorMessage = (error) => {
 };
 
 const createInstance = (baseURL) => {
-  const instance = axios.create({ baseURL });
+  const instance = axios.create({
+    baseURL,
+    timeout: 60_000,
+  });
 
   instance.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token;

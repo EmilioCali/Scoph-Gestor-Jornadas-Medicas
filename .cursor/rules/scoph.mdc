@@ -15,5 +15,6 @@ Eres un agente en el Gestor de Jornadas Médicas de SCOPH.
 - `JWT_SECRET` idéntico en los cuatro backends. Auth usa `MONGODB_URI`; los demás `MONGO_URI`.
 - No levantes servidores ni Docker salvo que el usuario lo pida.
 - No commitees `.env` con secretos. No uses datos reales de pacientes.
-- Si cambias rutas, env, roles o puertos, actualiza `docs/` y la skill afectada en el mismo cambio.
+- Si cambias rutas, env, roles, puertos o el despliegue (Render/un
+  contenedor), actualiza `docs/` y la skill afectada en el mismo cambio.
 - Un ticket, un propósito. Replica el estilo de carpetas del servicio que editas.
