@@ -18,7 +18,9 @@ import {
 } from "../../../shared/apis/authService";
 
 function isSystemAccount(user) {
-  return Boolean(user?.esCuentaSistema);
+  if (!user) return false;
+  if (user.esCuentaSistema) return true;
+  return String(user.username || "").toLowerCase() === "admin";
 }
 
 function getRolBadge(rol) {
@@ -326,7 +328,7 @@ export default function UsuariosPage() {
       key: "acciones",
       label: "Acciones",
       render: (row) =>
-        row.esCuentaSistema ? (
+        isSystemAccount(row) ? (
           <span className="text-xs text-gray-400">Cuenta protegida</span>
         ) : (
           <div className="flex gap-2">
