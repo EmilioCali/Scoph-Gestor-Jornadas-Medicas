@@ -38,7 +38,9 @@ const initialForm = {
 };
 
 function isSystemAccount(user) {
-  return Boolean(user?.esCuentaSistema);
+  if (!user) return false;
+  if (user.esCuentaSistema) return true;
+  return String(user.username || '').toLowerCase() === 'admin';
 }
 
 function getRolBadge(rol) {
