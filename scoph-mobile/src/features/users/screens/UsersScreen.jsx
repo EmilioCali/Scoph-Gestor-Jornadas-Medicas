@@ -37,6 +37,10 @@ const initialForm = {
   isActive: true
 };
 
+function isSystemAccount(user) {
+  return Boolean(user?.esCuentaSistema);
+}
+
 function getRolBadge(rol) {
   return rol === 'ADMIN' || rol === 'SUPER_ADMIN' ? (
     <Badge variant="primary">Administrador</Badge>
@@ -69,6 +73,10 @@ export function UsersScreen() {
   };
 
   const openEditModal = (user) => {
+    if (isSystemAccount(user)) {
+      Alert.alert('Cuenta protegida', 'La cuenta de sistemas no se puede editar.');
+      return;
+    }
     setSelectedUser(user);
     setForm({
       nombre: user.nombre ?? '',
@@ -122,13 +130,17 @@ export function UsersScreen() {
   };
 
   const confirmDelete = (user) => {
+    if (isSystemAccount(user)) {
+      Alert.alert('Cuenta protegida', 'La cuenta de sistemas no se puede eliminar.');
+      return;
+    }
     setSelectedUser(user);
     Alert.alert(
-      'Eliminar usuario',
-      `¿Estás seguro que deseas eliminar a ${user.nombre} ${user.apellido}?`,
+      'Desactivar usuario',
+      `¿Desactivar a ${user.nombre} ${user.apellido}? No podrá iniciar sesión.`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: handleDeleteUser }
+        { text: 'Desactivar', style: 'destructive', onPress: handleDeleteUser }
       ]
     );
   };
@@ -139,7 +151,7 @@ export function UsersScreen() {
 
     try {
       await deleteUser(selectedUser._id);
-      Alert.alert('Listo', 'Usuario eliminado correctamente.');
+      Alert.alert('Listo', 'Usuario desactivado.');
       refreshUsers();
     } catch (err) {
       const message = err.response?.data?.message || err.message || 'Error al eliminar usuario.';
@@ -173,6 +185,9 @@ export function UsersScreen() {
         <Text style={styles.detailValue}>{item.telefono || 'No registrado'}</Text>
       </View>
 
+      {isSystemAccount(item) ? (
+        <Text style={[styles.actionText, { color: COLORS.textSecondary }]}>Cuenta protegida</Text>
+      ) : (
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.iconButton} onPress={() => openEditModal(item)}>
           <MaterialIcons name="edit" size={20} color={COLORS.primaryDark} />
@@ -183,6 +198,7 @@ export function UsersScreen() {
           <Text style={[styles.actionText, { color: COLORS.error }]}>Eliminar</Text>
         </TouchableOpacity>
       </View>
+      )}
     </Card>
   );
 

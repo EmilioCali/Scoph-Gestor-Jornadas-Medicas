@@ -47,4 +47,8 @@ no este cuadro. Si cambias un `requireRole`, actualiza este archivo.
 ## Seed
 
 El primer `SUPER_ADMIN` nace de `ADMIN_*` en el entorno de auth.
+El usuario seed (`ADMIN_USERNAME` / `ADMIN_CORREO`, flag
+`esCuentaSistema`) **no se edita ni se elimina**. Otros `SUPER_ADMIN`
+de la organización sí: edición y baja lógica (`isActive: false`).
+Sigue pudiendo cambiar su propia contraseña (login / reset).
 No dejes `ADMIN_PASSWORD` débil en producción ni lo subas a Git.

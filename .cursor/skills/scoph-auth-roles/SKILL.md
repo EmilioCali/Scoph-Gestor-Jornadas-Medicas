@@ -12,6 +12,8 @@ Fuente: `docs/ROLES-Y-PERMISOS.md` y `auth-service/src/middlewares/authenticate.
 - JWT Bearer, payload `{ id, rol, username }`, 8 h. Secreto compartido.
 - `SUPER_ADMIN` bypasea `requireRole`. No elimines ese bypass sin ticket y docs.
 - Seed: `auth-service/src/scripts/seedAdmin.js` + env `ADMIN_*`.
+  La cuenta seed (`esCuentaSistema`) no se edita ni se elimina por CRUD.
+  Otros SUPER_ADMIN sí (baja lógica).
 - Correo: SMTP y/o Resend. No dejes API keys en Git.
 - CORS: `FRONTEND_URL`, `CORS_ORIGIN`.
 - Móvil: **no hay** `POST /api/auth/refresh` en el backend. Implementarlo es un ticket propio (auth + clientes).

@@ -14,11 +14,31 @@ import {
 import { validatePassword } from "../../utils/passwordValidator.js";
 
 const SALT_ROUNDS = 12;
+const PROTECTED_SUPER_ADMIN_MESSAGE =
+  "La cuenta de sistemas no se puede editar ni eliminar.";
 
 function assertValidPassword(password) {
   const validation = validatePassword(password);
   if (!validation.valid) {
     throw new Error(validation.errors[0]);
+  }
+}
+
+function isSystemAccount(user) {
+  if (user.esCuentaSistema) return true;
+
+  const username = (process.env.ADMIN_USERNAME || "admin").toLowerCase();
+  const correo = (process.env.ADMIN_CORREO || "").toLowerCase();
+  return (
+    user.username === username || (Boolean(correo) && user.correo === correo)
+  );
+}
+
+function assertUserIsMutable(user) {
+  if (isSystemAccount(user)) {
+    const error = new Error(PROTECTED_SUPER_ADMIN_MESSAGE);
+    error.statusCode = 403;
+    throw error;
   }
 }
 
@@ -112,6 +132,7 @@ export async function register(
     mustChangePassword: true,
     emailVerificado: false,
     isActive: false,
+    esCuentaSistema: false,
     activationToken: activationCode,
     activationTokenExpires,
   });
@@ -295,6 +316,9 @@ export async function listUsers() {
  * @param {string} requesterRole - Rol del usuario que está actualizando
  */
 export async function updateUser(id, data, requesterId, requesterRole) {
+  const current = await User.findById(id);
+  if (!current) throw new Error("Usuario no encontrado");
+  assertUserIsMutable(current);
   const allowedFields = [
     "nombre",
     "apellido",
@@ -361,8 +385,11 @@ export async function updateUser(id, data, requesterId, requesterRole) {
  * @param {string} id
  */
 export async function deleteUser(id) {
-  const user = await User.findByIdAndDelete(id);
+  const user = await User.findById(id);
   if (!user) throw new Error("Usuario no encontrado");
+  assertUserIsMutable(user);
+  user.isActive = false;
+  await user.save();
   return user;
 }
 
@@ -372,6 +399,9 @@ export async function deleteUser(id) {
  * @param {boolean} isActive
  */
 export async function toggleUserStatus(id, isActive) {
+  const current = await User.findById(id);
+  if (!current) throw new Error("Usuario no encontrado");
+  assertUserIsMutable(current);
   const user = await User.findByIdAndUpdate(id, { isActive }, { new: true });
   if (!user) throw new Error("Usuario no encontrado");
   return user;
