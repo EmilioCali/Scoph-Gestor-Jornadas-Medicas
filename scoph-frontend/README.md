@@ -13,3 +13,6 @@ pnpm dev
 
 Rutas y roles: `src/app/routes/AppRouter.jsx` y
 [docs/ROLES-Y-PERMISOS.md](../docs/ROLES-Y-PERMISOS.md).
+
+En producción (contenedor Render) las APIs van por el mismo origen
+(`/auth`, `/workday`, `/core`, `/report`). PWA: `vite-plugin-pwa`.

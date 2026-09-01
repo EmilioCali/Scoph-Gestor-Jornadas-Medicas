@@ -86,9 +86,13 @@ Tabs de admin solo para `ADMIN` y `SUPER_ADMIN`. Jornadas para todos.
 
 ## Docker y Render
 
-- `docker-compose.yml`: cuatro servicios, red `scoph`, healthchecks.
-- `render.yaml`: `scoph-auth-api`, `scoph-workday-api`, `scoph-core-api`,
-  `scoph-report-api`. Variables `sync: false` no van a Git.
+- `docker-compose.yml`: cuatro APIs en local, red `scoph`, healthchecks.
+- `deploy/Dockerfile`: un contenedor (nginx + SPA + cuatro Node).
+  Prefijos públicos: `/auth/`, `/workday/`, `/core/`, `/report/`.
+- `render.yaml`: servicio `scoph` (`runtime: docker`). Health
+  `GET /auth/api/healthz`. Variables `sync: false` no van a Git.
+  Reutilizar las env de los cuatro servicios antiguos; no copiar `.env`
+  a la imagen.
 
 ## Cómo actualizar este archivo
 

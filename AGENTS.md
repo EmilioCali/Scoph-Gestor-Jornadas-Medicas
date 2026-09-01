@@ -34,8 +34,9 @@ terceros.
 | `report-service/` | BFF de reportes (HTTP a los otros). Puerto **3023**. |
 | `scoph-frontend/` | React 19 + Vite 8 + Zustand + Tailwind 4. |
 | `scoph-mobile/` | Expo 55. En dispositivo físico usa IP LAN, no localhost. |
-| `docker-compose.yml` | Solo los 4 backends. Mongo va afuera. |
-| `render.yaml` | Deploy de APIs en Render. |
+| `docker-compose.yml` | Solo los 4 backends (local). Mongo va afuera. |
+| `deploy/` | Dockerfile único (SPA + nginx + 4 APIs) para Render. |
+| `render.yaml` | Un Web Service Docker (`scoph`). |
 
 No hay `package.json` en la raíz ni workspace de pnpm. Cada paquete se
 instala y corre por separado.
