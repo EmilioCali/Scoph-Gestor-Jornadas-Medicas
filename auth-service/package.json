@@ -4,6 +4,7 @@
   "description": "Servicio de autenticacion para la gestion de jornadas e invetario - SCOPH",
   "main": "index.js",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "test": "node --test",

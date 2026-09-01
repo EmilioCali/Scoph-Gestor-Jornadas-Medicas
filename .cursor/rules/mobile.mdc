@@ -1,0 +1,14 @@
+---
+description: App móvil Expo de SCOPH
+globs: scoph-mobile/**
+alwaysApply: false
+---
+
+# scoph-mobile
+
+- Expo ~55, React Native 0.83, React Navigation 7, Zustand, SecureStore.
+- En dispositivo físico las URLs deben ser IP LAN, no `localhost`.
+- El cliente espera `POST /api/auth/refresh`. **Esa ruta no existe en auth-service.** No asumas refresh funcional; no lo implementes de pasada.
+- Tabs de inventario/usuarios/reportes/dashboard: solo `ADMIN` y `SUPER_ADMIN`.
+- Features en `src/features/`. APIs en `src/shared/api/`.
+- No subas `.env` con IPs personales nuevas si puedes usar `.env.example` + env local.

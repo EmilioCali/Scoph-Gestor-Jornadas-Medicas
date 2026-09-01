@@ -1,21 +1,113 @@
-MIT License
+LICENCIA DE USO PRIVADO, EXCLUSIVO Y FORMATIVO
+Fundación Kinal — SCOPH
+Gestor de Jornadas Médicas
 
-Copyright (c) 2026 Emilio Cali
+Última actualización: 1 de septiembre de 2026
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Naturaleza del software
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Este software, su código fuente, su documentación, sus artefactos de
+compilación y cualquier material asociado (en conjunto, el "Software")
+son de carácter PRIVADO. No es software libre, no es de código abierto
+y no se otorga bajo MIT, Apache, GPL ni ninguna otra licencia pública.
+
+
+2. Titularidad del código fuente
+
+El código fuente y los derechos de autor sobre el Software pertenecen a
+FUNDACIÓN KINAL (Guatemala), en el marco del proceso formativo de los
+alumnos de Sexto Perito en Computación.
+
+La titularidad no se transfiere a estudiantes, docentes, colaboradores
+externos ni a SCOPH, salvo pacto escrito distinto entre las partes.
+
+
+3. Uso exclusivo
+
+El Software se destina al uso exclusivo de SCOPH, conforme al convenio
+o plazo definido entre Fundación Kinal y SCOPH.
+
+Queda prohibido, sin autorización escrita de Fundación Kinal:
+
+  a) usar el Software para fines distintos a la operación de SCOPH;
+  b) sublicenciar, vender, alquilar o ceder el Software;
+  c) publicar el código fuente o derivados en repositorios públicos;
+  d) copiar el Software para terceros ajenos al convenio;
+  e) extraer módulos para otros productos o clientes.
+
+
+4. Proceso formativo y mantenimiento anual
+
+El Software se desarrolla, documenta y mantiene como parte del proceso
+formativo de Sexto Perito en Computación de Fundación Kinal.
+
+Año con año, las nuevas promociones de ese grado son quienes dan
+mantenimiento al Software, bajo la dirección académica de Fundación
+Kinal y dentro del plazo acordado con SCOPH.
+
+Este relevo anual es el canal ordinario de evolución del producto.
+
+
+5. Colaboraciones
+
+Las colaboraciones (código, documentación, diseño, pruebas u operación)
+solo son posibles si ocurren por medio del proceso formativo de los
+futuros estudiantes de Sexto Perito en Computación de Fundación Kinal.
+
+No se aceptan contribuciones de terceros ajenos a ese proceso, ni
+pull requests, parches o asesorías externas que eludan el marco
+académico, salvo autorización expresa y escrita de Fundación Kinal.
+
+
+6. Estudiantes y personal académico
+
+Los estudiantes y el personal académico de Fundación Kinal pueden
+acceder al código únicamente para cumplir las actividades formativas
+asignadas. Ese acceso no otorga propiedad, licencia comercial ni
+derecho a reutilizar el Software fuera del proyecto.
+
+Al concluir el ciclo formativo aplicable, el acceso se rige por las
+políticas de Fundación Kinal y por el convenio con SCOPH.
+
+
+7. Datos y confidencialidad
+
+El Software puede tratar datos operativos de jornadas médicas,
+inventario y usuarios. Quienes accedan al entorno de desarrollo o
+producción deben:
+
+  a) no extraer ni difundir datos reales de pacientes, personal o stock;
+  b) usar conjuntos de prueba o datos anonimizados en desarrollo;
+  c) no publicar secretos, credenciales ni archivos .env.
+
+
+8. Ausencia de garantía
+
+EL SOFTWARE SE ENTREGA "TAL CUAL", SIN GARANTÍAS DE NINGÚN TIPO,
+EXPRESAS O IMPLÍCITAS, INCLUYENDO COMERCIABILIDAD, IDONEIDAD PARA UN
+FIN PARTICULAR Y NO INFRACCIÓN.
+
+Fundación Kinal, SCOPH, el personal académico y los estudiantes no
+serán responsables por daños directos, indirectos, incidentales o
+consecuentes derivados del uso o la imposibilidad de uso del Software,
+en la máxima medida permitida por la ley aplicable.
+
+
+9. Duración
+
+Los derechos de uso exclusivo de SCOPH rigen por el tiempo definido
+entre Fundación Kinal y SCOPH. Al vencimiento o resolución de ese
+acuerdo, el uso del Software se sujeta a lo que ambas partes pacten
+por escrito. La titularidad del código permanece en Fundación Kinal
+salvo cesión expresa.
+
+
+10. Interpretación
+
+En caso de conflicto entre esta licencia y un convenio vigente entre
+Fundación Kinal y SCOPH, prevalece el convenio escrito. Esta licencia
+rige el código y su redistribución; no sustituye acuerdos institucionales.
+
+Para consultas de titularidad o permisos: Fundación Kinal.
+Para uso operativo del producto: SCOPH, dentro del convenio vigente.
