@@ -1,0 +1,16 @@
+---
+description: Cliente web Vite + React de SCOPH
+globs: scoph-frontend/**
+alwaysApply: false
+---
+
+# scoph-frontend
+
+- React 19, Vite 8, Tailwind 4, Zustand, react-router-dom 7, axios.
+- Rutas: `src/app/routes/AppRouter.jsx`. Roles admin: dashboard, usuarios, inventario, reportes. `MEDICO` → `/jornadas`.
+- Features en `src/features/{auth,dashboard,users,workdays,inventory,reports}`.
+- APIs: `src/shared/apis/`. Variables `VITE_*_SERVICE_URL` (ver `.env.example`).
+- Interceptor: Bearer + logout en 401. Persistencia `auth-scoph-storage`.
+- No agregues otra librería de UI (no MUI, no shadcn) salvo acuerdo explícito del ciclo.
+- `pnpm lint` / `pnpm build` al cambiar UI de verdad. No hay suite de tests.
+- Hay páginas huérfanas (`InventarioPage.jsx`, un `ReportesPage` viejo). No las re-enlaces sin ticket.

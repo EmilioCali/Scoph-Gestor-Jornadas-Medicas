@@ -1,0 +1,13 @@
+---
+description: Documentación, licencia y skills del repo
+globs: "{README.md,AGENTS.md,LICENSE,CONTRIBUTING.md,COLABORACION.md,docs/**,.cursor/**}"
+alwaysApply: false
+---
+
+# Documentación
+
+- Español claro, pensado en estudiantes de 6to Perito y en agentes.
+- LICENSE es de uso privado Kinal/SCOPH; no la sustituyas por MIT.
+- Si un hecho de código cambia (puerto, env, ruta, rol), el mismo cambio actualiza `docs/` y skills.
+- No pongas secretos ni datos reales en markdown.
+- Skills: frontmatter `name` + `description` con disparadores concretos.

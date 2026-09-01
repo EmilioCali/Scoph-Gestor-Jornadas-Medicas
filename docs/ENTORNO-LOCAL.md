@@ -1,0 +1,123 @@
+# Entorno local
+
+Esta guía es para **cuando** se pida levantar el proyecto. Leerla no
+implica instalar ni arrancar servicios.
+
+## Qué necesitas
+
+- Node.js **22**
+- **pnpm** 10 (el repo declara `packageManager: pnpm@10.29.3` en varios paquetes)
+- MongoDB 7+ en localhost o Atlas
+- Docker Engine + Compose, opcional, solo para los backends
+- Git
+
+Mongo no está definido en `docker-compose.yml`. Si usas contenedores
+para las APIs y Mongo en el host, en las URI usa
+`host.docker.internal` (no `localhost` desde dentro del contenedor).
+
+## Puertos que debe quedar libres
+
+| Puerto | Proceso |
+| --- | --- |
+| 27017 | MongoDB (si es local) |
+| 3020 | auth-service |
+| 3021 | workday-service |
+| 3022 | core-service |
+| 3023 | report-service |
+| 5173 | Vite (`scoph-frontend`) |
+
+## Variables de entorno
+
+En **cada** servicio:
+
+```bash
+cp auth-service/.env.example     auth-service/.env
+cp workday-service/.env.example  workday-service/.env
+cp core-service/.env.example     core-service/.env
+cp report-service/.env.example   report-service/.env
+cp scoph-frontend/.env.example   scoph-frontend/.env
+cp scoph-mobile/.env.example     scoph-mobile/.env
+```
+
+Rellena al menos:
+
+1. `JWT_SECRET` — **el mismo valor** en auth, workday, core y report.
+2. `MONGODB_URI` (auth) y `MONGO_URI` (los otros tres). Pueden apuntar
+   a la misma instancia y distintas bases, o a la misma base; sé
+   consistente con lo que ya use el ciclo.
+3. `ADMIN_*` y correo (`SMTP_*` o `RESEND_*`) en auth, si vas a login real.
+4. URLs entre servicios en `http://localhost:302x` para desarrollo en host.
+5. Frontend: `VITE_AUTH_SERVICE_URL`, etc. (ya documentadas en el example).
+6. Móvil en teléfono físico: cambia `192.168.x.x` por la IP LAN de tu máquina.
+
+No pegues secretos de producción. No hagas commit de `.env`.
+
+## Opción A — APIs en el host (desarrollo)
+
+En cuatro terminales (o tmux):
+
+```bash
+cd auth-service && pnpm install && pnpm dev
+cd workday-service && pnpm install && pnpm dev
+cd core-service && pnpm install && pnpm dev
+cd report-service && pnpm install && pnpm dev
+```
+
+Health esperado:
+
+```text
+curl -s http://localhost:3020/api/healthz
+curl -s http://localhost:3021/api/v1/health
+curl -s http://localhost:3022/api/v1/health
+curl -s http://localhost:3023/api/v1/health
+```
+
+Swagger: `http://localhost:3020/api/docs` (y 3021–3023).
+
+Web:
+
+```bash
+cd scoph-frontend && pnpm install && pnpm dev
+```
+
+Móvil:
+
+```bash
+cd scoph-mobile && pnpm install && pnpm start
+```
+
+## Opción B — APIs con Docker Compose
+
+Los Dockerfiles esperan `.env` por servicio (opcionales en compose:
+`required: false`). Compose fuerza `PORT` 3020–3023 y las URLs internas
+`http://<servicio>:<puerto>`.
+
+```bash
+docker compose up --build
+```
+
+Sigue corriendo frontend y móvil **en el host**, apuntando a
+`http://localhost:3020` … `3023`.
+
+## Primer usuario
+
+auth-service ejecuta seed de `SUPER_ADMIN` si no hay usuarios, usando
+`ADMIN_CORREO`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, etc.
+(`auth-service/src/scripts/seedAdmin.js`).
+
+## Pruebas
+
+```bash
+pnpm test   # dentro de cada *-service
+```
+
+## Fallos frecuentes
+
+| Síntoma | Causa típica |
+| --- | --- |
+| 401 en todos los servicios | `JWT_SECRET` distinto entre APIs |
+| Auth no conecta a Mongo | Usaste `MONGO_URI` en vez de `MONGODB_URI` |
+| Compose no llega a Mongo | URI con `localhost` dentro del contenedor |
+| Frontend en blanco / CORS | `FRONTEND_URL` / `CORS_ORIGIN` no incluyen el origen Vite |
+| Móvil no llama APIs | `localhost` en un teléfono físico |
+| Refresh 404 en móvil | `POST /api/auth/refresh` no existe en auth (deuda conocida) |

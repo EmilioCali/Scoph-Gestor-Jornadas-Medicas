@@ -1,0 +1,17 @@
+---
+description: Backends Fastify (auth, workday, core, report)
+globs: "{auth,workday,core,report}-service/**"
+alwaysApply: false
+---
+
+# Backends Fastify
+
+- ESM (`"type": "module"`). Fastify 5 + `@fastify/jwt`.
+- Autenticación: `authenticate` y `requireRole` en `src/middlewares/authenticate.js` de ese servicio. `SUPER_ADMIN` bypasea roles.
+- auth-service: respuestas `{ ok, ... }`, Mongo `MONGODB_URI`, puerto 3020.
+- core, workday, report: `{ success, message, data }` vía `src/utils/response.js`, Mongo `MONGO_URI`.
+- Errores de dominio en core/workday: `ServiceError` / `NotFoundError` / `ValidationError`.
+- Tests: `node --test` (`pnpm test`) junto al servicio. Extiende tests existentes.
+- Swagger ya está; nuevas rutas deben aparecer en docs `/api/docs`.
+- Llama a otros servicios con `fetch`/`axios` reenviando `Authorization`. URLs desde env, no hardcodees puertos viejos (3001/3002).
+- No introduzcas npm lockfiles. Respeta `packageManager: pnpm@10.29.3` donde exista.

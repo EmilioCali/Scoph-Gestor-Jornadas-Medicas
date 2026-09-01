@@ -40,7 +40,11 @@ build/
 # Docker / procesos
 *.pid
 
-# Cursor
-.cursor/
+# Cursor: estado local fuera; reglas y skills del proyecto sí se versionan
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 *.cursor/debug-*.log
 *debug-46cf1c.log

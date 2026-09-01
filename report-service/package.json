@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "CCCTP",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@10.29.3",
   "dependencies": {
