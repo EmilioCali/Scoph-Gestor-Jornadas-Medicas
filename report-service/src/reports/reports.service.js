@@ -1,6 +1,5 @@
 import { SERVICES } from '../config/services.js';
-import * as XLSX from 'xlsx';
-import PDFDocument from 'pdfkit';
+import { buildExcelBuffer, buildPdfBuffer, formatDateGT } from './exportTemplates.js';
 
 const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -429,6 +428,120 @@ export async function obtenerAlertasVencimiento(dias = 30, authHeader) {
     return getExpirationAlerts(data.data || [], dias);
 }
 
+const MOVIMIENTO_COLUMNS = [
+    { key: 'Tipo', header: 'Tipo', width: 12, weight: 1 },
+    { key: 'SubTipo', header: 'Subtipo', width: 18, weight: 1.3 },
+    { key: 'Medicamento', header: 'Medicamento', width: 22, weight: 1.6 },
+    { key: 'Concentracion', header: 'Concentración', width: 14, weight: 1.1 },
+    { key: 'Lote', header: 'Lote', width: 12, weight: 1 },
+    { key: 'Cantidad', header: 'Cantidad', width: 10, weight: 0.8 },
+    { key: 'FechaVencimiento', header: 'Vencimiento', width: 14, weight: 1 },
+    { key: 'Estado', header: 'Estado', width: 12, weight: 1 },
+    { key: 'Usuario', header: 'Usuario', width: 18, weight: 1.3 },
+    { key: 'Fecha', header: 'Fecha', width: 12, weight: 1 },
+];
+
+const STOCK_COLUMNS = [
+    { key: 'Medicamento', header: 'Medicamento', width: 22, weight: 1.6 },
+    { key: 'Concentracion', header: 'Concentración', width: 14, weight: 1.1 },
+    { key: 'Lote', header: 'Lote', width: 12, weight: 1 },
+    { key: 'Stock', header: 'Stock', width: 10, weight: 0.8 },
+    { key: 'FechaVencimiento', header: 'Vencimiento', width: 14, weight: 1 },
+    { key: 'StockTotal', header: 'Stock total', width: 12, weight: 1 },
+    { key: 'StockMinimo', header: 'Stock mínimo', width: 12, weight: 1 },
+];
+
+const JORNADA_COLUMNS = [
+    { key: 'Nombre', header: 'Nombre', width: 20, weight: 1.5 },
+    { key: 'Descripcion', header: 'Descripción', width: 22, weight: 1.4 },
+    { key: 'FechaInicio', header: 'Inicio', width: 12, weight: 1 },
+    { key: 'FechaFin', header: 'Fin', width: 12, weight: 1 },
+    { key: 'Departamento', header: 'Departamento', width: 14, weight: 1.1 },
+    { key: 'Municipio', header: 'Municipio', width: 14, weight: 1.1 },
+    { key: 'Direccion', header: 'Dirección', width: 18, weight: 1.2 },
+    { key: 'Responsable', header: 'Responsable', width: 16, weight: 1.2 },
+    { key: 'PacientesEstimados', header: 'Pacientes est.', width: 12, weight: 0.9 },
+    { key: 'MedicamentosEstimados', header: 'Medicamentos est.', width: 14, weight: 0.9 },
+    { key: 'Estado', header: 'Estado', width: 14, weight: 1 },
+];
+
+const CONSUMO_COLUMNS = [
+    { key: 'JornadaId', header: 'Jornada', width: 16, weight: 1.2 },
+    { key: 'Medicamento', header: 'Medicamento', width: 22, weight: 1.6 },
+    { key: 'Concentracion', header: 'Concentración', width: 14, weight: 1.1 },
+    { key: 'Lote', header: 'Lote', width: 12, weight: 1 },
+    { key: 'Cantidad', header: 'Cantidad', width: 10, weight: 0.8 },
+    { key: 'FechaVencimiento', header: 'Vencimiento', width: 14, weight: 1 },
+    { key: 'Usuario', header: 'Usuario', width: 18, weight: 1.3 },
+    { key: 'Fecha', header: 'Fecha', width: 12, weight: 1 },
+];
+
+function asList(value) {
+    return Array.isArray(value) ? value : [];
+}
+
+export function buildMovimientoExportRows(movements = []) {
+    return asList(movements).flatMap((mov) =>
+        asList(mov.detail).map((item) => ({
+            Tipo: mov.type,
+            SubTipo: mov.subType,
+            Medicamento: item.medicationSnapshot?.name,
+            Concentracion: item.medicationSnapshot?.concentration,
+            Lote: item.batch,
+            Cantidad: item.quantity,
+            FechaVencimiento: formatDateGT(item.expirationDate),
+            Estado: mov.status,
+            Usuario: mov.userDisplayName,
+            Fecha: formatDateGT(mov.createdAt),
+        })),
+    );
+}
+
+export function buildStockExportRows(inventory = []) {
+    return asList(inventory).flatMap((inv) =>
+        asList(inv.lots).map((lote) => ({
+            Medicamento: inv.medicineId?.name,
+            Concentracion: inv.medicineId?.concentration,
+            Lote: lote.batch,
+            Stock: lote.stock,
+            FechaVencimiento: formatDateGT(lote.expirationDate),
+            StockTotal: inv.totalStock,
+            StockMinimo: inv.minimumStock,
+        })),
+    );
+}
+
+export function buildJornadaExportRows(workdays = []) {
+    return asList(workdays).map((jornada) => ({
+        Nombre: jornada.name,
+        Descripcion: jornada.description,
+        FechaInicio: formatDateGT(jornada.startDate),
+        FechaFin: formatDateGT(jornada.endDate),
+        Departamento: jornada.location?.department,
+        Municipio: jornada.location?.municipality,
+        Direccion: jornada.location?.address,
+        Responsable: jornada.manager?.name,
+        PacientesEstimados: jornada.estimatedPatients,
+        MedicamentosEstimados: jornada.estimatedMedicines,
+        Estado: jornada.status,
+    }));
+}
+
+export function buildConsumoExportRows(movements = []) {
+    return asList(movements).flatMap((mov) =>
+        asList(mov.detail).map((item) => ({
+            JornadaId: mov.destination?.id,
+            Medicamento: item.medicationSnapshot?.name,
+            Concentracion: item.medicationSnapshot?.concentration,
+            Lote: item.batch,
+            Cantidad: item.quantity,
+            FechaVencimiento: formatDateGT(item.expirationDate),
+            Usuario: mov.userDisplayName,
+            Fecha: formatDateGT(mov.createdAt),
+        })),
+    );
+}
+
 export async function exportarMovimientosExcel(authHeader) {
     const [data, users] = await Promise.all([
         fetchJson(
@@ -440,26 +553,12 @@ export async function exportarMovimientosExcel(authHeader) {
     ]);
     const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    const filas = movements.flatMap(mov =>
-        mov.detail.map(item => ({
-        Tipo: mov.type,
-        SubTipo: mov.subType,
-        Medicamento: item.medicationSnapshot.name,
-        Concentracion: item.medicationSnapshot.concentration,
-        Lote: item.batch,
-        Cantidad: item.quantity,
-        FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
-        Estado: mov.status,
-        Usuario: mov.userDisplayName,
-        Fecha: new Date(mov.createdAt).toLocaleDateString()
-        }))
-    );
-
-    const worksheet = XLSX.utils.json_to_sheet(filas);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimientos');
-
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return buildExcelBuffer({
+        title: 'Reporte de Movimientos',
+        sheet: 'Movimientos',
+        columns: MOVIMIENTO_COLUMNS,
+        rows: buildMovimientoExportRows(movements),
+    });
 }
 
 export async function exportarStockExcel(authHeader) {
@@ -469,23 +568,12 @@ export async function exportarStockExcel(authHeader) {
         'Error al consultar inventario'
     );
 
-    const filas = data.data.flatMap(inv =>
-        inv.lots.map(lote => ({
-        Medicamento: inv.medicineId?.name,
-        Concentracion: inv.medicineId?.concentration,
-        Lote: lote.batch,
-        Stock: lote.stock,
-        FechaVencimiento: new Date(lote.expirationDate).toLocaleDateString(),
-        StockTotal: inv.totalStock,
-        StockMinimo: inv.minimumStock
-        }))
-    );
-
-    const worksheet = XLSX.utils.json_to_sheet(filas);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock');
-
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return buildExcelBuffer({
+        title: 'Reporte de Stock Actual',
+        sheet: 'Stock',
+        columns: STOCK_COLUMNS,
+        rows: buildStockExportRows(data.data),
+    });
 }
 
 export async function exportarJornadasExcel(authHeader) {
@@ -495,25 +583,12 @@ export async function exportarJornadasExcel(authHeader) {
         'Error al consultar jornadas'
     );
 
-    const filas = data.data.map(jornada => ({
-        Nombre: jornada.name,
-        Descripcion: jornada.description,
-        FechaInicio: new Date(jornada.startDate).toLocaleDateString(),
-        FechaFin: new Date(jornada.endDate).toLocaleDateString(),
-        Departamento: jornada.location?.department,
-        Municipio: jornada.location?.municipality,
-        Direccion: jornada.location?.address,
-        Responsable: jornada.manager?.name,
-        PacientesEstimados: jornada.estimatedPatients,
-        MedicamentosEstimados: jornada.estimatedMedicines,
-        Estado: jornada.status
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(filas);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Jornadas');
-
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return buildExcelBuffer({
+        title: 'Reporte de Jornadas',
+        sheet: 'Jornadas',
+        columns: JORNADA_COLUMNS,
+        rows: buildJornadaExportRows(data.data),
+    });
 }
 
 export async function exportarConsumoExcel(authHeader) {
@@ -527,24 +602,12 @@ export async function exportarConsumoExcel(authHeader) {
     ]);
     const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    const filas = movements.flatMap(mov =>
-        mov.detail.map(item => ({
-        JornadaId: mov.destination?.id,
-        Medicamento: item.medicationSnapshot.name,
-        Concentracion: item.medicationSnapshot.concentration,
-        Lote: item.batch,
-        Cantidad: item.quantity,
-        FechaVencimiento: new Date(item.expirationDate).toLocaleDateString(),
-        Usuario: mov.userDisplayName,
-        Fecha: new Date(mov.createdAt).toLocaleDateString()
-        }))
-    );
-
-    const worksheet = XLSX.utils.json_to_sheet(filas);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Consumo');
-
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return buildExcelBuffer({
+        title: 'Reporte de Consumo',
+        sheet: 'Consumo',
+        columns: CONSUMO_COLUMNS,
+        rows: buildConsumoExportRows(movements),
+    });
 }
 
 export async function exportarMovimientosPDF(authHeader) {
@@ -558,28 +621,10 @@ export async function exportarMovimientosPDF(authHeader) {
     ]);
     const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    return new Promise((resolve) => {
-        const doc = new PDFDocument({ margin: 30 });
-        const buffers = [];
-
-        doc.on('data', chunk => buffers.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(buffers)));
-
-        doc.fontSize(18).text('Reporte de Movimientos', { align: 'center' });
-        doc.moveDown();
-
-        movements.forEach(mov => {
-        doc.fontSize(11).text(`Tipo: ${mov.type} - ${mov.subType}`);
-        doc.text(`Estado: ${mov.status}`);
-        doc.text(`Usuario: ${mov.userDisplayName}`);
-        doc.text(`Fecha: ${new Date(mov.createdAt).toLocaleDateString()}`);
-        mov.detail.forEach(item => {
-            doc.text(`  Medicamento: ${item.medicationSnapshot.name} | Lote: ${item.batch} | Cantidad: ${item.quantity}`);
-        });
-        doc.moveDown(0.5);
-        });
-
-        doc.end();
+    return buildPdfBuffer({
+        title: 'Reporte de Movimientos',
+        columns: MOVIMIENTO_COLUMNS,
+        rows: buildMovimientoExportRows(movements),
     });
 }
 
@@ -590,26 +635,10 @@ export async function exportarStockPDF(authHeader) {
         'Error al consultar inventario'
     );
 
-    return new Promise((resolve) => {
-        const doc = new PDFDocument({ margin: 30 });
-        const buffers = [];
-
-        doc.on('data', chunk => buffers.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(buffers)));
-
-        doc.fontSize(18).text('Reporte de Stock Actual', { align: 'center' });
-        doc.moveDown();
-
-        data.data.forEach(inv => {
-        doc.fontSize(11).text(`Medicamento: ${inv.medicineId?.name} - ${inv.medicineId?.concentration}`);
-        doc.text(`Stock Total: ${inv.totalStock} | Stock Mínimo: ${inv.minimumStock}`);
-        inv.lots.forEach(lote => {
-            doc.text(`  Lote: ${lote.batch} | Stock: ${lote.stock} | Vence: ${new Date(lote.expirationDate).toLocaleDateString()}`);
-        });
-        doc.moveDown(0.5);
-        });
-
-        doc.end();
+    return buildPdfBuffer({
+        title: 'Reporte de Stock Actual',
+        columns: STOCK_COLUMNS,
+        rows: buildStockExportRows(data.data),
     });
 }
 
@@ -620,57 +649,28 @@ export async function exportarJornadasPDF(authHeader) {
         'Error al consultar jornadas'
     );
 
-    return new Promise((resolve) => {
-        const doc = new PDFDocument({ margin: 30 });
-        const buffers = [];
-
-        doc.on('data', chunk => buffers.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(buffers)));
-
-        doc.fontSize(18).text('Reporte de Jornadas', { align: 'center' });
-        doc.moveDown();
-
-        data.data.forEach(jornada => {
-        doc.fontSize(11).text(`Nombre: ${jornada.name}`);
-        doc.text(`Descripción: ${jornada.description}`);
-        doc.text(`Fecha: ${new Date(jornada.startDate).toLocaleDateString()} - ${new Date(jornada.endDate).toLocaleDateString()}`);
-        doc.text(`Ubicación: ${jornada.location?.department}, ${jornada.location?.municipality}`);
-        doc.text(`Responsable: ${jornada.manager?.name}`);
-        doc.text(`Estado: ${jornada.status}`);
-        doc.moveDown(0.5);
-        });
-
-        doc.end();
+    return buildPdfBuffer({
+        title: 'Reporte de Jornadas',
+        columns: JORNADA_COLUMNS,
+        rows: buildJornadaExportRows(data.data),
     });
 }
 
 export async function exportarConsumoPDF(authHeader) {
-    const data = await fetchJson(
-        `${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`,
-        authHeader,
-        'Error al consultar consumo'
-    );
+    const [data, users] = await Promise.all([
+        fetchJson(
+            `${SERVICES.core.baseUrl}/api/v1/movimientos?subType=CONSUMO_JORNADA`,
+            authHeader,
+            'Error al consultar consumo'
+        ),
+        fetchAuthUsers(authHeader),
+    ]);
+    const movements = enrichMovementEntriesWithUserNames(data.data || [], users);
 
-    return new Promise((resolve) => {
-        const doc = new PDFDocument({ margin: 30 });
-        const buffers = [];
-
-        doc.on('data', chunk => buffers.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(buffers)));
-
-        doc.fontSize(18).text('Reporte de Consumo', { align: 'center' });
-        doc.moveDown();
-
-        data.data.forEach(mov => {
-        doc.fontSize(11).text(`Jornada: ${mov.destination?.id}`);
-        doc.text(`Fecha: ${new Date(mov.createdAt).toLocaleDateString()}`);
-        mov.detail.forEach(item => {
-            doc.text(`  Medicamento: ${item.medicationSnapshot.name} | Lote: ${item.batch} | Cantidad: ${item.quantity}`);
-        });
-        doc.moveDown(0.5);
-        });
-
-        doc.end();
+    return buildPdfBuffer({
+        title: 'Reporte de Consumo',
+        columns: CONSUMO_COLUMNS,
+        rows: buildConsumoExportRows(movements),
     });
 }
 
