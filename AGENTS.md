@@ -78,6 +78,10 @@ instala y corre por separado.
 | `.cursor/skills/scoph-documentar/SKILL.md` | Cada vez que cambies contratos o env |
 
 Reglas Cursor siempre activas: `.cursor/rules/scoph.mdc`.
+Por glob: `dominio.mdc` (workday/core/report), `auth-roles.mdc`
+(auth y clientes), `despliegue.mdc` (Render, Compose, env).
+También: `backend.mdc`, `frontend.mdc`, `mobile.mdc`,
+`documentacion.mdc`.
 
 ## Cómo implementar
 

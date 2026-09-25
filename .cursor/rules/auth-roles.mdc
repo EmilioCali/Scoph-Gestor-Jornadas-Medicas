@@ -1,0 +1,15 @@
+---
+description: JWT, roles y correo de auth-service
+globs: "{auth-service/**,scoph-frontend/src/features/auth/**,scoph-mobile/src/**/*auth*}"
+alwaysApply: false
+---
+
+# Auth y roles
+
+- JWT Bearer, payload `{ id, rol, username }`, 8 h. Mismo `JWT_SECRET` en las 4 APIs.
+- Roles: `SUPER_ADMIN` (bypass en `requireRole`), `ADMIN`, `MEDICO`.
+- Seed `ADMIN_*` + `esCuentaSistema`: no editar/borrar por CRUD.
+- Correo: SMTP y/o Resend. Sin API keys en Git.
+- CORS: `FRONTEND_URL`, `CORS_ORIGIN`.
+- Auth responde `{ ok, message }`. No hay `POST /api/auth/refresh` (el móvil lo llama: deuda, ticket propio).
+- Al cambiar un `preHandler`, actualiza UI (`RequireRole` / tabs) y `docs/ROLES-Y-PERMISOS.md`.

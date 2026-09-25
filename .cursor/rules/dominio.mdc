@@ -1,0 +1,26 @@
+---
+description: Dominio jornadas e inventario (dueños de datos e invariantes)
+globs: "{workday,core,report}-service/**"
+alwaysApply: false
+---
+
+# Dominio SCOPH
+
+Jornada = evento médico de campo (`Workday`), no un día laboral.
+Zona horaria: `America/Guatemala`.
+
+## Dueños (no copies modelos entre servicios)
+
+- workday-service: jornada, estados `PLANNED | IN_PROGRESS | FINISHED | CANCELLED`, médicos.
+- core-service: medicina, categorías, unidades, inventario central, inventario de jornada, lotes, movimientos, auditoría.
+- report-service: Excel/PDF y agregados por HTTP. Sin esquemas de negocio propios.
+
+## Invariantes
+
+- Transferir a jornada: stock central → inventario de jornada + movimiento.
+- Cierre/retorno: no duplicar stock. Job de workday → `POST /api/v1/movimientos/retorno-automatico-jornada`.
+- Movimientos: `ENTRADA | SALIDA | TRANSFERENCIA` y subtipos existentes (`DONACION`, `COMPRA`, `RECETA`, `ASIGNACION_JORNADA`, `RETORNO_JORNADA`, …).
+- Core valida la jornada contra workday por HTTP. Reenvía `Authorization`.
+- Rutas de dominio en español. No inventes nombres en inglés.
+
+No “arregles de paso” el typo `inventroy.routes.js` ni el refresh de auth.

@@ -1,0 +1,14 @@
+---
+description: Render, Docker único y variables que se confunden
+globs: "{deploy/**,render.yaml,docker-compose.yml,.env.example,docs/ENTORNO-LOCAL.md,docs/SERVICIOS.md}"
+alwaysApply: false
+---
+
+# Despliegue y entorno
+
+- Local: Compose solo 4 APIs. Mongo afuera. Vite/Expo en el host. No levantar nada sin pedirlo.
+- Producción: un Docker (`deploy/`) en Render → `https://scoph.onrender.com`. nginx: `/auth` `/workday` `/core` `/report` → 3020–3023.
+- Defaults de código sin `PORT` (8080/3001/3002/3003) no se documentan como canónicos; usa 3020–3023.
+- Auth: `MONGODB_URI`. Resto: `MONGO_URI`.
+- Web: `VITE_*_SERVICE_URL` (raíz). Móvil: IP LAN, no localhost.
+- Nueva env → `.env.example` raíz + `docs/ENTORNO-LOCAL.md`. Nunca valores secretos.
